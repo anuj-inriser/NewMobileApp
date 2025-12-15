@@ -23,7 +23,7 @@ const IndicesDetailScreen = ({ route, navigation }) => {
         try {
             // Encode groupName to handle spaces (e.g., 'NIFTY 50')
             const encodedName = encodeURIComponent(groupName);
-            const baseUrl = Platform.OS === 'web' ? 'http://10.109.20.17' : apiUrl;
+            const baseUrl = Platform.OS === 'web' ? 'http:// 192.168.1.18' : apiUrl;
             const response = await fetch(`${baseUrl}/api/indices/${encodedName}/constituents`);
             const result = await response.json();
 
