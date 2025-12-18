@@ -4,119 +4,179 @@ import { LineChart } from 'react-native-gifted-charts';
 import { Ionicons } from '@expo/vector-icons';
 import { apiUrl } from '../utils/apiUrl';
 import { useIntervalData } from '../hooks/useIntervalData';
-// import { useRealtimePrices } from '../hooks/useRealtimePrices';
+import { useRealtimePrices } from '../hooks/useRealtimePrices';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = 250; // Increased width to match Figma design
 
 const IndexCard = ({ name, value, change, changePercent, data, onPress }) => {
+
     const isPositive = change >= 0;
 
-    // Generate zigzag chart data from OHLC or create realistic pattern
-    let chartData;
+    const chartData = React.useMemo(() => {
+        const seed = name
+            ? name.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+            : 0;
 
-    if (data && Array.isArray(data) && data.length > 0) {
-        // Use provided OHLC data
-        chartData = data;
-    } else {
-        // Generate multi-point zigzag pattern with peaks and valleys
-        const close = value; // Current value is Close
-        const open = value - change; // Previous close is Open
+        const open = value - change;
+        const close = value;
 
-        // Calculate range for zigzag variations
-        const range = Math.abs(change);
-        const volatility = range * 1.2; // Increased volatility for more pronounced zigzag
+        const points = 75;
+        const baseVolatility = Math.abs(change) * 0.8 || value * 0.002;
 
-        // Create 8-point zigzag pattern with alternating peaks and valleys
-        const baseValue = Math.min(open, close);
-        const topValue = Math.max(open, close);
-        const midValue = (baseValue + topValue) / 2;
+        const slopeBias = (seed % 7 - 3) * value * 0.00015;
+        const volatility = baseVolatility * (1 + (seed % 5) * 0.15);
 
-        const rawData = [
-            open,                           // Start at Open
-            baseValue + volatility * 0.6,   // Small peak
-            baseValue + volatility * 0.3,   // Valley
-            midValue + volatility * 0.5,    // Medium peak
-            midValue - volatility * 0.2,    // Small valley
-            topValue - volatility * 0.3,    // Higher peak
-            topValue - volatility * 0.6,    // Valley
-            close,                          // End at Close with upward trend
-        ];
+        const step = (close - open + slopeBias) / points;
 
-        // Normalize data by subtracting minimum (like GainerLoserCard)
-        const minValue = Math.min(...rawData);
-        chartData = rawData.map(val => ({ value: val - minValue }));
-    }
+        const values = [];
+        let current = open;
 
-    // Get current timestamp
-    const now = new Date();
-    const timestamp = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) +
+        values.push(open);
+
+        for (let i = 1; i < points - 1; i++) {
+            const pseudoRandom =
+                Math.sin(seed * (i + 1) * 0.45) * 0.5 + 0.5;
+
+            const trend = open + step * i;
+            const noise = (pseudoRandom - 0.5) * volatility;
+            const drift = Math.sin(i * 0.25 + seed) * volatility * 0.15;
+
+            current = trend + noise + drift;
+            values.push(current);
+        }
+
+        values.push(close);
+
+        return values.map(v => ({ value: v }));
+    }, [name, value, change]);
+
+    const ts = data?.timestamp ? new Date(data.timestamp) : new Date();
+    const timestamp =
+        ts.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        }) +
         ' ' +
-        now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        ts.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+        });
 
     return (
         <TouchableOpacity style={styles.horizontalCard} onPress={onPress}>
-            {/* Top Row: Name on left, Value on right */}
             <View style={styles.cardTopRow}>
-                <View style={styles.cardLeft}>
+                <View>
                     <Text style={styles.indexName}>{name}</Text>
                     <Text style={styles.timestamp}>{timestamp}</Text>
                 </View>
-                <View style={styles.cardRight}>
-                    <Text style={styles.indexValue}>₹ {value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-                    <Text style={[styles.changeText, isPositive ? styles.positive : styles.negative]}>
-                        {isPositive ? '+' : ''}₹{change.toFixed(2)}({isPositive ? '+' : ''}{changePercent.toFixed(2)}%)
+
+                <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.indexValue}>
+                        ₹ {value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.changeText,
+                            isPositive ? styles.positive : styles.negative,
+                        ]}
+                    >
+                        {isPositive ? '+' : ''}₹{change.toFixed(2)} (
+                        {isPositive ? '+' : ''}
+                        {changePercent.toFixed(2)}%)
                     </Text>
                 </View>
             </View>
 
-            {/* Bottom: Minimal Zigzag Chart */}
             <View style={styles.chartContainer}>
                 <LineChart
                     data={chartData}
-                    width={CARD_WIDTH - 32}
                     height={50}
-                    maxValue={Math.max(...chartData.map(d => d.value)) - Math.min(...chartData.map(d => d.value))}
-                    yAxisOffset={0}
-                    initialSpacing={0}
-                    endSpacing={0}
-                    spacing={chartData.length > 1 ? (CARD_WIDTH - 32) / (chartData.length - 1) : (CARD_WIDTH - 32)}
-                    color={isPositive ? '#22c55e' : '#ef4444'}
+                    adjustToWidth
+                    curved
+                    curvature={0.15}
                     thickness={2}
+                    areaChart
+                    color={isPositive ? '#22c55e' : '#ef4444'}
                     startFillColor={isPositive ? '#22c55e' : '#ef4444'}
                     endFillColor={isPositive ? '#22c55e' : '#ef4444'}
                     startOpacity={0.2}
-                    endOpacity={0.0}
+                    endOpacity={0.05}
                     hideDataPoints
-                    hideRules
                     hideAxesAndRules
+                    hideXAxisText
                     hideYAxisText
-                    curved
-                    areaChart
+                    hidePointerStrip
+                    isAnimated
+                    animationDuration={700}
                 />
             </View>
         </TouchableOpacity>
     );
 };
 
+
+
+
+import { useIndicesChart } from '../hooks/useIndicesChart';
+
 const IndexVerticalCard = ({ index, onPress }) => {
-    // Fetch 1-minute interval data for more granularity (more zigzag)
-    const { data: intervalData, loading } = useIntervalData(index.symbol, '1m');
+    // Use new dedicated hook for 5-min chart data
+    const { data: chartDataResponse, loading } = useIndicesChart(index.symbol, '5m', 75);
+    const intervalData = chartDataResponse; // Alias to match existing logic if needed or adapt below
+    console.log('indicesChartData ---', intervalData)
     const isPositive = index.change >= 0;
     const color = isPositive ? '#22c55e' : '#ef4444';
 
     // Prepare Chart Data like StockListCard
     const allCandles = intervalData?.candles || [];
-    // Take last 30 candles for a clean sparkline
-    const recentCandles = allCandles.slice(-30);
+    // Show requested data
+    const recentCandles = allCandles;
 
-    let chartData = [];
+    const chartData = useMemo(() => {
+        console.log(`[IndexVerticalCard] ${index.symbol} - recentCandles:`, recentCandles?.length);
+
+        if (recentCandles.length > 0) {
+            const firstVal = recentCandles[0].close;
+            console.log(`[IndexVerticalCard] ${index.symbol} | DataPts: ${recentCandles.length} | FirstVal: ${firstVal}`);
+
+            // "Old chart type should not show" -> Removed the Previous Close anchor which forced a specific shape
+            const mapped = recentCandles.map(item => ({ value: item.close }));
+            console.log(`[IndexVerticalCard] ${index.symbol} - Mapped Data:`, mapped.length);
+            return mapped;
+        } else {
+            // Fallback: Generate realistic 1-day simulation (75 points) if no real data
+            const open = index.value - index.change;
+            const close = index.value;
+            const seedBuffer = (index.name || index.symbol || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+            const points = 75;
+            const rawData = [open];
+            const step = (close - open) / points;
+            const volatility = Math.abs(index.change) * 0.8 || index.value * 0.002;
+
+            for (let i = 1; i < points - 1; i++) {
+                // Deterministic pseudo-random based on Name and Position (i)
+                const pseudoRandom = Math.sin(seedBuffer * (i + 1) * 0.45) * 0.5 + 0.5;
+                const trend = open + (step * i);
+                const noise = (pseudoRandom - 0.5) * volatility * 1.5;
+                rawData.push(trend + noise);
+            }
+            rawData.push(close);
+
+            console.log(`[IndexVerticalCard] ${index.symbol} - Using Realistic Fallback Data`);
+            return rawData.map(v => ({ value: v }));
+        }
+    }, [recentCandles, index.value, index.change, isPositive]);
+
+    console.log(`[IndexVerticalCard] ${index.symbol} - Final ChartData:`, chartData);
+
     let yMin = 0;
     let finalRange = 100;
 
-    if (recentCandles.length >= 2) {
-        chartData = recentCandles.map(item => ({ value: item.close }));
-
+    if (chartData.length > 0) {
         const allValues = chartData.map(d => d.value);
         const minVal = Math.min(...allValues);
         const maxVal = Math.max(...allValues);
@@ -128,34 +188,6 @@ const IndexVerticalCard = ({ index, onPress }) => {
         yMin = Math.max(0, minVal - padding);
         const yMax = maxVal + padding;
         finalRange = Math.max(0.05, yMax - yMin);
-    } else {
-        // Fallback: Generate volatile zigzag if no real data
-        const open = index.value - index.change;
-        const close = index.value;
-        const range = Math.abs(index.change);
-        const volatility = range * 0.8 || index.value * 0.002;
-
-        // Create 10-point zigzag pattern for more "zigzag" look
-        const rawData = [
-            open,
-            open + (isPositive ? 1 : -1) * volatility * 0.3,
-            open - (isPositive ? 1 : -1) * volatility * 0.2,
-            open + (isPositive ? 1 : -1) * volatility * 0.6,
-            open + (isPositive ? 1 : -1) * volatility * 0.1,
-            open + (isPositive ? 1 : -1) * volatility * 0.8,
-            open + (isPositive ? 1 : -1) * volatility * 0.4,
-
-            close
-        ];
-
-        chartData = rawData.map(v => ({ value: v }));
-
-        const minVal = Math.min(...rawData);
-        const maxVal = Math.max(...rawData);
-        const chartRange = maxVal - minVal;
-        const padding = chartRange * 0.1;
-        yMin = Math.max(0, minVal - padding);
-        finalRange = chartRange + 2 * padding;
     }
 
     // console.log(`[Indices] ${index.symbol} - Loading: ${loading}, DataPoints: ${chartData.length}, Range: ${finalRange}`);
@@ -168,9 +200,9 @@ const IndexVerticalCard = ({ index, onPress }) => {
             <View style={styles.verticalCardLeft}>
                 <Text style={styles.verticalSymbol}>{index.name || index.symbol}</Text>
                 <Text style={styles.verticalTime}>
-                    {new Date().toLocaleTimeString('en-US', {
-                        hour: '2-digit', minute: '2-digit', hour12: true
-                    }).toLowerCase()}
+                    {index.timestamp ?
+                        `${new Date(index.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${new Date(index.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}`
+                        : '--:--'}
                 </Text>
             </View>
 
@@ -180,31 +212,45 @@ const IndexVerticalCard = ({ index, onPress }) => {
                 ) : (
                     <LineChart
                         data={chartData}
-                        height={40}
-                        width={80}
+
+                        /* Chart size */
+                        height={60}
+                        width={140}
                         adjustToWidth={true}
-                        maxValue={finalRange}
-                        yAxisOffset={yMin}
-                        initialSpacing={0}
-                        endSpacing={0}
-                        color={color}
+                        initialSpacing={1}
+                        endSpacing={1}
+
+                        /* Line style */
                         thickness={2}
-                        startFillColor={color}
-                        endFillColor={color}
-                        startOpacity={0.2}
-                        endOpacity={0.0}
-                        hideDataPoints
-                        hideRules
-                        rulesThickness={0}
-                        rulesColor="transparent"
-                        hideAxesAndRules
-                        hideYAxisText
-                        hideXAxisText
-                        xAxisThickness={0}
-                        yAxisThickness={0}
+                        color="#2ecc71"
                         curved
+                        curvature={0.2}
+
+                        /* Area fill (important for your look) */
                         areaChart
-                        isAnimated={false} // Disable animation to prevent blinking
+                        startFillColor="rgba(46, 204, 113, 0.25)"
+
+                        endFillColor="rgba(239, 225, 225, 0.02)"
+                        startOpacity={0.5}
+                        endOpacity={0.1}
+
+                        /* Hide grid & axes */
+                        hideRules={true}
+                        hideYAxisText={true}
+                        hideAxesAndRules={true}
+                        hideXAxisText={true}
+
+                        /* Pointer (optional) */
+                        hideDataPoints
+                        dataPointsHeight={0}
+                        dataPointsWidth={0}
+                        dataPointsRadius={0}
+                        hidePointerStrip
+
+                        /* Smooth spike effect */
+                        isAnimated
+                        animationDuration={800}
+
                     />
                 )}
             </View>
@@ -221,66 +267,88 @@ const IndexVerticalCard = ({ index, onPress }) => {
     );
 };
 
+import { useQuery } from '@tanstack/react-query';
+
+// ... (imports remain the same)
+
 const Indices = ({ exchange = 'NSE', viewMode = 'horizontal', onViewAllPress, maxItems, externalData, onIndexPress }) => {
-    const [indices, setIndices] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    // Subscribe to real-time price updates
+    const { prices: realtimePrices, isConnected } = useRealtimePrices();
 
-    // Subscribe to real-time price updates (DISABLED)
-    // const { prices: realtimePrices, isConnected } = useRealtimePrices();
-
-    useEffect(() => {
-        // If externalData is provided, use it instead of fetching
-        if (externalData) {
-            setIndices(externalData);
-            setLoading(false);
-            return;
-        }
-        fetchIndices();
-    }, [exchange, externalData]);
-
-    // Merge real-time prices with fetched indices
-    const indicesWithRealtimeData = useMemo(() => {
-        return indices;
-    }, [indices]);
-
-    const fetchIndices = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
+    // Query to fetch indices
+    const { data: indicesData, isLoading, error: queryError, refetch } = useQuery({
+        queryKey: ['indicesList'], // Global cache for indices list
+        queryFn: async () => {
             const response = await fetch(`${apiUrl}/api/indices`);
-
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
             const result = await response.json();
-
             if (result.success && Array.isArray(result.data)) {
-                // Filter indices based on exchange
-                // NSE indices: NIFTY, BANKNIFTY, etc.
-                // BSE indices: SENSEX, BSE500, etc.
-                const filteredIndices = result.data.filter(index => {
-                    if (exchange === 'NSE') {
-                        return index.symbol.includes('NIFTY') || index.symbol === 'NIFTY';
-                    } else {
-                        return index.symbol.includes('BSE') || index.symbol === 'SENSEX';
-                    }
-                });
-
-                setIndices(filteredIndices);
-            } else {
-                setIndices([]);
+                return result.data;
             }
-        } catch (err) {
-            console.error('Error fetching indices:', err);
-            setError(err.message);
-            setIndices([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+            return [];
+        },
+        staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+        enabled: !externalData, // Only fetch if externalData is NOT provided
+    });
+
+    // Determine the source of indices (External or Query)
+    const indicesSource = externalData || indicesData || [];
+    const loading = isLoading && !externalData;
+    const error = queryError ? queryError.message : null;
+
+    // Merge real-time prices with fetched indices
+    const indicesWithRealtimeData = useMemo(() => {
+        if (!indicesSource || indicesSource.length === 0) return [];
+
+        const baseIndices = indicesSource.filter(index => {
+            if (exchange === 'NSE') {
+                return index.symbol.includes('NIFTY') || index.symbol === 'NIFTY';
+            } else {
+                return index.symbol.includes('BSE') || index.symbol === 'SENSEX';
+            }
+        });
+
+        return baseIndices.map(index => {
+            // ... (Realtime merge logic remains largely the same, referencing baseIndices)
+            const realtimeData = realtimePrices[index.symbol];
+            if (realtimeData) {
+                const initialPrevClose = index.value - index.change;
+                const effectivePrevClose = (initialPrevClose > 0) ? initialPrevClose : (realtimeData.prevClose || realtimeData.open);
+
+                const newChange = realtimeData.price - effectivePrevClose;
+                const newPercent = effectivePrevClose > 0 ? (newChange / effectivePrevClose) * 100 : 0;
+
+                return {
+                    ...index,
+                    value: realtimeData.price,
+                    change: newChange,
+                    changePercent: newPercent,
+                    timestamp: realtimeData.timestamp
+                };
+            }
+            return index;
+        });
+    }, [indicesSource, realtimePrices, exchange]);
+
+    // Error Component Update (using refetch)
+    if (error) {
+        return (
+            <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+                <Text style={styles.errorText}>Failed to load indices</Text>
+                <Text style={styles.errorSubtext}>{error}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    // ... rest of the component logic (loading check, empty check, render) remains VALID because we mapped the variables above.
+
+
 
     // Show loading state
     if (loading) {
@@ -345,6 +413,7 @@ const Indices = ({ exchange = 'NSE', viewMode = 'horizontal', onViewAllPress, ma
                             value={index.value}
                             change={index.change}
                             changePercent={index.changePercent}
+                            data={index} // Pass full index object to access timestamp
                             onPress={onViewAllPress}
                         />
                     ))}
@@ -381,6 +450,9 @@ const Indices = ({ exchange = 'NSE', viewMode = 'horizontal', onViewAllPress, ma
                 {indicesWithRealtimeData.map((index, i) => (
                     <View key={index.symbol || i} style={styles.gridCard}>
                         <Text style={styles.indexName}>{index.name || index.symbol}</Text>
+                        <Text style={styles.timestamp}>
+                            {index.timestamp ? new Date(index.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + new Date(index.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                        </Text>
                         <Text style={styles.indexValue}>₹ {index.value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                         <Text style={[styles.changeText, index.change >= 0 ? styles.positive : styles.negative]}>
                             {index.change >= 0 ? '+' : ''}{index.change.toFixed(2)} ({index.change >= 0 ? '+' : ''}{index.changePercent.toFixed(2)}%)
@@ -388,15 +460,13 @@ const Indices = ({ exchange = 'NSE', viewMode = 'horizontal', onViewAllPress, ma
 
                         <View style={styles.chartContainer}>
                             <LineChart
-                                data={[
-                                    { value: 100 },
-                                    { value: 102 },
-                                    { value: 98 },
-                                    { value: 105 },
-                                    { value: 103 },
-                                    { value: 108 },
-                                    { value: 110 },
-                                ]}
+                                areaChart
+                                startFillColor="rgba(46, 204, 113, 0.25)"
+
+                                endFillColor="rgba(239, 225, 225, 0.02)"
+                                startOpacity={0.5}
+                                endOpacity={0.1}
+                                data={chartData}
                                 width={(width - 48) / 2 - 32}
                                 height={60}
                                 hideDataPoints
@@ -405,11 +475,6 @@ const Indices = ({ exchange = 'NSE', viewMode = 'horizontal', onViewAllPress, ma
                                 color={index.change >= 0 ? '#22c55e' : '#ef4444'}
                                 thickness={2}
                                 curved
-                                areaChart
-                                startFillColor={index.change >= 0 ? '#22c55e' : '#ef4444'}
-                                endFillColor={index.change >= 0 ? '#22c55e20' : '#ef444420'}
-                                startOpacity={0.3}
-                                endOpacity={0.1}
                             />
                         </View>
                     </View>
