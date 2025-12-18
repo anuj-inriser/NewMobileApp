@@ -5,7 +5,7 @@ import Svg, { Circle, G } from "react-native-svg";
 const KycChart = ({
   radius = 16,
   strokeWidth = 4,
-  percentage = 20,  // center text percentage
+  percentage,  // center text percentage
   color = "#210F47",
   bgColor = "#E5DDF3",
 }) => {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, View, Text, Image, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from "react-native";
 import axios from "axios";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiUrl } from "../utils/apiUrl";
@@ -37,6 +38,7 @@ import DeleteIcon from "../../assets/deleteicon.png";
 import ProfileRefresh from "../../assets/profilerefresh.png";
 import GrowIcon from "../../assets/grow.png";
 import Setting from "../../assets/profilesetting.png";
+import AboutUs from "../../assets/aboutusicon.png";
 import LinkedAccount from "../../assets/linkedaccount.png";
 import AccountPrivacy from "../../assets/accountprivacy.png";
 import ArrowDown from "../../assets/arrow_down.png";
@@ -60,14 +62,77 @@ const ProfileScreen = () => {
     const [username, setUsername] = useState("");
     const [mobile, setMobile] = useState("");
     const [email, setEmail] = useState("");
+    const [cityVal, setCityVal] = useState("");
+    const [stateVal, setStateVal] = useState("");
     const [profileImage, setProfileImage] = useState(null);
     const [editOpen, setEditOpen] = useState(false);
-
+    const [address, setAddress] = useState("");
+    const [city, setCity] = useState("");
+    const [stateName, setStateName] = useState("");
+    const [pincode, setPincode] = useState("");
     const [editName, setEditName] = useState("");
     const [editUsername, setEditUsername] = useState("");
     const [editMobile, setEditMobile] = useState("");
     const [editEmail, setEditEmail] = useState("");
     const [editImage, setEditImage] = useState(null);
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [gender, setGender] = useState("");
+    const [fatherName, setFatherName] = useState("");
+    const [dob, setDob] = useState(null);
+    const [showDobPicker, setShowDobPicker] = useState(false);
+    const [pan, setPan] = useState("");
+    const [aadhar, setAadhar] = useState("");
+    const [panFiles, setPanFiles] = useState([]);
+    const [aadharFiles, setAadharFiles] = useState([]);
+    const [panDocBase64, setPanDocBase64] = useState(null);
+    const [aadharDocBase64, setAadharDocBase64] = useState(null);
+    const [previewVisible, setPreviewVisible] = useState(false);
+    const [previewBase64, setPreviewBase64] = useState(null);
+    const [kycPercent, setKycPercent] = useState(0);
+    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [aboutUsOpen, setAboutUsOpen] = useState(false);
+    const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+    const [rating, setRating] = useState(0);
+    const [feedbackText, setFeedbackText] = useState("");
+    const [reportModalOpen, setReportModalOpen] = useState(false);
+    const [issueDropdownOpen, setIssueDropdownOpen] = useState(false);
+    const [issueCategory, setIssueCategory] = useState("");
+    const [issueDescription, setIssueDescription] = useState("");
+    const [termsModalOpen, setTermsModalOpen] = useState(false);
+    const [termsAccepted, setTermsAccepted] = useState(false);
+
+    const handleMobileChange = (text) => {
+        // Sirf digits allow
+        const cleaned = text.replace(/[^0-9]/g, "");
+
+        // Max 10 digits
+        if (cleaned.length <= 10) {
+            setEditMobile(cleaned);
+        }
+    };
+    const handleEmailChange = (text) => {
+        setEditEmail(text.trim().toLowerCase());
+    };
+
+    const handlePanChange = (text) => {
+        const cleaned = text.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+        if (cleaned.length <= 10) {
+            setPan(cleaned);
+        }
+    };
+
+    const handleAadharChange = (text) => {
+        // Sirf digits allow
+        const cleaned = text.replace(/[^0-9]/g, "");
+
+        // Max 12 digits
+        if (cleaned.length <= 12) {
+            setAadhar(cleaned);
+        }
+    };
+
+
     const openEditProfile = () => {
         setEditName(name);
         setEditUsername(username);
@@ -76,6 +141,35 @@ const ProfileScreen = () => {
         setEditImage(profileImage);
         setEditOpen(true);
     };
+    const pickDocument = async (type) => {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+            Alert.alert("Permission required", "Please allow media access");
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsMultipleSelection: false, // 👈 IMPORTANT
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            const file = result.assets[0];
+
+            if (type === "PAN") {
+                setPanFiles([file]);          // 👈 replace
+                setPanDocBase64(null);        // 👈 backend wali hide
+            }
+
+            if (type === "AADHAR") {
+                setAadharFiles([file]);
+                setAadharDocBase64(null);
+            }
+        }
+    };
+
+
     const uriToBase64 = async (uri) => {
         const response = await fetch(uri);
         const blob = await response.blob();
@@ -91,6 +185,45 @@ const ProfileScreen = () => {
             reader.readAsDataURL(blob);
         });
     };
+    const fetchKycPercent = async () => {
+        try {
+            const userId = await AsyncStorage.getItem("userId");
+
+            if (!userId) {
+                console.log("❌ userId not found in AsyncStorage");
+                return;
+            }
+
+            const res = await axios.get(
+                `${apiUrl}/api/userkyc/percent/${userId}`
+            );
+            setKycPercent(res.data.percent);
+
+            if (res.data?.success) {
+                setKycPercent(res.data.percent || 0);
+            }
+
+        } catch (err) {
+            console.log(
+                "❌ KYC PERCENT API ERROR =>",
+                err?.response?.data || err.message
+            );
+        }
+    };
+
+    // const filesToBase64Array = async (files = []) => {
+    //     const base64Arr = [];
+
+    //     for (const file of files) {
+    //         if (file?.uri) {
+    //             const base64 = await uriToBase64(file.uri);
+    //             base64Arr.push(base64);
+    //         }
+    //     }
+
+    //     return base64Arr;
+    // };
+
     const getImageSource = (img) => {
         if (!img) return Profile;
 
@@ -104,6 +237,32 @@ const ProfileScreen = () => {
     };
     const handleSaveProfile = async () => {
         try {
+            // ✅ Email validation
+            const isValidEmail = (email) => {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            };
+
+            // ✅ Indian mobile validation
+            const isValidMobile = (mobile) => {
+                return /^[6-9]\d{9}$/.test(mobile);
+            };
+
+            if (!isValidEmail(editEmail)) {
+                Alert.alert(
+                    "Invalid Email",
+                    "Please enter a valid email address."
+                );
+                return;
+            }
+
+            if (!isValidMobile(editMobile)) {
+                Alert.alert(
+                    "Invalid Mobile Number",
+                    "Please enter a valid 10-digit mobile number."
+                );
+                return;
+            }
+
             let imageBase64 = null;
 
             // Agar image change hui hai tabhi base64 banao
@@ -119,7 +278,6 @@ const ProfileScreen = () => {
                 image: imageBase64, // base64 string
             };
 
-            console.log("UPDATE PROFILE PAYLOAD =>", payload);
             const userId = await AsyncStorage.getItem("userId");
             await axios.put(`${apiUrl}/api/users/users/${userId}`, payload);
             setEditOpen(false);
@@ -140,12 +298,15 @@ const ProfileScreen = () => {
         try {
             const userId = await AsyncStorage.getItem("userId");
             const res = await axios.get(`${apiUrl}/api/users/${userId}`);
-
+            console.log("city", res.data.city);
+            console.log("state", res.data.state);
             const user = res.data.data;
             setName(user.name || "");
             setUsername(user.username || "");
             setMobile(user.phone || "");
             setEmail(user.email || "");
+            setCityVal(res.data.city || "");
+            setStateVal(res.data.state || "");
             setProfileImage(user.userimage || null);
 
         } catch (err) {
@@ -244,8 +405,43 @@ const ProfileScreen = () => {
     useEffect(() => {
         fetchPortfolioBalance();
         getUserById();
+        loadKycData();
     }, []);
 
+    const handleChangePassword = async () => {
+        try {
+            if (!newPassword || !confirmPassword) {
+                Alert.alert("Error", "Both fields are required");
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                Alert.alert("Error", "Passwords do not match");
+                return;
+            }
+
+            const userId = await AsyncStorage.getItem("userId");
+            // 🔹 console log both values
+
+            await axios.put(
+                `${apiUrl}/api/users/change-password/${userId}`,
+                {
+                    password: newPassword,
+                    confirmPassword: confirmPassword,
+                }
+            );
+
+            Alert.alert("Success", "Password changed successfully");
+
+            // clear fields
+            setNewPassword("");
+            setConfirmPassword("");
+
+        } catch (err) {
+            console.log("Change Password Error =>", err);
+            Alert.alert("Error", "Failed to change password");
+        }
+    };
     const handleLogout = async () => {
         try {
             // STEP 1: Values load karo
@@ -285,8 +481,119 @@ const ProfileScreen = () => {
             console.log("Logout Failed:", err);
         }
     };
+    const getSingleBase64 = async (files = []) => {
+        if (!files.length) return null;
 
+        const file = files[0]; // 👈 sirf ek
+        if (!file?.uri) return null;
 
+        return await uriToBase64(file.uri);
+    };
+
+    const handleKycSubmit = async () => {
+        try {
+            const isValidPan = (pan) => {
+                return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan);
+            };
+
+            if (!isValidPan(pan)) {
+                Alert.alert(
+                    "Invalid PAN Number",
+                    "Please enter a valid PAN number (e.g. ANDPS2321P)."
+                );
+                return;
+            }
+
+            const isValidAadhar = (aadhar) => {
+                return /^[2-9]\d{11}$/.test(aadhar);
+            };
+
+            if (!isValidAadhar(aadhar)) {
+                Alert.alert(
+                    "Invalid Aadhaar Number",
+                    "Please enter a valid 12-digit Aadhaar number."
+                );
+                return;
+            }
+
+            const userId = await AsyncStorage.getItem("userId");
+
+            const formatDateOnly = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, "0");
+                const d = String(date.getDate()).padStart(2, "0");
+                return `${y}-${m}-${d}`;
+            };
+
+            const panBase64 =
+                panFiles.length > 0
+                    ? await getSingleBase64(panFiles)
+                    : panDocBase64;        // 👈 fallback
+
+            const aadharBase64 =
+                aadharFiles.length > 0
+                    ? await getSingleBase64(aadharFiles)
+                    : aadharDocBase64;
+
+            const payload = {
+                userId,
+                gender,
+                fatherName,
+                dob: dob ? formatDateOnly(dob) : null,
+                pan,
+                aadhar,
+                address,
+                city,
+                state: stateName,
+                pincode,
+                pan_doc: panBase64 || null,
+                aadhar_doc: aadharBase64 || null,
+            };
+
+            await axios.post(`${apiUrl}/api/userkyc/submit`, payload);
+            // 🔒 RESET local files (lock UI)
+            setPanFiles([]);
+            setAadharFiles([]);
+
+            await loadKycData();
+            fetchKycPercent();
+            Alert.alert("Success", "KYC submitted successfully");
+            setKycOpen(false);
+            getUserById();
+        } catch (error) {
+            console.log("❌ KYC SUBMIT ERROR =>", error?.response?.data || error.message);
+            Alert.alert("Error", "Failed to submit KYC");
+        }
+    };
+
+    const loadKycData = async () => {
+        try {
+            const userId = await AsyncStorage.getItem("userId");
+            const res = await axios.get(`${apiUrl}/api/userkyc/getuserkyc/${userId}`);
+            if (res.data.data) {
+                const kyc = res.data.data;
+                setGender(kyc.gender || "");
+                setFatherName(kyc.father_name || "");
+                setDob(kyc.date_of_birth ? new Date(kyc.date_of_birth) : null);
+                setPan(kyc.pan_no || "");
+                setAadhar(kyc.adhaar_no || "");
+                setAddress(kyc.address || "");
+                setCity(kyc.city || "");
+                setStateName(kyc.state || "");
+                setPincode(kyc.pin_code || "");
+                setPanDocBase64(kyc.pan_doc || null);
+                setAadharDocBase64(kyc.aadhar_doc || null);
+            }
+        } catch (err) {
+            console.log("❌ LOAD KYC ERROR =>", err.message);
+        }
+    };
+
+    useEffect(() => {
+        fetchKycPercent();
+        loadKycData();
+    }, []);
+    const isKycCompleted = kycPercent === 100;
     return (
         <>
             <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
@@ -304,16 +611,19 @@ const ProfileScreen = () => {
                             <View style={{ marginLeft: 12, }}>
                                 <View style={styles.nameRow}>
                                     <Text style={styles.nameText}>{name}</Text>
-
-                                    <TouchableOpacity style={styles.docIcon}>
-                                        <Image source={ProfileImg1} style={{ width: 16, height: 16 }} />
-                                    </TouchableOpacity>
+                                    {kycPercent === 100 && (
+                                        <TouchableOpacity style={styles.docIcon}>
+                                            <Image source={ProfileImg1} style={{ width: 16, height: 16 }} />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
 
                                 <Text style={styles.username}>@{username}</Text>
                                 <Text style={styles.contact}>{mobile}</Text>
                                 <Text style={styles.contact}>{email}</Text>
-                                <Text style={styles.location}>Noida, India</Text>
+                                <Text style={styles.location}>
+                                    {[cityVal, stateVal].filter(Boolean).join(", ")}
+                                </Text>
                             </View>
 
                             <TouchableOpacity style={styles.editBtn} onPress={openEditProfile}>
@@ -347,21 +657,14 @@ const ProfileScreen = () => {
                             <Text style={styles.bigAmount}>
                                 ₹ {formatAmount(totalCurrent)}
 
-                                {/* PROFIT AMOUNT CLEAN FORMAT */}
                                 <Text style={{ color: profitColor, fontWeight: "700", fontSize: 10 }}>
                                     {" "}({profitDisplay})
                                 </Text>
 
-                                {/* PROFIT PERCENT CLEAN FORMAT */}
                                 <Text style={{ color: percentColor, fontWeight: "700", fontSize: 10 }}>
                                     {" "}({percentDisplay})
                                 </Text>
                             </Text>
-
-
-                            {/* <Text style={styles.greenGain}>
-                                {" "} (₹{formatAmount(totalProfit)}) ({profitPercentage}%)
-                            </Text> */}
 
                             <View style={{ marginTop: 12 }}>
                                 <View style={styles.listRow}>
@@ -473,8 +776,8 @@ const ProfileScreen = () => {
                     <TouchableOpacity style={kycOpen ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setKycOpen(!kycOpen)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
                             <Image source={KycIcon} style={{ width: 30, height: 30, marginRight: 8, }} />
-                            <Text style={styles.kycTitle}>KYC Verification&nbsp;&nbsp;&nbsp;</Text><KycChart />
-                            {/* <Text style={styles.kycPercent}>20%</Text> */}
+                            <Text style={styles.kycTitle}>KYC Verification&nbsp;&nbsp;&nbsp;</Text>
+                            <KycChart percentage={kycPercent} />
                         </View>
 
                         <Image source={kycOpen ? ArrowUp : ArrowDown} style={{ width: 15, height: 8 }} />
@@ -482,55 +785,264 @@ const ProfileScreen = () => {
 
                     {kycOpen && (
                         <View style={styles.kycBody}>
-                            {/* Gender */}
+
+                            {/* GENDER */}
                             <Text style={styles.label}>Gender</Text>
                             <View style={styles.genderRow}>
-                                <TouchableOpacity style={styles.genderBtn}>
-                                    <Text style={styles.genderText}>Male</Text>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.genderBtn,
+                                        gender === "Male" && styles.genderSelected
+                                    ]}
+                                    onPress={() => setGender("Male")}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.genderText,
+                                            gender === "Male" && styles.genderTextSelected
+                                        ]}
+                                    >
+                                        Male
+                                    </Text>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity style={styles.genderBtn}>
-                                    <Text style={styles.genderText}>Female</Text>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.genderBtn,
+                                        gender === "Female" && styles.genderSelected
+                                    ]}
+                                    onPress={() => setGender("Female")}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.genderText,
+                                            gender === "Female" && styles.genderTextSelected
+                                        ]}
+                                    >
+                                        Female
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
 
                             {/* DOB */}
                             <Text style={styles.label}>DOB</Text>
-                            <View style={styles.inputBox}>
-                                <Text style={styles.inputText}>Enter Date of Birth</Text>
+
+                            <TouchableOpacity
+                                style={styles.datepickerinputBox}
+                                onPress={() => setShowDobPicker(true)}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.inputText}>
+                                    {dob
+                                        ? dob.toLocaleDateString("en-IN")
+                                        : "Select Date of Birth"}
+                                </Text>
                                 <Image source={Calendar} style={styles.iconSmall} />
+                            </TouchableOpacity>
+
+                            {/* Father Name */}
+                            <Text style={styles.label}>Father's Name</Text>
+                            <View style={styles.inputBox}>
+                                <TextInput
+                                    style={styles.inputText}
+                                    placeholder="Enter your father's name"
+                                    value={fatherName}
+                                    onChangeText={setFatherName}
+                                    multiline
+                                />
                             </View>
+
+                            {showDobPicker && (
+                                <DateTimePicker
+                                    value={dob || new Date()}
+                                    mode="date"
+                                    display="calendar"
+                                    maximumDate={new Date()} // future date disable
+                                    onChange={(event, selectedDate) => {
+                                        setShowDobPicker(false);
+                                        if (selectedDate) {
+                                            setDob(selectedDate);
+                                        }
+                                    }}
+                                />
+                            )}
 
                             {/* PAN */}
-                            <Text style={styles.label}>Pan Number</Text>
+                            <Text style={styles.label}>PAN Number</Text>
                             <View style={styles.inputBox}>
-                                <Text style={styles.inputText}>Mention PAN Number</Text>
-                                <Image source={Attach} style={styles.iconSmall2} />
+                                <TextInput
+                                    style={styles.inputText}
+                                    placeholder="Enter PAN Number"
+                                    autoCapitalize="characters"
+                                    maxLength={10}
+                                    value={pan}
+                                    onChangeText={handlePanChange}
+                                />
+                                <TouchableOpacity onPress={() => pickDocument("PAN")}>
+                                    <Image source={Attach} style={styles.iconSmall2} />
+                                </TouchableOpacity>
                             </View>
 
-                            {/* AADHAR */}
+
+                            <View style={styles.fileTagRow}>
+                                {/* ✅ Backend se aayi hui file (sirf tab jab new file select nahi hui) */}
+                                {panDocBase64 && panFiles.length === 0 && (
+                                    <TouchableOpacity
+                                        style={styles.fileTag}
+                                        onPress={() => {
+                                            setPreviewBase64(panDocBase64);
+                                            setPreviewVisible(true);
+                                        }}
+                                    >
+                                        <Image source={Attach} style={styles.iconSmall3} />
+                                        <Text style={styles.fileTagText}> PAN Document</Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {/* ✅ New selected file (sirf ek hi show hoga) */}
+                                {panFiles.length > 0 && (
+                                    <View style={styles.fileTag}>
+                                        <Image source={Attach} style={styles.iconSmall3} />
+                                        <Text style={styles.fileTagText}> PAN Document</Text>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                setPanFiles([]);
+                                                setPanDocBase64(null);   // 👈 backend doc bhi remove
+                                            }}
+
+                                        >
+                                            <Text style={{ marginLeft: 6, fontWeight: "700" }}>×</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+
+                            {/* AADHAAR */}
                             <Text style={styles.label}>Aadhar Number</Text>
                             <View style={styles.inputBox}>
-                                <Text style={styles.inputText}>Enter your aadhar number</Text>
-                                <Image source={Attach} style={styles.iconSmall2} />
+                                <TextInput
+                                    style={styles.inputText}
+                                    placeholder="Enter Aadhar Number"
+                                    keyboardType="number-pad"
+                                    maxLength={12}
+                                    value={aadhar}
+                                    onChangeText={handleAadharChange}
+                                />
+                                <TouchableOpacity onPress={() => pickDocument("AADHAR")}>
+                                    <Image source={Attach} style={styles.iconSmall2} />
+                                </TouchableOpacity>
                             </View>
 
-                            {/* FILE TAGS */}
-                            {/* <View style={styles.fileTagRow}>
-                                <View style={styles.fileTag}>
-                                    <Text style={styles.fileTagText}>Aadhar Card Front ✕</Text>
-                                </View>
-                                <View style={styles.fileTag}>
-                                    <Text style={styles.fileTagText}>Aadhar Card Back ✕</Text>
-                                </View>
-                            </View> */}
+                            <View style={styles.fileTagRow}>
+                                {/* ✅ Backend se aayi hui file */}
+                                {aadharDocBase64 && aadharFiles.length === 0 && (
+                                    <TouchableOpacity
+                                        style={styles.fileTag}
+                                        onPress={() => {
+                                            setPreviewBase64(aadharDocBase64);
+                                            setPreviewVisible(true);
+                                        }}
+                                    >
+                                        <Image source={Attach} style={styles.iconSmall3} />
+                                        <Text style={styles.fileTagText}> Aadhaar Document</Text>
+                                    </TouchableOpacity>
+                                )}
+
+
+                                {/* ✅ New selected file */}
+                                {aadharFiles.length > 0 && (
+                                    <View style={styles.fileTag}>
+                                        <Image source={Attach} style={styles.iconSmall3} />
+                                        <Text style={styles.fileTagText}> Aadhaar Document</Text>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                setAadharFiles([]);
+                                                setAadharDocBase64(null);
+                                            }}
+                                        >
+                                            <Text style={{ marginLeft: 6, fontWeight: "700" }}>×</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+
+
+                            {/* ADDRESS */}
+                            <Text style={styles.label}>Address</Text>
+                            <View style={styles.textAreaBox}>
+                                <TextInput
+                                    style={styles.textArea}
+                                    placeholder="Enter your address"
+                                    value={address}
+                                    onChangeText={setAddress}
+                                    multiline
+                                    numberOfLines={4}
+                                    textAlignVertical="top"   // 👈 IMPORTANT (Android)
+                                />
+                            </View>
+
+
+                            {/* CITY */}
+                            <Text style={styles.label}>City</Text>
+                            <View style={styles.inputBox}>
+                                <TextInput
+                                    style={styles.inputText}
+                                    placeholder="Enter city"
+                                    value={city}
+                                    onChangeText={setCity}
+                                />
+                            </View>
+
+                            {/* STATE */}
+                            <Text style={styles.label}>State</Text>
+                            <View style={styles.inputBox}>
+                                <TextInput
+                                    style={styles.inputText}
+                                    placeholder="Enter state"
+                                    value={stateName}
+                                    onChangeText={setStateName}
+                                />
+                            </View>
+
+                            {/* PINCODE */}
+                            <Text style={styles.label}>Pincode</Text>
+                            <View style={styles.inputBox}>
+                                <TextInput
+                                    style={styles.inputText}
+                                    placeholder="Enter pincode"
+                                    value={pincode}
+                                    onChangeText={setPincode}
+                                    keyboardType="number-pad"
+                                    maxLength={6}
+                                />
+                            </View>
 
                             {/* SUBMIT */}
-                            <TouchableOpacity style={styles.submitBtn}>
-                                <Text style={styles.submitText}>Submit</Text>
+                            <TouchableOpacity
+                                style={[
+                                    styles.submitBtn,
+                                    isKycCompleted
+                                ]}
+                                onPress={() => {
+                                    if (isKycCompleted) {
+                                        Alert.alert(
+                                            "Information",
+                                            "Your KYC is already completed. If you need any changes, please contact support."
+                                        );
+                                        return;
+                                    }
+                                    handleKycSubmit();
+                                }}
+                            >
+                                <Text style={styles.submitText}>
+                                    {isKycCompleted ? "KYC Completed" : "Submit"}
+                                </Text>
                             </TouchableOpacity>
+
                         </View>
                     )}
+
 
                     <TouchableOpacity style={setting ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setSetting(!setting)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -565,16 +1077,29 @@ const ProfileScreen = () => {
                             {/* PASSWORD */}
                             <Text style={styles.label}>Change Password</Text>
                             <View style={styles.inputField}>
-                                <Text style={styles.inputText}>Enter your new password</Text>
+                                <TextInput
+                                    style={styles.inputText}
+                                    placeholder="Enter your new password"
+                                    secureTextEntry
+                                    value={newPassword}
+                                    onChangeText={setNewPassword}
+                                />
                             </View>
 
                             <Text style={styles.label}>Confirm Password</Text>
                             <View style={styles.inputField}>
-                                <Text style={styles.inputText}>Re-enter your password</Text>
+                                <TextInput
+                                    style={styles.inputText}
+                                    placeholder="Re-enter your password"
+                                    secureTextEntry
+                                    value={confirmPassword}
+                                    onChangeText={setConfirmPassword}
+                                />
                             </View>
 
+
                             {/* SAVE BUTTON */}
-                            <TouchableOpacity style={styles.saveBtn}>
+                            <TouchableOpacity style={styles.saveBtn} onPress={handleChangePassword}>
                                 <Text style={styles.saveBtnText}>Save Changes</Text>
                             </TouchableOpacity>
 
@@ -582,7 +1107,61 @@ const ProfileScreen = () => {
 
                     )}
 
-                    <TouchableOpacity style={linkedAccount ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setLinkedAccount(!linkedAccount)}>
+
+                    {/* ABOUT US SECTION */}
+                    <TouchableOpacity
+                        style={aboutUsOpen ? styles.kycHeader : styles.kycHeaderclosed}
+                        onPress={() => setAboutUsOpen(!aboutUsOpen)}
+                    >
+                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                            <Image source={AboutUs} style={{ width: 30, height: 30, marginRight: 8, }} />
+                            <Text style={styles.kycTitle}>About Us</Text>
+                        </View>
+
+                        <Image
+                            source={aboutUsOpen ? ArrowUp : ArrowDown}
+                            style={{ width: 15, height: 8 }}
+                        />
+                    </TouchableOpacity>
+
+                    {aboutUsOpen && (
+                        <View style={styles.aboutUsBody}>
+                            {[
+                                "Send Feedback",
+                                "Report an Issue",
+                                "Register as Research & Analyst",
+                                "Terms & Conditions",
+                                "App Information",
+                            ].map((item, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    style={styles.aboutItem}
+                                    onPress={() => {
+                                        if (item === "Send Feedback") {
+                                            setFeedbackModalOpen(true);
+                                        }
+
+                                        if (item === "Report an Issue") {
+                                            setReportModalOpen(true);   // 👈 YAHI PE
+                                        }
+                                        if (item === "Terms & Conditions") {
+                                            setTermsModalOpen(true);
+                                        }
+
+                                        // baaki items ke liye baad me navigation laga sakte ho
+                                    }}
+                                >
+                                    <Text style={styles.aboutText}>{item}</Text>
+                                    <Text style={styles.aboutArrow}>›</Text>
+                                </TouchableOpacity>
+                            ))}
+
+                        </View>
+                    )}
+
+
+
+                    {/* <TouchableOpacity style={linkedAccount ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setLinkedAccount(!linkedAccount)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
                             <Image source={LinkedAccount} style={{ width: 30, height: 30, marginRight: 8, }} />
                             <Text style={styles.kycTitle}>Linked Accounts</Text>
@@ -593,7 +1172,6 @@ const ProfileScreen = () => {
                     {linkedAccount && (
                         <View style={styles.linkedBox}>
 
-                            {/* 🔹 ROW 1 */}
                             <View style={styles.row}>
                                 <View style={styles.rowLeft}>
                                     <Image source={GrowIcon} style={styles.icon} />
@@ -609,7 +1187,6 @@ const ProfileScreen = () => {
                                 </TouchableOpacity>
                             </View>
 
-                            {/* 🔹 ROW 2 */}
                             <View style={styles.row}>
                                 <View style={styles.rowLeft}>
                                     <Image source={GrowIcon} style={styles.icon} />
@@ -625,7 +1202,6 @@ const ProfileScreen = () => {
                                 </TouchableOpacity>
                             </View>
 
-                            {/* 🔹 ROW 3 */}
                             <View style={styles.row}>
                                 <View style={styles.rowLeft}>
                                     <Image source={GrowIcon} style={styles.icon} />
@@ -641,7 +1217,6 @@ const ProfileScreen = () => {
                                 </TouchableOpacity>
                             </View>
 
-                            {/* 🔹 ROW 4 */}
                             <View style={styles.row}>
                                 <View style={styles.rowLeft}>
                                     <Image source={GrowIcon} style={styles.icon} />
@@ -657,12 +1232,11 @@ const ProfileScreen = () => {
                                 </TouchableOpacity>
                             </View>
 
-                            {/* 🔹 ADD DEMAT BUTTON */}
                             <TouchableOpacity style={styles.addDematBtn}>
                                 <Text style={styles.addDematText}>Add Demat</Text>
                             </TouchableOpacity>
                         </View>
-                    )}
+                    )} */}
 
                     {/* <TouchableOpacity style={accountPrivacy ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setAccountPrivacy(!accountPrivacy)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -706,13 +1280,315 @@ const ProfileScreen = () => {
                     </TouchableOpacity>
 
                     {/* DELETE ACCOUNT BUTTON */}
-                    <TouchableOpacity style={styles.deleteBtn}>
+                    <TouchableOpacity style={styles.deleteBtn} onPress={() => setDeleteModalVisible(true)}>
                         <Text style={styles.deleteText}>
                             <Image
                                 source={DeleteIcon} style={{ height: 12, width: 11, }}
                             />&nbsp; Delete Account</Text>
                     </TouchableOpacity>
                 </ScrollView>
+                <Modal
+                    visible={reportModalOpen}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setReportModalOpen(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.reportCard}>
+
+                            {/* CLOSE */}
+                            <TouchableOpacity
+                                style={styles.reportClose}
+                                onPress={() => setReportModalOpen(false)}
+                            >
+                                <Text style={{ fontSize: 22 }}>✕</Text>
+                            </TouchableOpacity>
+
+                            <Text style={styles.reportTitle}>Report an Issue</Text>
+                            <Text style={styles.reportSubtitle}>
+                                Your report helps keep the platform accurate and safe.
+                            </Text>
+
+                            {/* ISSUE CATEGORY */}
+                            <View style={{ position: "relative", zIndex: 10 }}>
+                                <Text style={styles.reportLabel}>Issue Categories</Text>
+
+                                <TouchableOpacity
+                                    style={styles.dropdownBox}
+                                    onPress={() => setIssueDropdownOpen(!issueDropdownOpen)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={{ color: issueCategory ? "#210F47" : "#999" }}>
+                                        {issueCategory || "Select your concern"}
+                                    </Text>
+                                    <Text style={{ fontSize: 16 }}>▾</Text>
+                                </TouchableOpacity>
+
+                                {issueDropdownOpen && (
+                                    <View style={styles.dropdownList}>
+                                        {[
+                                            "Suspected Activity",
+                                            "Incorrect Data",
+                                            "Privacy Concern",
+                                            "Misleading Information",
+                                            "Other Issues",
+                                        ].map((item, index) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                style={styles.dropdownItem}
+                                                onPress={() => {
+                                                    setIssueCategory(item);
+                                                    setIssueDropdownOpen(false);
+                                                }}
+                                            >
+                                                <Text style={styles.dropdownItemText}>{item}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
+
+
+                            {/* DESCRIPTION */}
+                            <Text style={styles.reportLabel}>Description</Text>
+                            <View style={styles.textAreaBox}>
+                                <TextInput
+                                    placeholder="Tell us what’s on your mind..."
+                                    value={issueDescription}
+                                    onChangeText={setIssueDescription}
+                                    multiline
+                                    numberOfLines={4}
+                                    textAlignVertical="top"
+                                    style={styles.textArea}
+                                />
+                            </View>
+
+                            {/* ACTIONS */}
+                            <View style={styles.reportBtnRow}>
+                                <TouchableOpacity
+                                    style={styles.reportCancel}
+                                    onPress={() => setReportModalOpen(false)}
+                                >
+                                    <Text style={styles.reportCancelText}>Cancel</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.reportSubmit}
+                                    onPress={() => {
+                                        console.log("Category:", issueCategory);
+                                        console.log("Description:", issueDescription);
+
+                                        setReportModalOpen(false);
+                                        setIssueCategory("");
+                                        setIssueDescription("");
+                                    }}
+                                >
+                                    <Text style={styles.reportSubmitText}>Submit Report</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                        </View>
+                    </View>
+                </Modal>
+
+                <Modal
+                    visible={deleteModalVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setDeleteModalVisible(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalCardNew}>
+
+                            {/* ✔ Icon */}
+                            <View style={styles.alertIcon}>
+                                <Image
+                                    source={require("../../assets/redalert.png")}
+                                    style={styles.alertIconImg}
+                                />
+                            </View>
+
+                            {/* Title */}
+                            <Text style={styles.modalTitle}>
+                                Account Deletion Request
+                            </Text>
+
+                            {/* Message */}
+                            <Text style={styles.modalMessage}>
+                                For security reasons, your account cannot be deleted directly from the app.
+                                {"\n\n"}
+                                Please contact our support team to proceed with account deletion. They will assist you further.
+                            </Text>
+
+                            {/* Close button */}
+                            <TouchableOpacity
+                                style={styles.modalBtn}
+                                onPress={() => setDeleteModalVisible(false)}
+                            >
+                                <Text style={styles.modalBtnText}>Close</Text>
+                            </TouchableOpacity>
+
+                        </View>
+                    </View>
+                </Modal>
+                <Modal
+                    visible={feedbackModalOpen}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setFeedbackModalOpen(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.feedbackCard}>
+
+                            {/* Close */}
+                            <TouchableOpacity
+                                style={styles.feedbackClose}
+                                onPress={() => setFeedbackModalOpen(false)}
+                            >
+                                <Text style={{ fontSize: 22 }}>✕</Text>
+                            </TouchableOpacity>
+
+                            <Text style={styles.feedbackTitle}>Share Your Feedback</Text>
+                            <Text style={styles.feedbackSubtitle}>
+                                Help us improve your experience by telling us what you think.
+                            </Text>
+
+                            <Text style={styles.feedbackQuestion}>How was your experience?</Text>
+
+                            {/* ⭐ STAR RATING */}
+                            <View style={styles.starRow}>
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                                        <Text
+                                            style={[
+                                                styles.star,
+                                                { color: star <= rating ? "#F59E0B" : "#C4C4C4" },
+                                            ]}
+                                        >
+                                            ★
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* DESCRIPTION */}
+                            <Text style={styles.feedbackLabel}>Description</Text>
+                            <View style={styles.feedbackInputBox}>
+                                <TextInput
+                                    placeholder="Tell us what’s on your mind..."
+                                    value={feedbackText}
+                                    onChangeText={setFeedbackText}
+                                    multiline
+                                    style={styles.feedbackInput}
+                                />
+                            </View>
+
+                            {/* BUTTONS */}
+                            <View style={styles.feedbackBtnRow}>
+                                <TouchableOpacity
+                                    style={styles.feedbackCancel}
+                                    onPress={() => setFeedbackModalOpen(false)}
+                                >
+                                    <Text style={styles.feedbackCancelText}>Cancel</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.feedbackSubmit}
+                                    onPress={() => {
+                                        // 🔥 API CALL yahan lagega
+                                        console.log("Rating:", rating);
+                                        console.log("Feedback:", feedbackText);
+
+                                        setFeedbackModalOpen(false);
+                                        setRating(0);
+                                        setFeedbackText("");
+                                    }}
+                                >
+                                    <Text style={styles.feedbackSubmitText}>
+                                        Submit Feedback
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                        </View>
+                    </View>
+                </Modal>
+                <Modal
+                    visible={termsModalOpen}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setTermsModalOpen(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.termsCard}>
+
+                            {/* HEADER */}
+                            <View style={styles.termsHeader}>
+                                <Text style={styles.termsTitle}>Terms & Conditions</Text>
+                                <TouchableOpacity onPress={() => setTermsModalOpen(false)}>
+                                    <Text style={{ fontSize: 20 }}>✕</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                <Text style={styles.termsSectionTitle}>Policies & Disclaimers</Text>
+
+                                <Text style={styles.termsItemTitle}>• Privacy Policy</Text>
+                                <Text style={styles.termsText}>
+                                    We respect your privacy and are committed to protecting your personal
+                                    information. User data is used only to improve app functionality and
+                                    user experience.
+                                </Text>
+
+                                <Text style={styles.termsItemTitle}>• Refund & Subscription Policy</Text>
+                                <Text style={styles.termsText}>
+                                    All subscription purchases are final. Refunds, if applicable, are
+                                    processed according to platform guidelines and applicable laws.
+                                </Text>
+
+                                <Text style={styles.termsItemTitle}>• Market Data & Accuracy</Text>
+                                <Text style={styles.termsText}>
+                                    Market data is provided on a best-effort basis and may be delayed or
+                                    inaccurate. We do not guarantee completeness or accuracy.
+                                </Text>
+
+                                <Text style={styles.termsItemTitle}>• Market Risk Disclaimer</Text>
+                                <Text style={styles.termsText}>
+                                    Investments are subject to market risks. Past performance is not
+                                    indicative of future results.
+                                </Text>
+
+                                <Text style={styles.termsItemTitle}>• No Investment Advice</Text>
+                                <Text style={styles.termsText}>
+                                    The information provided is for educational purposes only and does not
+                                    constitute financial advice.
+                                </Text>
+
+                                <Text style={styles.termsItemTitle}>• User Responsibility</Text>
+                                <Text style={styles.termsText}>
+                                    Users are responsible for their investment decisions and compliance
+                                    with applicable laws.
+                                </Text>
+
+                                <Text style={styles.termsItemTitle}>• Limitation of Liability</Text>
+                                <Text style={styles.termsText}>
+                                    We shall not be liable for any losses arising from the use of the
+                                    platform.
+                                </Text>
+
+                                <Text style={styles.termsItemTitle}>• Policy Updates</Text>
+                                <Text style={styles.termsText}>
+                                    Policies may be updated periodically. Continued use of the app implies
+                                    acceptance of updated terms.
+                                </Text>
+                            </ScrollView>
+
+
+
+                        </View>
+                    </View>
+                </Modal>
+
                 <Modal visible={editOpen} transparent animationType="slide">
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalCard}>
@@ -749,19 +1625,23 @@ const ProfileScreen = () => {
                             <TextInput
                                 style={styles.modalInput}
                                 value={editMobile}
-                                onChangeText={setEditMobile}
+                                onChangeText={handleMobileChange}
                                 placeholder="Mobile Number"
                                 keyboardType="phone-pad"
+                                maxLength={10}
                             />
 
                             {/* EMAIL */}
                             <TextInput
                                 style={styles.modalInput}
                                 value={editEmail}
-                                onChangeText={setEditEmail}
+                                onChangeText={handleEmailChange}
                                 placeholder="Email ID"
                                 keyboardType="email-address"
+                                autoCapitalize="none"
+                                autoCorrect={false}
                             />
+
 
                             {/* BUTTONS */}
                             <View style={styles.modalBtnRow}>
@@ -780,6 +1660,31 @@ const ProfileScreen = () => {
                                 </TouchableOpacity>
 
                             </View>
+
+                        </View>
+                    </View>
+                </Modal>
+                <Modal
+                    visible={previewVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setPreviewVisible(false)}
+                >
+                    <View style={styles.previewOverlay}>
+                        <View style={styles.previewCard}>
+
+                            <Image
+                                source={{ uri: `data:image/jpeg;base64,${previewBase64}` }}
+                                style={styles.previewImage}
+                                resizeMode="contain"
+                            />
+
+                            <TouchableOpacity
+                                style={styles.previewCloseBtn}
+                                onPress={() => setPreviewVisible(false)}
+                            >
+                                <Text style={styles.previewCloseText}>Close</Text>
+                            </TouchableOpacity>
 
                         </View>
                     </View>
@@ -807,6 +1712,15 @@ const styles = StyleSheet.create({
         backgroundColor: "#fff",
         borderRadius: 20,
         padding: 20,
+    },
+
+
+    modalCardNew: {
+        width: "85%",
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        padding: 22,
+        alignItems: "center",
     },
 
     modalTitle: {
@@ -850,6 +1764,18 @@ const styles = StyleSheet.create({
         marginTop: 12,
     },
 
+    modalBtn: {
+        backgroundColor: "#2d1b69",
+        paddingVertical: 8,
+        paddingHorizontal: 22,
+        borderRadius: 20,
+        marginTop: 15,
+    },
+
+    modalBtnText: {
+        color: "#fff",
+        fontWeight: "600",
+    },
     cancelBtn: {
         width: "48%",
         borderWidth: 1,
@@ -1097,6 +2023,11 @@ const styles = StyleSheet.create({
         tintColor: "#210F47",
     },
 
+    iconSmall3: {
+        width: 18,
+        height: 18,
+        tintColor: "#210F47",
+    },
     /* THEME TOGGLE */
     themeRow: {
         backgroundColor: "#fff",
@@ -1142,9 +2073,9 @@ const styles = StyleSheet.create({
     inputField: {
         backgroundColor: "#fff",
         borderRadius: 12,
-        paddingVertical: 12,
+        paddingVertical: 2,   // 👈 height control
         paddingHorizontal: 14,
-        marginBottom: 16,
+        marginBottom: 12,     // 👈 thoda compact
     },
 
     /* BUTTON */
@@ -1472,7 +2403,7 @@ const styles = StyleSheet.create({
     inputBox: {
         backgroundColor: "#fff",
         borderRadius: 12,
-        paddingVertical: 12,
+        // paddingVertical: 2,
         paddingHorizontal: 14,
         flexDirection: "row",
         justifyContent: "space-between",
@@ -1480,25 +2411,42 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
 
+    datepickerinputBox: {
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        paddingVertical: 11,
+        paddingHorizontal: 14,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 6,
+    },
     inputText: { color: "#777" },
 
-    iconSmall: { width: 16, height: 17, tintColor: "#210F47" },
+    iconSmall: { width: 16, height: 18, tintColor: "#210F47" },
     iconSmall2: { width: 22, height: 25, tintColor: "#210F47" },
 
     fileTagRow: {
         flexDirection: "row",
-        marginTop: 10,
+        flexWrap: "wrap",
+        marginTop: 6,
     },
 
     fileTag: {
+        flexDirection: "row",
+        alignItems: "center",
         backgroundColor: "#fff",
         paddingVertical: 6,
         paddingHorizontal: 12,
-        borderRadius: 12,
+        borderRadius: 2,
         marginRight: 8,
+        marginBottom: 6,
     },
 
-    fileTagText: { fontSize: 12, color: "#210F47" },
+    fileTagText: {
+        fontSize: 12,
+        color: "#210F47",
+    },
 
     submitBtn: {
         backgroundColor: "#210F47",
@@ -1509,5 +2457,409 @@ const styles = StyleSheet.create({
     },
 
     submitText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+    genderSelected: {
+        backgroundColor: "#210F47",
+    },
+
+    genderTextSelected: {
+        color: "#fff",
+    },
+    previewOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    previewCard: {
+        width: "90%",
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        padding: 12,
+        alignItems: "center",
+    },
+
+    previewImage: {
+        width: "100%",
+        height: 400,
+        borderRadius: 8,
+    },
+
+    previewCloseBtn: {
+        marginTop: 12,
+        backgroundColor: "#210F47",
+        paddingVertical: 10,
+        paddingHorizontal: 30,
+        borderRadius: 14,
+    },
+
+    previewCloseText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "700",
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    successIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: "#22c55e",
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+
+    alertIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+
+    alertIconImg: {
+        width: 50,
+        height: 50,
+        resizeMode: "contain",
+    },
+    aboutUsBody: {
+        backgroundColor: "#EFE9F6",
+        marginHorizontal: 16,
+        padding: 12,
+        borderBottomLeftRadius: 16,
+        borderBottomRightRadius: 16,
+        marginTop: -8,
+    },
+
+    aboutItem: {
+        backgroundColor: "#fff",
+        borderRadius: 14,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        marginBottom: 10,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+
+    aboutText: {
+        fontSize: 15,
+        color: "#210F47",
+        fontWeight: "600",
+    },
+
+    aboutArrow: {
+        fontSize: 20,
+        color: "#210F47",
+        fontWeight: "600",
+    },
+    feedbackCard: {
+        width: "90%",
+        backgroundColor: "#fff",
+        borderRadius: 18,
+        padding: 20,
+    },
+
+    feedbackClose: {
+        position: "absolute",
+        right: 14,
+        top: 14,
+    },
+
+    feedbackTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#210F47",
+        marginBottom: 6,
+    },
+
+    feedbackSubtitle: {
+        fontSize: 14,
+        color: "#555",
+        marginBottom: 14,
+        width: 270,
+    },
+
+    feedbackQuestion: {
+        fontSize: 15,
+        fontWeight: "600",
+        marginBottom: 8,
+    },
+
+    starRow: {
+        flexDirection: "row",
+        marginBottom: 16,
+    },
+
+    star: {
+        fontSize: 30,
+        marginRight: 6,
+    },
+
+    feedbackLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        marginBottom: 6,
+    },
+
+    feedbackInputBox: {
+        backgroundColor: "#F5F5F5",
+        borderRadius: 12,
+        padding: 10,
+        marginBottom: 18,
+    },
+
+    feedbackInput: {
+        height: 80,
+        textAlignVertical: "top",
+        fontSize: 14,
+    },
+
+    feedbackBtnRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+
+    feedbackCancel: {
+        backgroundColor: "#E9E4EF",
+        paddingVertical: 10,
+        paddingHorizontal: 24,
+        borderRadius: 20,
+    },
+
+    feedbackCancelText: {
+        fontSize: 14,
+        fontWeight: "600",
+    },
+
+    feedbackSubmit: {
+        backgroundColor: "#210F47",
+        paddingVertical: 10,
+        paddingHorizontal: 26,
+        borderRadius: 20,
+    },
+
+    feedbackSubmitText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "700",
+    },
+    textAreaBox: {
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        marginBottom: 6,
+    },
+
+    textArea: {
+        fontSize: 14,
+        color: "#210F47",
+        height: 100,              // 👈 textarea height
+        textAlignVertical: "top", // 👈 Android fix
+    },
+    reportCard: {
+        width: "90%",
+        backgroundColor: "#fff",
+        borderRadius: 18,
+        padding: 20,
+    },
+
+    reportClose: {
+        position: "absolute",
+        right: 14,
+        top: 14,
+    },
+
+    reportTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#210F47",
+        marginBottom: 4,
+    },
+
+    reportSubtitle: {
+        fontSize: 13,
+        color: "#555",
+        marginBottom: 14,
+        width: 270,
+    },
+
+    reportLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        marginBottom: 6,
+        color: "#210F47",
+    },
+
+    dropdownBox: {
+        backgroundColor: "#fff",
+        borderWidth: 1,
+        borderColor: "#DDD",
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 6,
+    },
+
+    dropdownList: {
+        position: "absolute",
+        top: 70,              // dropdownBox ke niche
+        left: 0,
+        right: 0,
+        backgroundColor: "#fff",
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#ddd",
+        zIndex: 9999,         // iOS
+        elevation: 10,        // Android
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+    },
+
+
+    dropdownItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: "#EEE",
+    },
+
+    dropdownItemText: {
+        fontSize: 14,
+        color: "#210F47",
+    },
+
+    textAreaBox: {
+        backgroundColor: "#fff",
+        borderWidth: 1,
+        borderColor: "#DDD",
+        borderRadius: 12,
+        padding: 10,
+        marginBottom: 16,
+    },
+
+    textArea: {
+        height: 90,
+        fontSize: 14,
+        color: "#210F47",
+        textAlignVertical: "top",
+    },
+
+    reportBtnRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+
+    reportCancel: {
+        backgroundColor: "#EAE6F2",
+        paddingVertical: 10,
+        paddingHorizontal: 22,
+        borderRadius: 20,
+    },
+
+    reportCancelText: {
+        fontSize: 14,
+        fontWeight: "600",
+    },
+
+    reportSubmit: {
+        backgroundColor: "#210F47",
+        paddingVertical: 10,
+        paddingHorizontal: 26,
+        borderRadius: 20,
+    },
+
+    reportSubmitText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "700",
+    },
+    termsCard: {
+        width: "90%",
+        maxHeight: "85%",
+        backgroundColor: "#fff",
+        borderRadius: 18,
+        padding: 16,
+    },
+
+    termsHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 10,
+    },
+
+    termsTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#210F47",
+    },
+
+    termsSectionTitle: {
+        fontSize: 14,
+        fontWeight: "400",
+        marginBottom: 10,
+    },
+
+    termsItemTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        marginTop: 8,
+    },
+
+    termsText: {
+        fontSize: 13,
+        color: "#555",
+        marginBottom: 6,
+        lineHeight: 18,
+    },
+
+    checkboxRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 10,
+    },
+
+    checkbox: {
+        width: 18,
+        height: 18,
+        borderRadius: 4,
+        backgroundColor: "#210F47",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 8,
+    },
+
+    checkboxText: {
+        fontSize: 13,
+        color: "#210F47",
+    },
+
+    termsBtn: {
+        backgroundColor: "#210F47",
+        paddingVertical: 12,
+        borderRadius: 20,
+        alignItems: "center",
+        marginTop: 12,
+    },
+
+    termsBtnText: {
+        color: "#fff",
+        fontSize: 15,
+        fontWeight: "700",
+    },
 
 });
