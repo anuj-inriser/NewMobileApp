@@ -14,6 +14,7 @@ import GainerLoserCard from '../components/GainerLoserCard';
 import CommunitySecondMenuSlider from '../components/CommunitySecondMenuSlider';
 import TopFundamentalSlider from '../components/TopFundamentalSlider';
 import StockCard from '../components/StockCard';
+import SequenceCard from '../components/SequenceCard';
 
 import { useAllStocks } from '../hooks/useAllStocks';
 import { useMarketMovers } from '../hooks/useMarketMovers';
@@ -26,7 +27,7 @@ const StockTimelineScreen = () => {
     // 🔥 STOCK MENU (Latest / Watchlists / Gainers / Losers)
     const [stockTab, setStockTab] = useState("Latest");
 
-    const { stocks: allStocks, loading: stocksLoading, hasMore, loadMore } = useAllStocks(5);
+    const { stocks: allStocks, loading: stocksLoading, hasMore, loadMore } = useAllStocks(20);
     const { data: moversData, loading: moversLoading } = useMarketMovers();
 
     // Sample Watchlist (later API se aa jayega)
@@ -130,9 +131,20 @@ const StockTimelineScreen = () => {
 
 
                 {/* 🔥 MAIN CONTENT AREA */}
-                <View style={{ flex: 50, }}>
+                <View style={{ flex: 1, paddingBottom: 80 }}>
 
-                    {(stockTab === 'Gainers' || stockTab === 'Losers') ? (
+                    {topTab === 'Sequence' ? (
+                        <FlatList
+                            data={[
+                                { id: '1', title: '25 Stocks Moving Fast on High Volume and Price Breakouts' },
+                                { id: '2', title: '15 Stocks Surging Due to Strong Price and Volume Action' },
+                                { id: '3', title: '20 Stocks Gaining Momentum on Fresh Market Triggers' },
+                            ]}
+                            renderItem={({ item }) => <SequenceCard title={item.title} />}
+                            keyExtractor={item => item.id}
+                            contentContainerStyle={{ padding: 16 }}
+                        />
+                    ) : (stockTab === 'Gainers' || stockTab === 'Losers') ? (
                         moversLoading ? (
                             <ActivityIndicator size="large" color="#210F47" style={{ marginTop: 20 }} />
                         ) : (

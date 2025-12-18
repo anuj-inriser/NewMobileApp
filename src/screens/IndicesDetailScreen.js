@@ -7,6 +7,8 @@ import TopHeader from '../components/TopHeader';
 import StockListCard from '../components/StockListCard';
 import { apiUrl } from '../utils/apiUrl';
 
+import { useIntervalData } from '../hooks/useIntervalData';
+
 const { width } = Dimensions.get('window');
 
 const IndicesDetailScreen = ({ route, navigation }) => {
@@ -14,6 +16,10 @@ const IndicesDetailScreen = ({ route, navigation }) => {
     const [constituents, setConstituents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [indexData, setIndexData] = useState(initialData || { value: 0, change: 0, changePercent: 0 });
+
+    // Fetch 1-minute data for the chart (1 Day view)
+    const { data: chartDataResponse, loading: chartLoading } = useIntervalData(groupName, '1m', 375);
+
 
     useEffect(() => {
         fetchConstituents();
@@ -23,7 +29,7 @@ const IndicesDetailScreen = ({ route, navigation }) => {
         try {
             // Encode groupName to handle spaces (e.g., 'NIFTY 50')
             const encodedName = encodeURIComponent(groupName);
-            const baseUrl = Platform.OS === 'web' ? 'http:// 192.168.1.18' : apiUrl;
+            const baseUrl = apiUrl.baseUrl;
             const response = await fetch(`${baseUrl}/api/indices/${encodedName}/constituents`);
             const result = await response.json();
 
@@ -37,17 +43,14 @@ const IndicesDetailScreen = ({ route, navigation }) => {
         }
     };
 
-    // Mock Chart Data for the Index (Placeholders as per user request "chart will make after")
-    // We try to make it look like the index trend.
-    const chartData = [
-        { value: indexData.value * 0.98 },
-        { value: indexData.value * 0.985 },
-        { value: indexData.value * 0.99 },
-        { value: indexData.value * 0.988 },
-        { value: indexData.value * 1.002 },
-        { value: indexData.value * 1.005 },
-        { value: indexData.value },
-    ];
+    // Process chart data
+    let chartData = [];
+    if (chartDataResponse?.candles && chartDataResponse.candles.length > 0) {
+        chartData = chartDataResponse.candles.map(candle => ({ value: candle.close }));
+    } else {
+        // Fallback if no data (e.g. market just opened or error) - single point or empty
+        chartData = indexData.value ? [{ value: indexData.value }] : [];
+    }
 
     const isPositive = indexData.change >= 0;
     const chartColor = isPositive ? '#22c55e' : '#ef4444';

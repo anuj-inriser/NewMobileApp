@@ -18,6 +18,10 @@ export const useRealtimePrices = () => {
     const ws = useRef(null);
     const reconnectTimer = useRef(null);
 
+    // Throttling: specific ref to hold latest data without triggering re-renders
+    const latestPricesRef = useRef({});
+    const intervalRef = useRef(null);
+ 
     // Connect to WebSocket
     const connect = useCallback(() => {
         try {
@@ -37,34 +41,29 @@ export const useRealtimePrices = () => {
 
                     // Handle price updates
                     if (message.type === 'price' && message.data) {
-                        const { symbol, value, open, high, low, close } = message.data;
+                        const { symbol, value, open, high, low, close, ts } = message.data;
 
                         if (!symbol || value === undefined) return;
 
-                        setPrices(prev => {
-                            // Get previous close for change calculation
-                            const prevData = prev[symbol];
-                            const prevClose = prevData?.prevClose || open || value;
+                        // Update ref ONLY (no re-render yet)
+                        const prevData = latestPricesRef.current[symbol];
+                        const prevClose = prevData?.prevClose || open || value;
 
-                            // Calculate change and percent
-                            const change = value - prevClose;
-                            const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+                        // Calculate change and percent
+                        const change = value - prevClose;
+                        const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
 
-                            return {
-                                ...prev,
-                                [symbol]: {
-                                    price: value,
-                                    change,
-                                    changePercent,
-                                    open,
-                                    high,
-                                    low,
-                                    close,
-                                    prevClose: prevData?.prevClose || open || value, // Keep prev close stable
-                                    timestamp: new Date()
-                                }
-                            };
-                        });
+                        latestPricesRef.current[symbol] = {
+                            price: value,
+                            change,
+                            changePercent,
+                            open,
+                            high,
+                            low,
+                            close,
+                            prevClose: prevData?.prevClose || open || value, // Keep prev close stable
+                            timestamp: ts || new Date() // Use backend timestamp
+                        };
                     }
                 } catch (err) {
                     // Ignore parse errors for ping/pong messages
@@ -104,9 +103,21 @@ export const useRealtimePrices = () => {
         return prices[symbol] || null;
     }, [prices]);
 
-    // Initialize connection
+    // Initialize connection and throttling interval
     useEffect(() => {
         connect();
+
+        // THROTTLING: Update state every 1 second (1000ms)
+        // This makes the UI smooth like MoneyControl/TradingView, avoiding rapid jitters.
+        intervalRef.current = setInterval(() => {
+            // Only update if we have data
+            if (Object.keys(latestPricesRef.current).length > 0) {
+                setPrices(prev => ({
+                    ...prev,
+                    ...latestPricesRef.current
+                }));
+            }
+        }, 1000);
 
         return () => {
             if (reconnectTimer.current) {
@@ -114,6 +125,9 @@ export const useRealtimePrices = () => {
             }
             if (ws.current) {
                 ws.current.close();
+            }
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
             }
         };
     }, [connect]);

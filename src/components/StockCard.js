@@ -8,7 +8,7 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from 'lucide-react-native';
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -22,7 +22,7 @@ import { useIntervalData } from '../hooks/useIntervalData';
 
 const { width } = Dimensions.get('window');
 
-const StockCard = ({ stock }) => {
+const StockCard = ({ stock, realtimeData }) => {
   const [selectedInterval, setSelectedInterval] = useState('1D');
   const intervals = ['1m', '5m', '15m', '1H', '1D', '1W', '1M'];
 
@@ -40,12 +40,26 @@ const StockCard = ({ stock }) => {
   const apiInterval = getApiInterval(selectedInterval);
   const { data: intervalData, loading } = useIntervalData(stock.symbol, apiInterval);
 
-  // Extract data for display
-  const currentPrice = intervalData?.ltp ?? 0;
-  const currentChange = intervalData?.priceChange ?? 0;
-  const currentChangePercent = intervalData?.percentChange ?? 0;
+  // REALTIME DATA LOGIC (Efficient Global Socket)
+  // Check if we have realtime socket data passed from parent
+  const hasRealtime = !!realtimeData;
 
-  const currentOpen = intervalData?.ohlc?.open ?? 0;
+  // Helper to ensure number
+  const safeFloat = (val) => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Price Hierarchy: Realtime Socket > Interval Poll (Chart) > Static List Prop
+  const rawPrice = (hasRealtime && realtimeData.price !== undefined) ? realtimeData.price : (intervalData?.ltp ?? (stock.ltp || stock.price || 0));
+  const currentPrice = safeFloat(rawPrice);
+
+  const rawChange = (hasRealtime && realtimeData.change !== undefined) ? realtimeData.change : (intervalData?.priceChange ?? (stock.change || stock.priceChange || 0));
+  const currentChange = safeFloat(rawChange);
+
+  const rawChangePercent = (hasRealtime && realtimeData.changePercent !== undefined) ? realtimeData.changePercent : (intervalData?.percentChange ?? (stock.percentChange || stock.changePercent || 0));
+  const currentChangePercent = safeFloat(rawChangePercent);
+
   const currentHigh = intervalData?.ohlc?.high ?? 0;
   const currentLow = intervalData?.ohlc?.low ?? 0;
 
@@ -53,7 +67,7 @@ const StockCard = ({ stock }) => {
   const color = isPositive ? '#22c55e' : '#ef4444';
 
   // X-axis formatting
-  const formatXAxisLabel = (time, interval, index, total) => {
+  const formatXAxisLabel = useCallback((time, interval, index, total) => {
     // Handle different time formats (Date string, timestamp in ms, timestamp in sec)
     let date;
     if (typeof time === 'string') {
@@ -89,11 +103,11 @@ const StockCard = ({ stock }) => {
       default:
         return '';
     }
-  };
+  }, []);
 
   // Build chart data
-  const chartData =
-    intervalData?.candles.map((item, index) => ({
+  const chartData = useMemo(() => {
+    return intervalData?.candles.map((item, index) => ({
       value: item.close,
       label: formatXAxisLabel(
         item.time,
@@ -108,6 +122,7 @@ const StockCard = ({ stock }) => {
         textAlign: 'center',
       },
     })) || [];
+  }, [intervalData, apiInterval, color]);
 
   const chartWidth = width - 80;
   const dynamicSpacing =

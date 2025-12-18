@@ -5,8 +5,7 @@ const CommunitySecondMenuSlider = ({ activeFilter, onTabChange }) => {
 
     const tabs = [
         { id: "Timeline", name: "Timeline" },
-        { id: "Posts", name: "Posts" },
-        { id: "Messages", name: "Messages" },
+        { id: "Sequence", name: "Sequence" },
     ];
 
     const selected = activeFilter || "Timeline"; // DEFAULT SELECTED
@@ -58,13 +57,13 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
 
-     tabText: {
+    tabText: {
         color: "#210F47",
         fontSize: 12,
         fontWeight: "500",
     },
 
-   activeTab: {
+    activeTab: {
         backgroundColor: "#210F47",
     },
 

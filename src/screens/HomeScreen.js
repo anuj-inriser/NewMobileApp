@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
+
 import TopMenuSlider from '../components/TopMenuSlider';
 import TopHeader from '../components/TopHeader';
 import { useAuth } from '../context/AuthContext';
@@ -25,48 +27,36 @@ export default function HomeScreen({ navigation }) {
     const [selectedCategory, setSelectedCategory] = useState('Indices'); // Default to Indices
     const [showPreview, setShowPreview] = useState(true); // Show preview initially
 
-    const [allData, setAllData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    // Fetch indices data
+    // Fetch indices data using React Query
     const fetchIndices = async () => {
-        try {
-            // Use localhost for Web to avoid Network Failure with IP
-            const baseUrl = Platform.OS === 'web' ? 'http://0.0.0.0:3002' : apiUrl;
-            console.log('[HomeScreen] Fetching indices from:', `${baseUrl}/api/indices`);
+        // Use localhost for Web to avoid Network Failure with IP
+        const baseUrl = apiUrl;
+        console.log('[HomeScreen] Fetching indices from:', `${baseUrl}/api/indices`);
 
-            setLoading(true);
-            setError(null);
-            const response = await fetch(`${baseUrl}/api/indices`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
+        const response = await fetch(`${baseUrl}/api/indices`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-            const result = await response.json();
-            if (result.success && Array.isArray(result.data)) {
-                setAllData(result.data);
-                console.log('[HomeScreen] Successfully loaded', result.data.length, 'indices');
-            } else {
-                throw new Error('Invalid response format');
-            }
-        } catch (err) {
-            console.log("[HomeScreen] Error fetching indices:", err.message);
-            setError(err.message || 'Failed to load indices');
-        } finally {
-            setLoading(false);
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+            console.log('[HomeScreen] Successfully loaded', result.data.length, 'indices');
+            return result.data;
+        } else {
+            throw new Error('Invalid response format');
         }
     };
 
-    useEffect(() => {
-        fetchIndices();
-    }, []);
+    const { data: allData = [], isLoading: loading, error, refetch } = useQuery({
+        queryKey: ['indices'],
+        queryFn: fetchIndices
+    });
 
     const handleExchangeChange = (exchange) => {
         setSelectedExchange(exchange);
@@ -101,11 +91,20 @@ export default function HomeScreen({ navigation }) {
         );
 
         if (selectedCategory === 'Indices') {
-            // Show only types 'index' ('Index' or 'index')
-            return exchangeData.filter(i => !i.type || i.type.toLowerCase() === 'index');
+            return exchangeData.filter(i => {
+                const type = i.type ? i.type.toLowerCase() : '';
+                return type === 'index';
+            });
+        }
+        else if (selectedCategory === 'Market Cap') {
+            return exchangeData.filter(i => {
+                const type = i.type ? i.type.toLowerCase() : '';
+                const match = type === 'market cap';
+                if (!match && i.type && i.type.includes('Market')) console.log('Failed match:', i.type, type);
+                return match;
+            });
         }
         else if (selectedCategory === 'Sectors') {
-            // Show only types 'sector'
             return exchangeData.filter(i => i.type && i.type.toLowerCase() === 'sector');
         }
         else if (selectedCategory === 'Themes') {
@@ -128,11 +127,11 @@ export default function HomeScreen({ navigation }) {
         if (error) {
             return (
                 <View style={styles.placeholderContainer}>
-                    <Text style={styles.errorText}>⚠️ {error}</Text>
+                    <Text style={styles.errorText}>⚠️ {error.message}</Text>
                     <Text style={styles.errorSubtext}>
                         Please check your network connection and try again
                     </Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={fetchIndices}>
+                    <TouchableOpacity style={styles.retryButton} onPress={refetch}>
                         <Text style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
                 </View>
@@ -141,7 +140,7 @@ export default function HomeScreen({ navigation }) {
 
         const data = getDataForCategory();
 
-        if (['Indices', 'Sectors', 'Themes'].includes(selectedCategory)) {
+        if (['Indices', 'Sectors', 'Market Cap', 'Themes'].includes(selectedCategory)) {
             return (
                 <Indices
                     exchange={selectedExchange}
@@ -159,6 +158,8 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.placeholderText}>{selectedCategory} content coming soon...</Text>
             </View>
         );
+
+
     };
 
     return (
@@ -166,6 +167,7 @@ export default function HomeScreen({ navigation }) {
             <SafeAreaView edges={["top", "bottom"]} style={{ flex: 1, backgroundColor: "#fff" }}>
                 <TopHeader />
                 <TopMenuSlider currentRoute={route.name} />
+
                 <MarketTabs
                     onExchangeChange={handleExchangeChange}
                     onCategoryChange={handleCategoryChange}
