@@ -29,10 +29,9 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import StocksScreen from './src/screens/StocksScreen';
 import IndicesDetailScreen from './src/screens/IndicesDetailScreen';
 import IndicesListScreen from './src/screens/IndicesListScreen';
-import { AppQueryProvider } from './src/context/QueryClientProvider'; xx
+import { AppQueryProvider } from './src/context/QueryClientProvider';
 
 const Stack = createNativeStackNavigator();
-
 
 // ... imports
 

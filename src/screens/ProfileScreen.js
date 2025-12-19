@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StyleSheet, View, Text, Image, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from "react-native";
+import { StyleSheet, View, Text, Image, TouchableOpacity, ScrollView, Modal, TextInput, Alert, Platform } from "react-native";
 import axios from "axios";
+import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -101,6 +102,21 @@ const ProfileScreen = () => {
     const [issueDescription, setIssueDescription] = useState("");
     const [termsModalOpen, setTermsModalOpen] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
+    const [successModalOpen, setSuccessModalOpen] = useState(false);
+    const [successIssueModalOpen, setSuccessIssueModalOpen] = useState(false);
+    const [attachment, setAttachment] = useState(null);
+
+    const pickAttachment = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            setAttachment(result.assets[0]);
+        }
+    };
+
 
     const handleMobileChange = (text) => {
         // Sirf digits allow
@@ -565,6 +581,92 @@ const ProfileScreen = () => {
             Alert.alert("Error", "Failed to submit KYC");
         }
     };
+
+
+    const submitFeedback = async () => {
+        try {
+            if (!rating) {
+                console.log("❌ Rating required");
+                return;
+            }
+
+            const userId = await AsyncStorage.getItem("userId");
+            console.log("🧠 userId:", userId);
+
+            const payload = {
+                issue_type: `${rating}`,
+                message_text: feedbackText,
+                complaint_status: "Opened",
+                complaint_type: "Feedback",
+                user_id: userId,
+            };
+
+            console.log("📦 Payload:", payload);
+
+            const res = await axios.post(
+                `${apiUrl}/api/grievance/feedbacksubmit`,
+                payload,
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            console.log("✅ API RESPONSE:", res.data);
+            // 🔥 success popup
+            setSuccessModalOpen(true);
+            setFeedbackModalOpen(false);
+            setRating(0);
+            setFeedbackText("");
+
+        } catch (error) {
+            console.error("❌ FEEDBACK SUBMIT ERROR =>", error?.response || error);
+        }
+    };
+
+    const submitReportIssue = async () => {
+        try {
+            if (!issueCategory || !issueDescription) {
+                Alert.alert("Error", "Please select category and description");
+                return;
+            }
+
+            const userId = await AsyncStorage.getItem("userId");
+            const formData = new FormData();
+
+            formData.append("user_id", userId);
+            formData.append("complaint_type", "Issue");
+            formData.append("complaint_status", "Opened");
+            formData.append("issue_type", issueCategory);
+            formData.append("message_text", issueDescription);
+
+            if (attachment) {
+                formData.append("attachment", {
+                    uri: attachment.uri, // Keep file:// on iOS
+                    type: attachment.type || "image/jpeg",
+                    name: `issue_${Date.now()}.jpg`,
+                });
+            }
+
+            const response = await axios.post(
+                `${apiUrl}/api/grievance/issuesubmit`,
+                formData,
+                {
+                    // NO HEADERS — let Axios auto-set Content-Type
+                    timeout: 10000,
+                }
+            );
+
+            console.log("✅ Success:", response.data);
+            // ... rest of success logic
+
+        } catch (err) {
+            console.error("❌ Network or API error:", err.response?.data || err.message);
+            Alert.alert("Error", "Failed to submit issue. Check connection.");
+        }
+    };
+
 
     const loadKycData = async () => {
         try {
@@ -1288,6 +1390,73 @@ const ProfileScreen = () => {
                     </TouchableOpacity>
                 </ScrollView>
                 <Modal
+                    visible={successModalOpen}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setSuccessModalOpen(false)}
+                >
+                    <View style={styles.successOverlay}>
+                        <View style={styles.successCard}>
+
+                            {/* ✅ ICON */}
+                            <View style={styles.successIcon}>
+                                <Image
+                                    source={require("../../assets/confirmalert.png")}
+                                    style={styles.alertIconImg}
+                                />
+                            </View>
+
+                            <Text style={styles.successTitle}>Feedback Submitted</Text>
+
+                            <Text style={styles.successText}>
+                                We really appreciate you taking the time to share your thoughts.
+                                Your input helps us create a better experience for all users.
+                            </Text>
+
+                            <TouchableOpacity
+                                style={styles.successBtn}
+                                onPress={() => setSuccessModalOpen(false)}
+                            >
+                                <Text style={styles.successBtnText}>Close</Text>
+                            </TouchableOpacity>
+
+                        </View>
+                    </View>
+                </Modal>
+                <Modal
+                    visible={successIssueModalOpen}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setSuccessIssueModalOpen(false)}
+                >
+                    <View style={styles.successOverlay}>
+                        <View style={styles.successCard}>
+
+                            {/* ✅ ICON */}
+                            <View style={styles.successIcon}>
+                                <Image
+                                    source={require("../../assets/confirmalert.png")}
+                                    style={styles.alertIconImg}
+                                />
+                            </View>
+
+                            <Text style={styles.successTitle}>Report Submitted</Text>
+
+                            <Text style={styles.successText}>
+                                Thanks for bringing this to our attention. We may contact you in case more information is required.
+                            </Text>
+
+                            <TouchableOpacity
+                                style={styles.successBtn}
+                                onPress={() => setSuccessIssueModalOpen(false)}
+                            >
+                                <Text style={styles.successBtnText}>Close</Text>
+                            </TouchableOpacity>
+
+                        </View>
+                    </View>
+                </Modal>
+                <Modal
                     visible={reportModalOpen}
                     transparent
                     animationType="fade"
@@ -1349,7 +1518,6 @@ const ProfileScreen = () => {
                             </View>
 
 
-                            {/* DESCRIPTION */}
                             <Text style={styles.reportLabel}>Description</Text>
                             <View style={styles.textAreaBox}>
                                 <TextInput
@@ -1361,7 +1529,33 @@ const ProfileScreen = () => {
                                     textAlignVertical="top"
                                     style={styles.textArea}
                                 />
+
+                                {/* 📎 ATTACHMENT INSIDE TEXTAREA */}
+                                <View style={styles.attachInside}>
+                                    <TouchableOpacity
+                                        style={{ flexDirection: "row", alignItems: "center" }}
+                                        onPress={pickAttachment}
+                                    >
+                                        <Image source={Attach} style={styles.iconSmall2} />
+                                    </TouchableOpacity>
+
+
+                                </View>
                             </View>
+                            {attachment && (
+                                <View style={styles.attachRow}>
+                                    <Text style={styles.attachLabel}>Add Screenshot</Text>
+
+                                    <TouchableOpacity
+                                        onPress={() => setAttachment(null)}
+                                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                                    >
+                                        <Text style={styles.attachRemove}>×</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+
+
 
                             {/* ACTIONS */}
                             <View style={styles.reportBtnRow}>
@@ -1374,23 +1568,14 @@ const ProfileScreen = () => {
 
                                 <TouchableOpacity
                                     style={styles.reportSubmit}
-                                    onPress={() => {
-                                        console.log("Category:", issueCategory);
-                                        console.log("Description:", issueDescription);
-
-                                        setReportModalOpen(false);
-                                        setIssueCategory("");
-                                        setIssueDescription("");
-                                    }}
+                                    onPress={submitReportIssue}
                                 >
                                     <Text style={styles.reportSubmitText}>Submit Report</Text>
                                 </TouchableOpacity>
                             </View>
-
                         </View>
                     </View>
                 </Modal>
-
                 <Modal
                     visible={deleteModalVisible}
                     transparent
@@ -1418,6 +1603,8 @@ const ProfileScreen = () => {
                                 For security reasons, your account cannot be deleted directly from the app.
                                 {"\n\n"}
                                 Please contact our support team to proceed with account deletion. They will assist you further.
+                                {"\n\n"}
+                                Please email to support@inriser.com
                             </Text>
 
                             {/* Close button */}
@@ -1431,6 +1618,7 @@ const ProfileScreen = () => {
                         </View>
                     </View>
                 </Modal>
+
                 <Modal
                     visible={feedbackModalOpen}
                     transparent
@@ -1457,7 +1645,7 @@ const ProfileScreen = () => {
 
                             {/* ⭐ STAR RATING */}
                             <View style={styles.starRow}>
-                                {[1, 2, 3, 4, 5].map((star) => (
+                                {['1 Star', '2 Star', '3 Star', '4 Star', '5 Star'].map((star) => (
                                     <TouchableOpacity key={star} onPress={() => setRating(star)}>
                                         <Text
                                             style={[
@@ -1494,20 +1682,13 @@ const ProfileScreen = () => {
 
                                 <TouchableOpacity
                                     style={styles.feedbackSubmit}
-                                    onPress={() => {
-                                        // 🔥 API CALL yahan lagega
-                                        console.log("Rating:", rating);
-                                        console.log("Feedback:", feedbackText);
-
-                                        setFeedbackModalOpen(false);
-                                        setRating(0);
-                                        setFeedbackText("");
-                                    }}
+                                    onPress={submitFeedback}
                                 >
                                     <Text style={styles.feedbackSubmitText}>
                                         Submit Feedback
                                     </Text>
                                 </TouchableOpacity>
+
                             </View>
 
                         </View>
@@ -2653,17 +2834,19 @@ const styles = StyleSheet.create({
     },
     textAreaBox: {
         backgroundColor: "#fff",
+        borderWidth: 1,
+        borderColor: "#DDD",
         borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        marginBottom: 6,
+        padding: 12,
+        position: "relative",   // 🔥 IMPORTANT
     },
 
     textArea: {
+        height: 110,
         fontSize: 14,
         color: "#210F47",
-        height: 100,              // 👈 textarea height
-        textAlignVertical: "top", // 👈 Android fix
+        textAlignVertical: "top",
+        paddingBottom: 28,       // 👈 space for attachment row
     },
     reportCard: {
         width: "90%",
@@ -2860,6 +3043,106 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontSize: 15,
         fontWeight: "700",
+    },
+    successOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    successCard: {
+        width: "85%",
+        backgroundColor: "#fff",
+        borderRadius: 20,
+        paddingVertical: 30,
+        paddingHorizontal: 22,
+        alignItems: "center",
+    },
+
+    successIcon: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: "#22C55E",
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 16,
+    },
+
+    successTick: {
+        fontSize: 40,
+        color: "#fff",
+        fontWeight: "bold",
+    },
+
+    successTitle: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#1F2937",
+        marginBottom: 10,
+    },
+
+    successText: {
+        fontSize: 15,
+        color: "#4B5563",
+        textAlign: "left",
+        lineHeight: 20,
+        marginBottom: 24,
+    },
+
+    successBtn: {
+        backgroundColor: "#1E0A3C", // dark purple
+        paddingVertical: 12,
+        paddingHorizontal: 40,
+        borderRadius: 25,
+    },
+
+    successBtnText: {
+        color: "#fff",
+        fontSize: 15,
+        fontWeight: "600",
+    },
+    attachInside: {
+        position: "absolute",
+        bottom: 8,
+        right: 10,
+        flexDirection: "row",
+        alignItems: "center",
+    },
+
+    attachIcon: {
+        fontSize: 16,
+        marginRight: 4,
+    },
+
+    attachText: {
+        fontSize: 12,
+        color: "#777",
+    },
+
+    attachRemove: {
+        marginLeft: 6,
+        fontSize: 16,
+        fontWeight: "700",
+    },
+    attachRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: -10,
+        marginBottom: 20
+    },
+
+    attachLabel: {
+        fontSize: 12,
+        color: "#777",
+    },
+
+    attachRemove: {
+        marginLeft: 6,
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#777",
     },
 
 });
