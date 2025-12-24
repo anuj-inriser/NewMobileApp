@@ -123,28 +123,17 @@ const IndexCard = ({ name, value, change, changePercent, data, onPress }) => {
 import { useIndicesChart } from '../hooks/useIndicesChart';
 
 const IndexVerticalCard = ({ index, onPress }) => {
-    // Use new dedicated hook for 5-min chart data
     const { data: chartDataResponse, loading } = useIndicesChart(index.symbol, '5m', 75);
     const intervalData = chartDataResponse; // Alias to match existing logic if needed or adapt below
-    console.log('indicesChartData ---', intervalData)
     const isPositive = index.change >= 0;
     const color = isPositive ? '#22c55e' : '#ef4444';
 
-    // Prepare Chart Data like StockListCard
     const allCandles = intervalData?.candles || [];
-    // Show requested data
     const recentCandles = allCandles;
-
     const chartData = useMemo(() => {
-        console.log(`[IndexVerticalCard] ${index.symbol} - recentCandles:`, recentCandles?.length);
-
         if (recentCandles.length > 0) {
             const firstVal = recentCandles[0].close;
-            console.log(`[IndexVerticalCard] ${index.symbol} | DataPts: ${recentCandles.length} | FirstVal: ${firstVal}`);
-
-            // "Old chart type should not show" -> Removed the Previous Close anchor which forced a specific shape
             const mapped = recentCandles.map(item => ({ value: item.close }));
-            console.log(`[IndexVerticalCard] ${index.symbol} - Mapped Data:`, mapped.length);
             return mapped;
         } else {
             // Fallback: Generate realistic 1-day simulation (75 points) if no real data
@@ -166,12 +155,10 @@ const IndexVerticalCard = ({ index, onPress }) => {
             }
             rawData.push(close);
 
-            console.log(`[IndexVerticalCard] ${index.symbol} - Using Realistic Fallback Data`);
             return rawData.map(v => ({ value: v }));
         }
     }, [recentCandles, index.value, index.change, isPositive]);
 
-    console.log(`[IndexVerticalCard] ${index.symbol} - Final ChartData:`, chartData);
 
     let yMin = 0;
     let finalRange = 100;
@@ -190,7 +177,6 @@ const IndexVerticalCard = ({ index, onPress }) => {
         finalRange = Math.max(0.05, yMax - yMin);
     }
 
-    // console.log(`[Indices] ${index.symbol} - Loading: ${loading}, DataPoints: ${chartData.length}, Range: ${finalRange}`);
 
     return (
         <TouchableOpacity

@@ -9,29 +9,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiUrl } from "../utils/apiUrl";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
-
 import TopHeader from "../components/TopHeader";
 import BottomTabBar from "../components/BottomTabBar";
 import DonutChart from "../components/DonutChart";
 import KycChart from "../components/KycChart";
-
-/* Profile Assets */
 import Profile from "../../assets/Profile.png";
 import ProfileImg1 from "../../assets/ProfileImg1.png";
 import ProfilePencil from "../../assets/ProfilePencil.png";
-
-/* Stats Assets */
 import Troffy from "../../assets/troffy.png";
 import Rewards from "../../assets/rewards.png";
 import Book from "../../assets/book.png";
-
-/* Badge Assets */
 import BadgeShield from "../../assets/badge_shield.png";
 import BadgeStar from "../../assets/badge_star.png";
 import BadgeVerified from "../../assets/badge_verified.png";
 import BadgeInfluencer from "../../assets/badge_influencer.png";
-
-/* KYC Assets */
 import Attach from "../../assets/attach.png";
 import Calendar from "../../assets/calendar.png";
 import KycIcon from "../../assets/kyc.png";
@@ -117,12 +108,8 @@ const ProfileScreen = () => {
         }
     };
 
-
     const handleMobileChange = (text) => {
-        // Sirf digits allow
         const cleaned = text.replace(/[^0-9]/g, "");
-
-        // Max 10 digits
         if (cleaned.length <= 10) {
             setEditMobile(cleaned);
         }
@@ -139,10 +126,7 @@ const ProfileScreen = () => {
     };
 
     const handleAadharChange = (text) => {
-        // Sirf digits allow
         const cleaned = text.replace(/[^0-9]/g, "");
-
-        // Max 12 digits
         if (cleaned.length <= 12) {
             setAadhar(cleaned);
         }
@@ -166,7 +150,7 @@ const ProfileScreen = () => {
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsMultipleSelection: false, // 👈 IMPORTANT
+            allowsMultipleSelection: false,
             quality: 0.8,
         });
 
@@ -174,8 +158,8 @@ const ProfileScreen = () => {
             const file = result.assets[0];
 
             if (type === "PAN") {
-                setPanFiles([file]);          // 👈 replace
-                setPanDocBase64(null);        // 👈 backend wali hide
+                setPanFiles([file]);
+                setPanDocBase64(null);
             }
 
             if (type === "AADHAR") {
@@ -193,7 +177,6 @@ const ProfileScreen = () => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                // remove data:image/...;base64,
                 const base64data = reader.result.split(",")[1];
                 resolve(base64data);
             };
@@ -204,11 +187,6 @@ const ProfileScreen = () => {
     const fetchKycPercent = async () => {
         try {
             const userId = await AsyncStorage.getItem("userId");
-
-            if (!userId) {
-                console.log("❌ userId not found in AsyncStorage");
-                return;
-            }
 
             const res = await axios.get(
                 `${apiUrl}/api/userkyc/percent/${userId}`
@@ -227,38 +205,21 @@ const ProfileScreen = () => {
         }
     };
 
-    // const filesToBase64Array = async (files = []) => {
-    //     const base64Arr = [];
-
-    //     for (const file of files) {
-    //         if (file?.uri) {
-    //             const base64 = await uriToBase64(file.uri);
-    //             base64Arr.push(base64);
-    //         }
-    //     }
-
-    //     return base64Arr;
-    // };
-
     const getImageSource = (img) => {
         if (!img) return Profile;
 
-        // agar file uri hai
         if (img.startsWith("file://") || img.startsWith("content://")) {
             return { uri: img };
         }
 
-        // agar base64 hai
         return { uri: `data:image/jpeg;base64,${img}` };
     };
     const handleSaveProfile = async () => {
         try {
-            // ✅ Email validation
             const isValidEmail = (email) => {
                 return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
             };
 
-            // ✅ Indian mobile validation
             const isValidMobile = (mobile) => {
                 return /^[6-9]\d{9}$/.test(mobile);
             };
@@ -281,7 +242,6 @@ const ProfileScreen = () => {
 
             let imageBase64 = null;
 
-            // Agar image change hui hai tabhi base64 banao
             if (editImage && editImage !== profileImage) {
                 imageBase64 = await uriToBase64(editImage);
             }
@@ -291,7 +251,7 @@ const ProfileScreen = () => {
                 username: editUsername,
                 phone: editMobile,
                 email: editEmail,
-                image: imageBase64, // base64 string
+                image: imageBase64,
             };
 
             const userId = await AsyncStorage.getItem("userId");
@@ -310,12 +270,11 @@ const ProfileScreen = () => {
             maximumFractionDigits: 2,
         });
     };
+
     const getUserById = async () => {
         try {
             const userId = await AsyncStorage.getItem("userId");
             const res = await axios.get(`${apiUrl}/api/users/${userId}`);
-            console.log("city", res.data.city);
-            console.log("state", res.data.state);
             const user = res.data.data;
             setName(user.name || "");
             setUsername(user.username || "");
@@ -345,23 +304,13 @@ const ProfileScreen = () => {
                     const realisedQty = Number(item.realisedquantity) || 0;
                     const ltp = Number(item.ltp) || 0;
                     const avg = Number(item.averageprice) || 0;
-
-                    // invested value
                     const invested = avg * realisedQty;
-
-                    // current value (Correct: LTP × Qty)
                     const currentValue = ltp * realisedQty;
-
-                    // profit
                     const profit = currentValue - invested;
-
-                    // profit %
                     const profitPercent =
                         invested > 0
                             ? ((profit / invested) * 100).toFixed(2)
                             : "0.00";
-
-
                     totalCurrentValue += currentValue;
                     totalProfitValue += profit;
                     totalInvestedValue += invested;
@@ -380,7 +329,6 @@ const ProfileScreen = () => {
                 setTotalCurrent(totalCurrentValue.toFixed(2));
                 setTotalInvested(totalInvestedValue.toFixed(2));
 
-                // overall %
                 const overallPercent =
                     totalInvestedValue > 0
                         ? ((totalProfitValue / totalInvestedValue) * 100).toFixed(2)
@@ -437,7 +385,6 @@ const ProfileScreen = () => {
             }
 
             const userId = await AsyncStorage.getItem("userId");
-            // 🔹 console log both values
 
             await axios.put(
                 `${apiUrl}/api/users/change-password/${userId}`,
@@ -449,7 +396,6 @@ const ProfileScreen = () => {
 
             Alert.alert("Success", "Password changed successfully");
 
-            // clear fields
             setNewPassword("");
             setConfirmPassword("");
 
@@ -460,7 +406,6 @@ const ProfileScreen = () => {
     };
     const handleLogout = async () => {
         try {
-            // STEP 1: Values load karo
             const userIdStored = await AsyncStorage.getItem("userId");
             const authTokenStored = await AsyncStorage.getItem("authToken");
             const clientIdStored = await AsyncStorage.getItem("clientId");
@@ -471,7 +416,6 @@ const ProfileScreen = () => {
                 return;
             }
 
-            // STEP 2: API CALL
             const res = await fetch(`${apiUrl}/api/check-user/logout`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -484,7 +428,6 @@ const ProfileScreen = () => {
 
             const data = await res.json();
 
-            // STEP 3: Logout success
             if (data.status) {
                 await clearAuth();
                 navigation.reset({
@@ -500,7 +443,7 @@ const ProfileScreen = () => {
     const getSingleBase64 = async (files = []) => {
         if (!files.length) return null;
 
-        const file = files[0]; // 👈 sirf ek
+        const file = files[0];
         if (!file?.uri) return null;
 
         return await uriToBase64(file.uri);
@@ -544,7 +487,7 @@ const ProfileScreen = () => {
             const panBase64 =
                 panFiles.length > 0
                     ? await getSingleBase64(panFiles)
-                    : panDocBase64;        // 👈 fallback
+                    : panDocBase64;
 
             const aadharBase64 =
                 aadharFiles.length > 0
@@ -567,7 +510,6 @@ const ProfileScreen = () => {
             };
 
             await axios.post(`${apiUrl}/api/userkyc/submit`, payload);
-            // 🔒 RESET local files (lock UI)
             setPanFiles([]);
             setAadharFiles([]);
 
@@ -591,7 +533,6 @@ const ProfileScreen = () => {
             }
 
             const userId = await AsyncStorage.getItem("userId");
-            console.log("🧠 userId:", userId);
 
             const payload = {
                 issue_type: `${rating}`,
@@ -600,8 +541,6 @@ const ProfileScreen = () => {
                 complaint_type: "Feedback",
                 user_id: userId,
             };
-
-            console.log("📦 Payload:", payload);
 
             const res = await axios.post(
                 `${apiUrl}/api/grievance/feedbacksubmit`,
@@ -613,8 +552,6 @@ const ProfileScreen = () => {
                 }
             );
 
-            console.log("✅ API RESPONSE:", res.data);
-            // 🔥 success popup
             setSuccessModalOpen(true);
             setFeedbackModalOpen(false);
             setRating(0);
@@ -625,6 +562,7 @@ const ProfileScreen = () => {
         }
     };
 
+
     const submitReportIssue = async () => {
         try {
             if (!issueCategory || !issueDescription) {
@@ -634,36 +572,44 @@ const ProfileScreen = () => {
 
             const userId = await AsyncStorage.getItem("userId");
             const formData = new FormData();
-
-            formData.append("user_id", userId);
             formData.append("complaint_type", "Issue");
             formData.append("complaint_status", "Opened");
             formData.append("issue_type", issueCategory);
             formData.append("message_text", issueDescription);
+            formData.append("user_id", userId);
+            const getAttachmentFileName = () => {
+                const now = new Date();
+                return `attachment${now.getTime()}.jpg`;
+            };
 
             if (attachment) {
                 formData.append("attachment", {
-                    uri: attachment.uri, // Keep file:// on iOS
-                    type: attachment.type || "image/jpeg",
-                    name: `issue_${Date.now()}.jpg`,
+                    uri: attachment.uri,
+                    name: getAttachmentFileName(),
+                    type: "image/jpeg",
                 });
             }
 
-            const response = await axios.post(
+
+            const res = await axios.post(
                 `${apiUrl}/api/grievance/issuesubmit`,
                 formData,
                 {
-                    // NO HEADERS — let Axios auto-set Content-Type
-                    timeout: 10000,
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
                 }
             );
 
-            console.log("✅ Success:", response.data);
-            // ... rest of success logic
+            setSuccessIssueModalOpen(true);
+            setReportModalOpen(false);
+            setIssueCategory("");
+            setIssueDescription("");
+            setAttachment(null);
 
         } catch (err) {
-            console.error("❌ Network or API error:", err.response?.data || err.message);
-            Alert.alert("Error", "Failed to submit issue. Check connection.");
+            console.log("❌ REPORT ERROR:", err?.response?.data || err.message);
+            Alert.alert("Error", "Failed to submit issue");
         }
     };
 
@@ -704,7 +650,6 @@ const ProfileScreen = () => {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 100 }}
                 >
-                    {/* PROFILE CARD */}
                     <View style={styles.profileCard}>
 
                         <View style={styles.topRow}>
@@ -733,7 +678,6 @@ const ProfileScreen = () => {
                             </TouchableOpacity>
                         </View>
 
-                        {/* PLAN ROW */}
                         {/* <View style={styles.planRow}>
                             <View>
                                 <Text style={styles.planLabel}>Premium Plan</Text>
@@ -751,7 +695,6 @@ const ProfileScreen = () => {
                     </View>
 
 
-                    {/* PORTFOLIO CARD */}
                     <View style={styles.portfolioMainCard}>
                         <View>
                             <Text style={styles.cardTitle}>Portfolio Value</Text>
@@ -801,15 +744,10 @@ const ProfileScreen = () => {
                             {/* <View style={{ alignItems: "center", width: 140 }}>
                                 <DonutChart />
                             </View> */}
-
                         </View>
-
                     </View>
 
-
-                    {/* 3 STATS CARDS */}
                     {/* <View style={styles.statsRow}>
-
                         <View style={styles.statsCard}>
                             <Image source={Troffy} style={styles.statsIcon} />
                             <Text style={styles.statsTitle}>
@@ -817,26 +755,20 @@ const ProfileScreen = () => {
                             </Text>
                             <Text style={styles.statsCode}>Code VIP2045</Text>
                         </View>
-
                         <View style={styles.statsCard}>
                             <Image source={Rewards} style={styles.statsIcon} />
                             <Text style={styles.statsTitle}>Total Rewards</Text>
                             <Text style={styles.statsValue}>2,450</Text>
                         </View>
-
                         <View style={styles.statsCard}>
                             <Image source={Book} style={styles.statsIcon} />
                             <Text style={styles.statsTitle}>Money Balance</Text>
                             <Text style={styles.statsValue}>₹12,450</Text>
                         </View>
-
                     </View> */}
 
-
-                    {/* BADGES SECTION */}
                     {/* <View style={styles.badgesSection}>
                         <Text style={styles.badgesTitle}>Badges</Text>
-
                         <View style={styles.badgeRow}>
                             <View style={{ alignItems: "center" }}>
                                 <View style={styles.badgeCard}>
@@ -847,8 +779,6 @@ const ProfileScreen = () => {
                                 </View>
                                 <Text style={styles.badgeLabel}>Pro Trader</Text>
                             </View>
-
-
                             <View style={{ alignItems: "center" }}>
                                 <View style={styles.badgeCard}>
                                     <View style={styles.badgeInnerRow}>
@@ -858,7 +788,6 @@ const ProfileScreen = () => {
                                 </View>
                                 <Text style={styles.badgeLabel}>Social Star</Text>
                             </View>
-
                             <View>
                                 <View style={styles.badgeInactive}>
                                     <Image source={BadgeVerified} style={styles.badgeIconInactive} />
@@ -874,7 +803,6 @@ const ProfileScreen = () => {
                         </View>
                     </View> */}
 
-                    {/* KYC COLLAPSIBLE */}
                     <TouchableOpacity style={kycOpen ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setKycOpen(!kycOpen)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
                             <Image source={KycIcon} style={{ width: 30, height: 30, marginRight: 8, }} />
@@ -887,11 +815,8 @@ const ProfileScreen = () => {
 
                     {kycOpen && (
                         <View style={styles.kycBody}>
-
-                            {/* GENDER */}
                             <Text style={styles.label}>Gender</Text>
                             <View style={styles.genderRow}>
-
                                 <TouchableOpacity
                                     style={[
                                         styles.genderBtn,
@@ -908,7 +833,6 @@ const ProfileScreen = () => {
                                         Male
                                     </Text>
                                 </TouchableOpacity>
-
                                 <TouchableOpacity
                                     style={[
                                         styles.genderBtn,
@@ -926,10 +850,7 @@ const ProfileScreen = () => {
                                     </Text>
                                 </TouchableOpacity>
                             </View>
-
-                            {/* DOB */}
                             <Text style={styles.label}>DOB</Text>
-
                             <TouchableOpacity
                                 style={styles.datepickerinputBox}
                                 onPress={() => setShowDobPicker(true)}
@@ -943,7 +864,6 @@ const ProfileScreen = () => {
                                 <Image source={Calendar} style={styles.iconSmall} />
                             </TouchableOpacity>
 
-                            {/* Father Name */}
                             <Text style={styles.label}>Father's Name</Text>
                             <View style={styles.inputBox}>
                                 <TextInput
@@ -954,13 +874,12 @@ const ProfileScreen = () => {
                                     multiline
                                 />
                             </View>
-
                             {showDobPicker && (
                                 <DateTimePicker
                                     value={dob || new Date()}
                                     mode="date"
                                     display="calendar"
-                                    maximumDate={new Date()} // future date disable
+                                    maximumDate={new Date()}
                                     onChange={(event, selectedDate) => {
                                         setShowDobPicker(false);
                                         if (selectedDate) {
@@ -970,7 +889,6 @@ const ProfileScreen = () => {
                                 />
                             )}
 
-                            {/* PAN */}
                             <Text style={styles.label}>PAN Number</Text>
                             <View style={styles.inputBox}>
                                 <TextInput
@@ -988,7 +906,6 @@ const ProfileScreen = () => {
 
 
                             <View style={styles.fileTagRow}>
-                                {/* ✅ Backend se aayi hui file (sirf tab jab new file select nahi hui) */}
                                 {panDocBase64 && panFiles.length === 0 && (
                                     <TouchableOpacity
                                         style={styles.fileTag}
@@ -1002,7 +919,6 @@ const ProfileScreen = () => {
                                     </TouchableOpacity>
                                 )}
 
-                                {/* ✅ New selected file (sirf ek hi show hoga) */}
                                 {panFiles.length > 0 && (
                                     <View style={styles.fileTag}>
                                         <Image source={Attach} style={styles.iconSmall3} />
@@ -1010,9 +926,8 @@ const ProfileScreen = () => {
                                         <TouchableOpacity
                                             onPress={() => {
                                                 setPanFiles([]);
-                                                setPanDocBase64(null);   // 👈 backend doc bhi remove
+                                                setPanDocBase64(null);
                                             }}
-
                                         >
                                             <Text style={{ marginLeft: 6, fontWeight: "700" }}>×</Text>
                                         </TouchableOpacity>
@@ -1020,7 +935,6 @@ const ProfileScreen = () => {
                                 )}
                             </View>
 
-                            {/* AADHAAR */}
                             <Text style={styles.label}>Aadhar Number</Text>
                             <View style={styles.inputBox}>
                                 <TextInput
@@ -1037,7 +951,6 @@ const ProfileScreen = () => {
                             </View>
 
                             <View style={styles.fileTagRow}>
-                                {/* ✅ Backend se aayi hui file */}
                                 {aadharDocBase64 && aadharFiles.length === 0 && (
                                     <TouchableOpacity
                                         style={styles.fileTag}
@@ -1052,7 +965,6 @@ const ProfileScreen = () => {
                                 )}
 
 
-                                {/* ✅ New selected file */}
                                 {aadharFiles.length > 0 && (
                                     <View style={styles.fileTag}>
                                         <Image source={Attach} style={styles.iconSmall3} />
@@ -1069,8 +981,6 @@ const ProfileScreen = () => {
                                 )}
                             </View>
 
-
-                            {/* ADDRESS */}
                             <Text style={styles.label}>Address</Text>
                             <View style={styles.textAreaBox}>
                                 <TextInput
@@ -1080,12 +990,10 @@ const ProfileScreen = () => {
                                     onChangeText={setAddress}
                                     multiline
                                     numberOfLines={4}
-                                    textAlignVertical="top"   // 👈 IMPORTANT (Android)
+                                    textAlignVertical="top"
                                 />
                             </View>
 
-
-                            {/* CITY */}
                             <Text style={styles.label}>City</Text>
                             <View style={styles.inputBox}>
                                 <TextInput
@@ -1096,7 +1004,6 @@ const ProfileScreen = () => {
                                 />
                             </View>
 
-                            {/* STATE */}
                             <Text style={styles.label}>State</Text>
                             <View style={styles.inputBox}>
                                 <TextInput
@@ -1107,7 +1014,6 @@ const ProfileScreen = () => {
                                 />
                             </View>
 
-                            {/* PINCODE */}
                             <Text style={styles.label}>Pincode</Text>
                             <View style={styles.inputBox}>
                                 <TextInput
@@ -1120,7 +1026,6 @@ const ProfileScreen = () => {
                                 />
                             </View>
 
-                            {/* SUBMIT */}
                             <TouchableOpacity
                                 style={[
                                     styles.submitBtn,
@@ -1141,10 +1046,8 @@ const ProfileScreen = () => {
                                     {isKycCompleted ? "KYC Completed" : "Submit"}
                                 </Text>
                             </TouchableOpacity>
-
                         </View>
                     )}
-
 
                     <TouchableOpacity style={setting ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setSetting(!setting)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -1156,7 +1059,6 @@ const ProfileScreen = () => {
 
                     {setting && (
                         <View style={styles.settingsCard}>
-
                             {/* <Text style={styles.label}>Language</Text>
                             <View style={styles.dropdownBox}>
                                 <Text style={styles.inputText}>Select your language</Text>
@@ -1176,7 +1078,6 @@ const ProfileScreen = () => {
 
                             <View style={styles.divider} /> */}
 
-                            {/* PASSWORD */}
                             <Text style={styles.label}>Change Password</Text>
                             <View style={styles.inputField}>
                                 <TextInput
@@ -1198,19 +1099,12 @@ const ProfileScreen = () => {
                                     onChangeText={setConfirmPassword}
                                 />
                             </View>
-
-
-                            {/* SAVE BUTTON */}
                             <TouchableOpacity style={styles.saveBtn} onPress={handleChangePassword}>
                                 <Text style={styles.saveBtnText}>Save Changes</Text>
                             </TouchableOpacity>
-
                         </View>
-
                     )}
 
-
-                    {/* ABOUT US SECTION */}
                     <TouchableOpacity
                         style={aboutUsOpen ? styles.kycHeader : styles.kycHeaderclosed}
                         onPress={() => setAboutUsOpen(!aboutUsOpen)}
@@ -1219,7 +1113,6 @@ const ProfileScreen = () => {
                             <Image source={AboutUs} style={{ width: 30, height: 30, marginRight: 8, }} />
                             <Text style={styles.kycTitle}>About Us</Text>
                         </View>
-
                         <Image
                             source={aboutUsOpen ? ArrowUp : ArrowDown}
                             style={{ width: 15, height: 8 }}
@@ -1242,15 +1135,12 @@ const ProfileScreen = () => {
                                         if (item === "Send Feedback") {
                                             setFeedbackModalOpen(true);
                                         }
-
                                         if (item === "Report an Issue") {
-                                            setReportModalOpen(true);   // 👈 YAHI PE
+                                            setReportModalOpen(true);
                                         }
                                         if (item === "Terms & Conditions") {
                                             setTermsModalOpen(true);
                                         }
-
-                                        // baaki items ke liye baad me navigation laga sakte ho
                                     }}
                                 >
                                     <Text style={styles.aboutText}>{item}</Text>
@@ -1260,8 +1150,6 @@ const ProfileScreen = () => {
 
                         </View>
                     )}
-
-
 
                     {/* <TouchableOpacity style={linkedAccount ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setLinkedAccount(!linkedAccount)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -1273,32 +1161,26 @@ const ProfileScreen = () => {
 
                     {linkedAccount && (
                         <View style={styles.linkedBox}>
-
                             <View style={styles.row}>
                                 <View style={styles.rowLeft}>
                                     <Image source={GrowIcon} style={styles.icon} />
                                     <Text style={styles.exchangeName}>Groww</Text>
                                 </View>
-
                                 <TouchableOpacity style={styles.refreshBtn}>
                                     <Image source={ProfileRefresh} style={styles.refreshIcon} />
                                 </TouchableOpacity>
-
                                 <TouchableOpacity style={styles.disconnectBtn}>
                                     <Text style={styles.disconnectText}>Disconnect</Text>
                                 </TouchableOpacity>
                             </View>
-
                             <View style={styles.row}>
                                 <View style={styles.rowLeft}>
                                     <Image source={GrowIcon} style={styles.icon} />
                                     <Text style={styles.exchangeName}>Groww</Text>
                                 </View>
-
                                 <TouchableOpacity style={styles.refreshBtn}>
                                     <Image source={ProfileRefresh} style={styles.refreshIcon} />
                                 </TouchableOpacity>
-
                                 <TouchableOpacity style={styles.unlinkedBtn}>
                                     <Text style={styles.unlinkedText}>Unlinked</Text>
                                 </TouchableOpacity>
@@ -1309,11 +1191,9 @@ const ProfileScreen = () => {
                                     <Image source={GrowIcon} style={styles.icon} />
                                     <Text style={styles.exchangeName}>Groww</Text>
                                 </View>
-
                                 <TouchableOpacity style={styles.refreshBtn}>
                                     <Image source={ProfileRefresh} style={styles.refreshIcon} />
                                 </TouchableOpacity>
-
                                 <TouchableOpacity style={styles.unlinkedBtn}>
                                     <Text style={styles.unlinkedText}>Unlinked</Text>
                                 </TouchableOpacity>
@@ -1324,16 +1204,13 @@ const ProfileScreen = () => {
                                     <Image source={GrowIcon} style={styles.icon} />
                                     <Text style={styles.exchangeName}>Groww</Text>
                                 </View>
-
                                 <TouchableOpacity style={styles.refreshBtn}>
                                     <Image source={ProfileRefresh} style={styles.refreshIcon} />
                                 </TouchableOpacity>
-
                                 <TouchableOpacity style={styles.unlinkedBtn}>
                                     <Text style={styles.unlinkedText}>Unlinked</Text>
                                 </TouchableOpacity>
                             </View>
-
                             <TouchableOpacity style={styles.addDematBtn}>
                                 <Text style={styles.addDematText}>Add Demat</Text>
                             </TouchableOpacity>
@@ -1347,7 +1224,6 @@ const ProfileScreen = () => {
                         </View>
                         <Image source={accountPrivacy ? ArrowUp : ArrowDown} style={{ width: 15, height: 8 }} />
                     </TouchableOpacity>
-
                     {accountPrivacy && (
                         <View style={styles.privacyCard}>
 
@@ -1376,12 +1252,10 @@ const ProfileScreen = () => {
                             ))}
                         </View>
                     )} */}
-                    {/* LOGOUT BUTTON */}
                     <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                         <Text style={styles.logoutText}>Logout</Text>
                     </TouchableOpacity>
 
-                    {/* DELETE ACCOUNT BUTTON */}
                     <TouchableOpacity style={styles.deleteBtn} onPress={() => setDeleteModalVisible(true)}>
                         <Text style={styles.deleteText}>
                             <Image
@@ -1398,28 +1272,23 @@ const ProfileScreen = () => {
                     <View style={styles.successOverlay}>
                         <View style={styles.successCard}>
 
-                            {/* ✅ ICON */}
                             <View style={styles.successIcon}>
                                 <Image
                                     source={require("../../assets/confirmalert.png")}
                                     style={styles.alertIconImg}
                                 />
                             </View>
-
                             <Text style={styles.successTitle}>Feedback Submitted</Text>
-
                             <Text style={styles.successText}>
                                 We really appreciate you taking the time to share your thoughts.
                                 Your input helps us create a better experience for all users.
                             </Text>
-
                             <TouchableOpacity
                                 style={styles.successBtn}
                                 onPress={() => setSuccessModalOpen(false)}
                             >
                                 <Text style={styles.successBtnText}>Close</Text>
                             </TouchableOpacity>
-
                         </View>
                     </View>
                 </Modal>
@@ -1431,28 +1300,22 @@ const ProfileScreen = () => {
                 >
                     <View style={styles.successOverlay}>
                         <View style={styles.successCard}>
-
-                            {/* ✅ ICON */}
                             <View style={styles.successIcon}>
                                 <Image
                                     source={require("../../assets/confirmalert.png")}
                                     style={styles.alertIconImg}
                                 />
                             </View>
-
                             <Text style={styles.successTitle}>Report Submitted</Text>
-
                             <Text style={styles.successText}>
                                 Thanks for bringing this to our attention. We may contact you in case more information is required.
                             </Text>
-
                             <TouchableOpacity
                                 style={styles.successBtn}
                                 onPress={() => setSuccessIssueModalOpen(false)}
                             >
                                 <Text style={styles.successBtnText}>Close</Text>
                             </TouchableOpacity>
-
                         </View>
                     </View>
                 </Modal>
@@ -1464,8 +1327,6 @@ const ProfileScreen = () => {
                 >
                     <View style={styles.modalOverlay}>
                         <View style={styles.reportCard}>
-
-                            {/* CLOSE */}
                             <TouchableOpacity
                                 style={styles.reportClose}
                                 onPress={() => setReportModalOpen(false)}
@@ -1478,10 +1339,8 @@ const ProfileScreen = () => {
                                 Your report helps keep the platform accurate and safe.
                             </Text>
 
-                            {/* ISSUE CATEGORY */}
                             <View style={{ position: "relative", zIndex: 10 }}>
                                 <Text style={styles.reportLabel}>Issue Categories</Text>
-
                                 <TouchableOpacity
                                     style={styles.dropdownBox}
                                     onPress={() => setIssueDropdownOpen(!issueDropdownOpen)}
@@ -1517,7 +1376,6 @@ const ProfileScreen = () => {
                                 )}
                             </View>
 
-
                             <Text style={styles.reportLabel}>Description</Text>
                             <View style={styles.textAreaBox}>
                                 <TextInput
@@ -1530,7 +1388,6 @@ const ProfileScreen = () => {
                                     style={styles.textArea}
                                 />
 
-                                {/* 📎 ATTACHMENT INSIDE TEXTAREA */}
                                 <View style={styles.attachInside}>
                                     <TouchableOpacity
                                         style={{ flexDirection: "row", alignItems: "center" }}
@@ -1538,14 +1395,11 @@ const ProfileScreen = () => {
                                     >
                                         <Image source={Attach} style={styles.iconSmall2} />
                                     </TouchableOpacity>
-
-
                                 </View>
                             </View>
                             {attachment && (
                                 <View style={styles.attachRow}>
                                     <Text style={styles.attachLabel}>Add Screenshot</Text>
-
                                     <TouchableOpacity
                                         onPress={() => setAttachment(null)}
                                         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
@@ -1555,9 +1409,6 @@ const ProfileScreen = () => {
                                 </View>
                             )}
 
-
-
-                            {/* ACTIONS */}
                             <View style={styles.reportBtnRow}>
                                 <TouchableOpacity
                                     style={styles.reportCancel}
@@ -1565,7 +1416,6 @@ const ProfileScreen = () => {
                                 >
                                     <Text style={styles.reportCancelText}>Cancel</Text>
                                 </TouchableOpacity>
-
                                 <TouchableOpacity
                                     style={styles.reportSubmit}
                                     onPress={submitReportIssue}
@@ -1584,21 +1434,15 @@ const ProfileScreen = () => {
                 >
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalCardNew}>
-
-                            {/* ✔ Icon */}
                             <View style={styles.alertIcon}>
                                 <Image
                                     source={require("../../assets/redalert.png")}
                                     style={styles.alertIconImg}
                                 />
                             </View>
-
-                            {/* Title */}
                             <Text style={styles.modalTitle}>
                                 Account Deletion Request
                             </Text>
-
-                            {/* Message */}
                             <Text style={styles.modalMessage}>
                                 For security reasons, your account cannot be deleted directly from the app.
                                 {"\n\n"}
@@ -1606,15 +1450,12 @@ const ProfileScreen = () => {
                                 {"\n\n"}
                                 Please email to support@inriser.com
                             </Text>
-
-                            {/* Close button */}
                             <TouchableOpacity
                                 style={styles.modalBtn}
                                 onPress={() => setDeleteModalVisible(false)}
                             >
                                 <Text style={styles.modalBtnText}>Close</Text>
                             </TouchableOpacity>
-
                         </View>
                     </View>
                 </Modal>
@@ -1627,23 +1468,17 @@ const ProfileScreen = () => {
                 >
                     <View style={styles.modalOverlay}>
                         <View style={styles.feedbackCard}>
-
-                            {/* Close */}
                             <TouchableOpacity
                                 style={styles.feedbackClose}
                                 onPress={() => setFeedbackModalOpen(false)}
                             >
                                 <Text style={{ fontSize: 22 }}>✕</Text>
                             </TouchableOpacity>
-
                             <Text style={styles.feedbackTitle}>Share Your Feedback</Text>
                             <Text style={styles.feedbackSubtitle}>
                                 Help us improve your experience by telling us what you think.
                             </Text>
-
                             <Text style={styles.feedbackQuestion}>How was your experience?</Text>
-
-                            {/* ⭐ STAR RATING */}
                             <View style={styles.starRow}>
                                 {['1 Star', '2 Star', '3 Star', '4 Star', '5 Star'].map((star) => (
                                     <TouchableOpacity key={star} onPress={() => setRating(star)}>
@@ -1658,8 +1493,6 @@ const ProfileScreen = () => {
                                     </TouchableOpacity>
                                 ))}
                             </View>
-
-                            {/* DESCRIPTION */}
                             <Text style={styles.feedbackLabel}>Description</Text>
                             <View style={styles.feedbackInputBox}>
                                 <TextInput
@@ -1670,8 +1503,6 @@ const ProfileScreen = () => {
                                     style={styles.feedbackInput}
                                 />
                             </View>
-
-                            {/* BUTTONS */}
                             <View style={styles.feedbackBtnRow}>
                                 <TouchableOpacity
                                     style={styles.feedbackCancel}
@@ -1679,7 +1510,6 @@ const ProfileScreen = () => {
                                 >
                                     <Text style={styles.feedbackCancelText}>Cancel</Text>
                                 </TouchableOpacity>
-
                                 <TouchableOpacity
                                     style={styles.feedbackSubmit}
                                     onPress={submitFeedback}
@@ -1688,9 +1518,7 @@ const ProfileScreen = () => {
                                         Submit Feedback
                                     </Text>
                                 </TouchableOpacity>
-
                             </View>
-
                         </View>
                     </View>
                 </Modal>
@@ -1702,70 +1530,56 @@ const ProfileScreen = () => {
                 >
                     <View style={styles.modalOverlay}>
                         <View style={styles.termsCard}>
-
-                            {/* HEADER */}
                             <View style={styles.termsHeader}>
                                 <Text style={styles.termsTitle}>Terms & Conditions</Text>
                                 <TouchableOpacity onPress={() => setTermsModalOpen(false)}>
                                     <Text style={{ fontSize: 20 }}>✕</Text>
                                 </TouchableOpacity>
                             </View>
-
                             <ScrollView showsVerticalScrollIndicator={false}>
                                 <Text style={styles.termsSectionTitle}>Policies & Disclaimers</Text>
-
                                 <Text style={styles.termsItemTitle}>• Privacy Policy</Text>
                                 <Text style={styles.termsText}>
                                     We respect your privacy and are committed to protecting your personal
                                     information. User data is used only to improve app functionality and
                                     user experience.
                                 </Text>
-
                                 <Text style={styles.termsItemTitle}>• Refund & Subscription Policy</Text>
                                 <Text style={styles.termsText}>
                                     All subscription purchases are final. Refunds, if applicable, are
                                     processed according to platform guidelines and applicable laws.
                                 </Text>
-
                                 <Text style={styles.termsItemTitle}>• Market Data & Accuracy</Text>
                                 <Text style={styles.termsText}>
                                     Market data is provided on a best-effort basis and may be delayed or
                                     inaccurate. We do not guarantee completeness or accuracy.
                                 </Text>
-
                                 <Text style={styles.termsItemTitle}>• Market Risk Disclaimer</Text>
                                 <Text style={styles.termsText}>
                                     Investments are subject to market risks. Past performance is not
                                     indicative of future results.
                                 </Text>
-
                                 <Text style={styles.termsItemTitle}>• No Investment Advice</Text>
                                 <Text style={styles.termsText}>
                                     The information provided is for educational purposes only and does not
                                     constitute financial advice.
                                 </Text>
-
                                 <Text style={styles.termsItemTitle}>• User Responsibility</Text>
                                 <Text style={styles.termsText}>
                                     Users are responsible for their investment decisions and compliance
                                     with applicable laws.
                                 </Text>
-
                                 <Text style={styles.termsItemTitle}>• Limitation of Liability</Text>
                                 <Text style={styles.termsText}>
                                     We shall not be liable for any losses arising from the use of the
                                     platform.
                                 </Text>
-
                                 <Text style={styles.termsItemTitle}>• Policy Updates</Text>
                                 <Text style={styles.termsText}>
                                     Policies may be updated periodically. Continued use of the app implies
                                     acceptance of updated terms.
                                 </Text>
                             </ScrollView>
-
-
-
                         </View>
                     </View>
                 </Modal>
@@ -1773,36 +1587,26 @@ const ProfileScreen = () => {
                 <Modal visible={editOpen} transparent animationType="slide">
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalCard}>
-
                             <Text style={styles.modalTitle}>Edit Profile</Text>
-
-                            {/* PROFILE IMAGE */}
                             <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
                                 <Image
                                     source={getImageSource(editImage)}
                                     style={styles.modalImage}
                                 />
-
                                 <Text style={styles.uploadText}>Change Photo</Text>
                             </TouchableOpacity>
-
-                            {/* NAME */}
                             <TextInput
                                 style={styles.modalInput}
                                 value={editName}
                                 onChangeText={setEditName}
                                 placeholder="Name"
                             />
-
-                            {/* USERNAME */}
                             <TextInput
                                 style={styles.modalInput}
                                 value={editUsername}
                                 onChangeText={setEditUsername}
                                 placeholder="Username"
                             />
-
-                            {/* MOBILE */}
                             <TextInput
                                 style={styles.modalInput}
                                 value={editMobile}
@@ -1811,8 +1615,6 @@ const ProfileScreen = () => {
                                 keyboardType="phone-pad"
                                 maxLength={10}
                             />
-
-                            {/* EMAIL */}
                             <TextInput
                                 style={styles.modalInput}
                                 value={editEmail}
@@ -1822,9 +1624,6 @@ const ProfileScreen = () => {
                                 autoCapitalize="none"
                                 autoCorrect={false}
                             />
-
-
-                            {/* BUTTONS */}
                             <View style={styles.modalBtnRow}>
                                 <TouchableOpacity
                                     style={styles.cancelBtn}
@@ -1832,16 +1631,13 @@ const ProfileScreen = () => {
                                 >
                                     <Text style={styles.cancelText}>Cancel</Text>
                                 </TouchableOpacity>
-
                                 <TouchableOpacity
                                     style={styles.saveBtnModal}
                                     onPress={handleSaveProfile}
                                 >
                                     <Text style={styles.saveText}>Save</Text>
                                 </TouchableOpacity>
-
                             </View>
-
                         </View>
                     </View>
                 </Modal>
@@ -1859,24 +1655,20 @@ const ProfileScreen = () => {
                                 style={styles.previewImage}
                                 resizeMode="contain"
                             />
-
                             <TouchableOpacity
                                 style={styles.previewCloseBtn}
                                 onPress={() => setPreviewVisible(false)}
                             >
                                 <Text style={styles.previewCloseText}>Close</Text>
                             </TouchableOpacity>
-
                         </View>
                     </View>
                 </Modal>
-
             </SafeAreaView>
             <BottomTabBar />
         </>
     );
 };
-
 export default ProfileScreen;
 
 /* ------------------ STYLES ------------------ */
@@ -3092,7 +2884,7 @@ const styles = StyleSheet.create({
     },
 
     successBtn: {
-        backgroundColor: "#1E0A3C", // dark purple
+        backgroundColor: "#1E0A3C",
         paddingVertical: 12,
         paddingHorizontal: 40,
         borderRadius: 25,

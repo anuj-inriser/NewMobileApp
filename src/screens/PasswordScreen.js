@@ -34,7 +34,6 @@ export default function PasswordScreen({ navigation, route }) {
       const data = await response.json();
       setIp(data.ip || 'Unknown');
     } catch (err) {
-      console.log('Device/Network error:', err);
       setDeviceId('Unknown');
       setIp('Unknown');
     }

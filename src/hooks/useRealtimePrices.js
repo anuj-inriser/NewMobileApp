@@ -26,7 +26,6 @@ export const useRealtimePrices = () => {
     const connect = useCallback(() => {
         try {
             const WS_URL = `ws://${wsUrl}/ws/prices`;
-            console.log(`[RealtimePrices] Attempting to connect to: ${WS_URL}`);
 
             ws.current = new WebSocket(WS_URL);
 
@@ -71,7 +70,6 @@ export const useRealtimePrices = () => {
             };
 
             ws.current.onerror = (error) => {
-                // Log full error details
                 console.log('❌ [RealtimePrices] WebSocket Error:', error);
                 if (error.message) console.log('Error Message:', error.message);
             };

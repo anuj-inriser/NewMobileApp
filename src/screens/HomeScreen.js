@@ -31,7 +31,6 @@ export default function HomeScreen({ navigation }) {
     const fetchIndices = async () => {
         // Use localhost for Web to avoid Network Failure with IP
         const baseUrl = apiUrl;
-        console.log('[HomeScreen] Fetching indices from:', `${baseUrl}/api/indices`);
 
         const response = await fetch(`${baseUrl}/api/indices`, {
             method: 'GET',
@@ -46,7 +45,6 @@ export default function HomeScreen({ navigation }) {
 
         const result = await response.json();
         if (result.success && Array.isArray(result.data)) {
-            console.log('[HomeScreen] Successfully loaded', result.data.length, 'indices');
             return result.data;
         } else {
             throw new Error('Invalid response format');

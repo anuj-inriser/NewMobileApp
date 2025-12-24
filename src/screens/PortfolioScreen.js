@@ -112,8 +112,6 @@ const PorfolioScreen = () => {
                 const text = await response.text();
                 const json = JSON.parse(text);
 
-                console.log("BROKERS RESPONSE:", json);
-
                 if (json.success) {
                     setBrokerFilters(json.data);
                 }
