@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
@@ -7,7 +7,9 @@ import {
     StyleSheet,
     View,
     TouchableOpacity,
-    Text
+    Text,
+    Animated,
+    AppState
 } from 'react-native';
 
 import BottomTabBar from '../components/BottomTabBar';
@@ -17,11 +19,17 @@ import CommunitySecondMenuSlider from '../components/CommunitySecondMenuSlider';
 import TopFundamentalSlider from '../components/TopFundamentalSlider';
 import StockCard from '../components/StockCard';
 import SequenceCard from '../components/SequenceCard';
-
+import { useFocusEffect } from "@react-navigation/native";
+import {
+    subscribeSymbols,
+    unsubscribeDelayed,
+} from "../ws/marketSubscriptions";
 import { useAllStocks } from '../hooks/useAllStocks';
 import { useMarketMovers } from '../hooks/useMarketMovers';
 import { useCommunitySequences } from '../hooks/useCommunitySequences';
 import { useCommunityPosts } from '../hooks/useCommunityPosts';
+import { useUserLikes } from '../hooks/useUserLikes';
+import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
 const StockTimelineScreen = () => {
@@ -41,6 +49,22 @@ const StockTimelineScreen = () => {
     const [currentPostIndex, setCurrentPostIndex] = useState(0);
     const { posts: sequencePosts, loading: postsLoading, error: postsError } = useCommunityPosts(selectedSequenceId);
 
+    // 🔥 LIKE SYSTEM
+    const { userId } = useAuth();
+    const { userLikes, fetchUserLikes } = useUserLikes();
+
+    // Animation State
+    const scrollY = useRef(new Animated.Value(0)).current;
+
+    const [headerHeight, setHeaderHeight] = useState(130); // Total header height for padding
+    const [collapsibleHeight, setCollapsibleHeight] = useState(60); // Only TopHeader height hides
+
+    useEffect(() => {
+        if (userId) {
+            fetchUserLikes(userId);
+        }
+    }, [userId]);
+
     const handlePlaySequence = (sequence) => {
         setSelectedSequenceId(sequence.id);
         setCurrentPostIndex(0);
@@ -51,7 +75,7 @@ const StockTimelineScreen = () => {
     const getSymbolFromScriptId = (scriptId) => {
         if (!scriptId) return 'Unknown Stock';
         const stock = allStocks.find(s => s.token === scriptId || String(s.token) === String(scriptId));
-        return stock ? stock.symbol || stock.name : `Stock #${scriptId}`;
+        return stock ? stock.symbol || stock.name : `${scriptId}`;
     };
 
     const viewabilityConfig = useRef({
@@ -67,59 +91,156 @@ const StockTimelineScreen = () => {
     // Sample Watchlist (later API se aa jayega)
     const watchlistStocks = allStocks.slice(0, 10);
 
+    const truncateWords = (str, numWords) => {
+        if (!str) return null;
+        const words = str.split(' ');
+        if (words.length <= numWords) return str;
+        return words.slice(0, numWords).join(' ') + ' ...';
+    };
+
+
 
     // 🔥 STOCK TAB LOGIC
     const getStockData = () => {
         const defaultStats = { likes: "0", dislikes: "0", comments: "0" };
+
 
         switch (stockTab) {
 
             case "Latest":
                 return allStocks.map(stock => ({
                     ...stock,
-                    analysis: "Real-time market analysis and insights.",
+                    analysis: truncateWords(stock.news_description, 12) || "Real-time market analysis and insights.",
+                    news_title: stock.news_title || "Market Analysis",
+                    news_date: stock.news_date,
                     stats: stock.stats || defaultStats
                 }));
 
             case "Watchlists":
                 return watchlistStocks.map(stock => ({
                     ...stock,
-                    analysis: "Stock in your watchlist.",
+                    analysis: truncateWords(stock.news_description, 12) || "Stock in your watchlist.",
+                    news_title: stock.news_title || "Market Analysis",
+                    news_date: stock.news_date,
                     stats: stock.stats || defaultStats
                 }));
 
             case "Gainers":
                 return (moversData?.gainers || []).map(item => ({
                     ...item,
-                    stats: defaultStats   // 🟢 FIX APPLIED HERE
+                    stats: defaultStats
                 }));
 
             case "Losers":
                 return (moversData?.losers || []).map(item => ({
                     ...item,
-                    stats: defaultStats   // 🟢 FIX APPLIED HERE
+                    stats: defaultStats
                 }));
 
             default:
                 return allStocks.map(stock => ({
                     ...stock,
-                    analysis: "Real-time market analysis and insights.",
+                    analysis: truncateWords(stock.news_description, 12) || "Real-time market analysis and insights.",
+                    news_title: stock.news_title || "Market Analysis",
+                    news_date: stock.news_date,
                     stats: stock.stats || defaultStats
                 }));
         }
     };
 
+    const subscribedRef = useRef(new Set());
+
 
     const stockData = getStockData();
+
+    const getTimelineSymbols = () => {
+    if (!stockData?.length) return [];
+    if (topTab === "News" || topTab === "Sequence") return [];
+
+    return stockData
+        .map(s =>
+            s.token ??
+            s.symboltoken ??
+            s.script_id ??
+            s.id ??
+            null
+        )
+        .filter(Boolean);
+};
+
+    const subscribeIncremental = (symbols, page, context) => {
+        const newOnes = symbols.filter(s => !subscribedRef.current.has(s));
+
+        if (!newOnes.length) return;
+
+        newOnes.forEach(s => subscribedRef.current.add(s));
+
+        console.log(`🟢 SUBSCRIBE (INCREMENTAL) → ${page}::${context}`, newOnes);
+        subscribeSymbols(newOnes, page, context);
+    };
+
+
+    useFocusEffect(
+    useCallback(() => {
+        const page = "StockTimelineScreen";
+        const context = `${topTab}-${stockTab}`;
+
+        const symbols = getTimelineSymbols();
+
+        if (!symbols.length) {
+            console.log(`⏭ SKIP SUBSCRIBE → ${page}::${context}`);
+            return;
+        }
+
+        // 🔥 incremental subscribe
+        const newOnes = symbols.filter(
+            s => !subscribedRef.current.has(s)
+        );
+
+        if (newOnes.length) {
+            newOnes.forEach(s => subscribedRef.current.add(s));
+            console.log(
+                `🟢 SUBSCRIBE (INCREMENTAL) → ${page}::${context}`,
+                newOnes
+            );
+            subscribeSymbols(newOnes, page, context);
+        }
+
+        const appSub = AppState.addEventListener("change", state => {
+            if (state !== "active") {
+                unsubscribeDelayed(
+                    Array.from(subscribedRef.current),
+                    page,
+                    context
+                );
+            }
+        });
+
+        return () => {
+            unsubscribeDelayed(
+                Array.from(subscribedRef.current),
+                page,
+                context
+            );
+            subscribedRef.current.clear();
+            appSub?.remove();
+        };
+    }, [stockData, topTab, stockTab])
+);
+
 
 
     // 🔥 Vertical Stock Pagination Layout
     const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-    const ITEM_HEIGHT = SCREEN_HEIGHT - 60;
+    const ITEM_HEIGHT = SCREEN_HEIGHT - 60; // Adjust for bottom tab mostly
 
     const renderStockItem = ({ item }) => (
         <View style={{ height: ITEM_HEIGHT }}>
-            <StockCard stock={item} />
+            <StockCard
+                stock={item}
+                contentType="stock" // Explicitly stock
+                userReaction={userLikes[`stock_${item.id}`]} // Composite key
+            />
         </View>
     );
 
@@ -140,28 +261,56 @@ const StockTimelineScreen = () => {
         }
     };
 
+    // Animation Interpolation
+    const handleScroll = Animated.event(
+        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+        { useNativeDriver: true }
+    );
+
+    const diffClamp = Animated.diffClamp(scrollY, 0, collapsibleHeight);
+    const translateY = diffClamp.interpolate({
+        inputRange: [0, collapsibleHeight],
+        outputRange: [0, -collapsibleHeight], // Move up only by TopHeader height
+    });
 
     return (
         <>
             <SafeAreaView style={styles.container}>
-                <TopHeader />
 
-                {/* 🔥 TOP TWO MENUS */}
-                <View style={styles.topSliders}>
+                {/* 🔥 ANIMATED HEADER WRAPPER */}
+                <Animated.View
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        zIndex: 1000,
+                        backgroundColor: '#fff',
+                        transform: [{ translateY }]
+                    }}
+                    onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+                >
+                    <View onLayout={(e) => setCollapsibleHeight(e.nativeEvent.layout.height)}>
+                        <TopHeader />
+                    </View>
 
-                    {/* TOP: Timeline / Posts / Messages */}
-                    <CommunitySecondMenuSlider
-                        activeFilter={topTab}
-                        onTabChange={(t) => setTopTab(t)}
-                    />
+                    {/* 🔥 TOP TWO MENUS */}
+                    <View style={styles.topSliders}>
 
-                    {/* SECOND: Latest / Watchlists / Gainers / Losers */}
-                    <TopFundamentalSlider
-                        selectedCategory={stockTab}
-                        onTabChange={(id) => setStockTab(id)}
-                    />
+                        {/* TOP: Timeline / Posts / Messages */}
+                        <CommunitySecondMenuSlider
+                            activeFilter={topTab}
+                            onTabChange={(t) => setTopTab(t)}
+                        />
 
-                </View>
+                        {/* SECOND: Latest / Watchlists / Gainers / Losers */}
+                        <TopFundamentalSlider
+                            selectedCategory={stockTab}
+                            onTabChange={(id) => setStockTab(id)}
+                        />
+
+                    </View>
+                </Animated.View>
 
 
                 {/* 🔥 MAIN CONTENT AREA */}
@@ -169,13 +318,13 @@ const StockTimelineScreen = () => {
 
                     {topTab === 'Sequence' ? (
                         sequencesLoading ? (
-                            <ActivityIndicator size="large" color="#210F47" style={{ marginTop: 20 }} />
+                            <ActivityIndicator size="large" color="#210F47" style={{ marginTop: headerHeight + 20 }} />
                         ) : sequenceError ? (
-                            <View style={{ padding: 20, alignItems: 'center' }}>
+                            <View style={{ padding: 20, alignItems: 'center', marginTop: headerHeight }}>
                                 <Text style={{ color: 'red' }}>Error: {sequenceError}</Text>
                             </View>
                         ) : (
-                            <FlatList
+                            <Animated.FlatList
                                 data={sequences || []}
                                 renderItem={({ item }) => (
                                     <SequenceCard
@@ -190,75 +339,86 @@ const StockTimelineScreen = () => {
                                     />
                                 )}
                                 keyExtractor={item => item.id.toString()}
-                                contentContainerStyle={{ padding: 16 }}
+                                contentContainerStyle={{ paddingTop: headerHeight + 16, paddingBottom: 16, paddingHorizontal: 16 }}
+                                onScroll={handleScroll}
                             />
                         )
                     ) : topTab === 'News' ? (
-                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: headerHeight }}>
                             <Text style={{ color: '#888' }}>News feed coming soon...</Text>
                         </View>
                     ) : (stockTab === 'Gainers' || stockTab === 'Losers') ? (
                         moversLoading ? (
-                            <ActivityIndicator size="large" color="#210F47" style={{ marginTop: 20 }} />
+                            <ActivityIndicator size="large" color="#210F47" style={{ marginTop: headerHeight + 20 }} />
                         ) : (
-                            <FlatList
+                            <Animated.FlatList
                                 data={stockData}
                                 renderItem={renderGainerLoserItem}
                                 keyExtractor={(item) => item.id || item.symbol}
-                                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20, marginTop: 10, }}
+                                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20, marginTop: 10, paddingTop: headerHeight }}
                                 showsVerticalScrollIndicator={true}
+                                onScroll={handleScroll}
                             />
                         )
                     ) : (
                         <View style={{ flex: 1 }}>
-                            {selectedSequenceId && (
-                                <TouchableOpacity
-                                    style={{
-                                        padding: 10,
-                                        backgroundColor: '#F0EFFF',
-                                        flexDirection: 'row',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        zIndex: 100
-                                    }}
-                                    onPress={() => setSelectedSequenceId(null)}
-                                >
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <Ionicons name="arrow-back" size={20} color="#210F47" />
-                                        <Text style={{ marginLeft: 10, fontWeight: '700', color: '#210F47' }}>Viewing Sequence</Text>
-                                    </View>
-                                    <Ionicons name="close-circle" size={24} color="#210F47" />
-                                </TouchableOpacity>
-                            )}
-
                             {selectedSequenceId ? (
                                 postsLoading ? (
-                                    <ActivityIndicator size="large" color="#210F47" style={{ marginTop: 20 }} />
+                                    <ActivityIndicator size="large" color="#210F47" style={{ marginTop: headerHeight + 20 }} />
                                 ) : (
-                                    <FlatList
+                                    <Animated.FlatList
                                         key="sequence-posts-list"
                                         data={sequencePosts || []}
-                                        renderItem={({ item, index }) => (
-                                            <View style={{ height: ITEM_HEIGHT }}>
-                                                <StockCard
-                                                    stock={{
-                                                        id: item.content_id,
-                                                        name: getSymbolFromScriptId(item.content_script_id),
-                                                        symbol: `POST ${index + 1}/${sequencePosts.length}`,
-                                                        price: 430.92,
-                                                        ltp: 430.92,
-                                                        change: 45.30,
-                                                        changePercent: 11.77,
-                                                        analysis: item.content || 'Stocks continue upward trend as investors show confidence amid strong earnings reports.',
-                                                        stats: {
-                                                            likes: '20.9k',
-                                                            dislikes: '0',
-                                                            comments: '23'
-                                                        }
-                                                    }}
-                                                />
-                                            </View>
-                                        )}
+                                        renderItem={({ item, index }) => {
+                                            const stockInfo = allStocks.find(s => String(s.token) === String(item.content_script_id));
+                                            return (
+                                                <View style={{ height: ITEM_HEIGHT }}>
+                                                    <StockCard
+                                                        stock={{
+                                                            id: item.content_id,
+                                                            name: item.content_symbol || getSymbolFromScriptId(item.content_script_id),
+                                                            symbol: item.content_symbol || stockInfo?.symbol || 'Unknown',
+                                                            price: 430.92,
+                                                            ltp: 430.92,
+                                                            change: 45.30,
+                                                            changePercent: 11.77,
+                                                            // Prioritize News Description, then Post Content
+                                                            analysis: truncateWords(stockInfo?.news_description, 12) || item.content || 'Stocks continue upward trend...',
+                                                            news_title: stockInfo?.news_title || "Market Analysis",
+                                                            news_date: stockInfo?.news_date || item.created_at,
+                                                            content_script_timeframe: item.content_script_timeframe,
+                                                            stats: {
+                                                                likes: item.likes_count || 0,
+                                                                dislikes: item.dislikes_count || 0,
+                                                                comments: item.comments_count || 0
+                                                            }
+                                                        }}
+                                                        postNumber={`${index + 1}/${sequencePosts.length}`}
+                                                        contentType="post"
+                                                        userReaction={userLikes[`post_${item.content_id}`]}
+                                                    />
+                                                </View>
+                                            );
+                                        }}
+                                        ListHeaderComponent={
+                                            <TouchableOpacity
+                                                style={{
+                                                    padding: 10,
+                                                    backgroundColor: '#f2edf9',
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    marginBottom: 0
+                                                }}
+                                                onPress={() => setSelectedSequenceId(null)}
+                                            >
+                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                    <Ionicons name="arrow-back" size={20} color="#210F47" />
+                                                    <Text style={{ marginLeft: 10, fontWeight: '700', color: '#210F47' }}>Viewing Sequence</Text>
+                                                </View>
+                                                <Ionicons name="close-circle" size={24} color="#210F47" />
+                                            </TouchableOpacity>
+                                        }
                                         keyExtractor={(item) => item.content_id.toString()}
                                         pagingEnabled
                                         snapToAlignment="start"
@@ -267,10 +427,12 @@ const StockTimelineScreen = () => {
                                         onViewableItemsChanged={onViewableItemsChanged}
                                         viewabilityConfig={viewabilityConfig}
                                         showsVerticalScrollIndicator={false}
+                                        onScroll={handleScroll}
+                                        contentContainerStyle={{ paddingTop: headerHeight }}
                                     />
                                 )
                             ) : (
-                                <FlatList
+                                <Animated.FlatList
                                     key="stock-timeline-list"
                                     data={stockData}
                                     renderItem={renderStockItem}
@@ -279,13 +441,14 @@ const StockTimelineScreen = () => {
                                     snapToAlignment="start"
                                     decelerationRate="fast"
                                     snapToInterval={ITEM_HEIGHT}
+                                    onScroll={handleScroll}
+                                    contentContainerStyle={{ paddingTop: headerHeight }}
                                     getItemLayout={(data, index) => ({
                                         length: ITEM_HEIGHT,
                                         offset: ITEM_HEIGHT * index,
                                         index,
                                     })}
                                     showsVerticalScrollIndicator={false}
-                                    contentContainerStyle={{ paddingHorizontal: 0 }}
                                     onEndReached={handleLoadMore}
                                     onEndReachedThreshold={0.5}
                                     ListFooterComponent={
