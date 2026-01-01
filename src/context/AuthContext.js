@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [feedToken, setFeedToken] = useState(null);
   const [refreshToken, setRefreshToken] = useState(null);
   const [clientId, setClientId] = useState(null);
+  const [userId, setUserId] = useState(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -24,11 +25,13 @@ export const AuthProvider = ({ children }) => {
       const f = await AsyncStorage.getItem(TOKENS.FEED_TOKEN);
       const r = await AsyncStorage.getItem(TOKENS.REFRESH_TOKEN);
       const c = await AsyncStorage.getItem(TOKENS.CLIENT_ID);
+      const u = await AsyncStorage.getItem("userId");
 
       setAuthToken(a);
       setFeedToken(f);
       setRefreshToken(r);
       setClientId(c);
+      setUserId(u);
     } finally {
       setLoading(false);
     }
@@ -38,7 +41,7 @@ export const AuthProvider = ({ children }) => {
     loadTokens();
   }, []);
 
-  const setAuthData = async ({ authToken, feedToken, refreshToken, clientId }) => {
+  const setAuthData = async ({ authToken, feedToken, refreshToken, clientId, userId }) => {
     if (authToken) {
       await AsyncStorage.setItem(TOKENS.AUTH_TOKEN, authToken.toString());
       setAuthToken(authToken.toString());
@@ -55,6 +58,10 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem(TOKENS.CLIENT_ID, clientId.toString());
       setClientId(clientId.toString());
     }
+    if (userId) {
+      await AsyncStorage.setItem("userId", userId.toString());
+      setUserId(userId.toString());
+    }
   };
 
   const clearAuth = async () => {
@@ -63,11 +70,13 @@ export const AuthProvider = ({ children }) => {
     await AsyncStorage.removeItem(TOKENS.REFRESH_TOKEN);
     await AsyncStorage.removeItem(TOKENS.CLIENT_ID);
     await AsyncStorage.removeItem(SHOW_KEY);
+    await AsyncStorage.removeItem("userId");
 
     setAuthToken(null);
     setFeedToken(null);
     setRefreshToken(null);
     setClientId(null);
+    setUserId(null);
   };
 
   return (
@@ -77,6 +86,7 @@ export const AuthProvider = ({ children }) => {
         feedToken,
         refreshToken,
         clientId,
+        userId,
         loading,
         setAuthData,
         clearAuth,

@@ -43,11 +43,16 @@ export const useAllStocks = (limit = 20, sortBy = 'price_desc', indexName = null
 
         if (result.success && Array.isArray(result.data)) {
           newStocks = result.data.map((stock, index) => ({
-            id: `${stock.symbol}-${currentOffset + index}`,
+            id: stock.token, // Use stable token ID
             symbol: stock.symbol,
             name: stock.name || stock.symbol,
             exchange: stock.exch_seg || stock.exchange || 'NSE',
-            ...stock
+            ...stock,
+            stats: {
+              likes: stock.likes_count || 0,
+              dislikes: stock.dislikes_count || 0,
+              comments: stock.comments_count || 0
+            }
           }));
 
           if (result.data.length < limit) {

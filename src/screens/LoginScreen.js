@@ -13,11 +13,13 @@ import {
   Alert,
 } from 'react-native';
 import { apiUrl } from '../utils/apiUrl';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const { setAuthData } = useAuth();
   const inputRefs = useRef([]);
 
   const handleOtpChange = (text, index) => {
@@ -67,7 +69,7 @@ export default function LoginScreen({ navigation }) {
       if (result.status && result.data.exists) {
 
         // ⭐ STORE USER ID FROM CONTROLLER
-        await AsyncStorage.setItem("userId", String(result.data.userId));
+        await setAuthData({ userId: String(result.data.userId) });
 
         // Alert.alert('Success', 'Login successful.');
         navigation.navigate('Demat');
