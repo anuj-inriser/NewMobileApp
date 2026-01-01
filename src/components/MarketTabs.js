@@ -18,9 +18,7 @@ const MarketTabs = ({ onExchangeChange, onCategoryChange, tabs = ['Indices', 'Ma
         setExchange(exch);
         onExchangeChange && onExchangeChange(exch);
     };
-
     const handleTabPress = (tab) => {
-        // Only update internal state if not controlled
         if (controlledActiveTab === undefined) {
             setInternalActiveTab(tab);
         }

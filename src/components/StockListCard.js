@@ -11,28 +11,60 @@ import { useIntervalData } from '../hooks/useIntervalData';
 
 const { width } = Dimensions.get('window');
 
-const StockListCard = ({ stock }) => {
-    // User requested "1m of realtime data", so hardcoding to '1m' for this view
+const StockListCard = ({ stock, realtime }) => {
     const apiInterval = '1m';
     const { data: intervalData, loading } = useIntervalData(stock.symbol, apiInterval);
 
     // Get current price from 1m data (most real-time)
-    const rawPrice = intervalData?.ltp || stock.ltp || 0;
-    const currentPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(rawPrice) || 0;
+    // const rawPrice = intervalData?.ltp || stock.ltp || 0;
+    // const currentPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(rawPrice) || 0;
 
-    // Use prev_close from stock prop (comes from market_snapshot via API)
-    const prevClose = stock.prev_close ? parseFloat(stock.prev_close) : 0;
+    // // Use prev_close from stock prop (comes from market_snapshot via API)
+    // const prevClose = stock.prev_close ? parseFloat(stock.prev_close) : 0;
 
-    // Calculate change based on prev_close
-    let currentChange = 0;
-    let currentChangePercent = 0;
+    // // Calculate change based on prev_close
+    // let currentChange = 0;
+    // let currentChangePercent = 0;
 
-    if (prevClose > 0 && currentPrice > 0) {
-        currentChange = currentPrice - prevClose;
-        currentChangePercent = (currentChange / prevClose) * 100;
-    }
+    // if (prevClose > 0 && currentPrice > 0) {
+    //     currentChange = currentPrice - prevClose;
+    //     currentChangePercent = (currentChange / prevClose) * 100;
+    // }
+    // const basePrevClose = Number(
+    //     stock.prev_close ??
+    //     realtime?.prevClose ??
+    //     realtime?.open ??
+    //     0
+    // ) || 0;
+
+    const basePrevClose = Number(stock.prev_close) || 0;
+
+    const rawPrice =
+        realtime?.price ??
+        intervalData?.ltp ??
+        stock.ltp ??
+        0;
+
+    const currentPrice = Number(rawPrice) || 0;
+
+
+    const currentChange =
+        basePrevClose > 0 ? currentPrice - basePrevClose : 0;
+
+    const currentChangePercent =
+        basePrevClose > 0 ? (currentChange / basePrevClose) * 100 : 0;
 
     const isPositive = currentChange >= 0;
+    const displayChange =
+        typeof currentChange === "number"
+            ? Math.abs(currentChange).toFixed(2)
+            : "0.00";
+
+    const displayPercent =
+        typeof currentChangePercent === "number"
+            ? Math.abs(currentChangePercent).toFixed(2)
+            : "0.00";
+
     const color = isPositive ? '#22c55e' : '#ef4444';
 
     // Prepare Chart Data
@@ -109,11 +141,11 @@ const StockListCard = ({ stock }) => {
             {/* Left: Info */}
             <View style={styles.leftContainer}>
                 <Text style={styles.symbol}>{stock.symbol}</Text>
-                <Text style={styles.time}>{lastTime}</Text>
+                <Text style={styles.time}>{stock.exchange}</Text>
+                {/* <Text style={styles.time}>{lastTime}</Text> */}
             </View>
 
-            {/* Middle: Mini Chart */}
-            <View style={styles.chartContainer}>
+            {/* <View style={styles.chartContainer}>
                 {loading && displayData.length === 0 ? (
                     <ActivityIndicator size="small" color={color} />
                 ) : (
@@ -148,7 +180,7 @@ const StockListCard = ({ stock }) => {
                         maxValue={finalRange}
                     />
                 )}
-            </View>
+            </View> */}
 
             {/* Right: Price */}
             <View style={styles.rightContainer}>
@@ -156,8 +188,11 @@ const StockListCard = ({ stock }) => {
                     {loading && currentPrice === 0 ? '--' : `₹${currentPrice.toFixed(2)}`}
                 </Text>
                 <Text style={[styles.change, { color }]}>
-                    {loading && currentPrice === 0 ? '--' : `${isPositive ? '+' : ''}${currentChange.toFixed(2)} (${currentChangePercent.toFixed(2)}%)`}
+                    {displayChange} ({displayPercent}%)
                 </Text>
+                {/* <Text style={[styles.change, { color }]}>
+                    {loading && currentPrice === 0 ? '--' : `${isPositive ? '+' : ''}${currentChange.toFixed(2)} (${currentChangePercent.toFixed(2)}%)`}
+                </Text> */}
             </View>
         </View>
     );

@@ -41,7 +41,9 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
                 navigation.navigate('Home');
                 break;
             case 'Stocks':
-                navigation.navigate('Stocks');
+                navigation.navigate('Stocks', {
+                    defaultTab: 'All'
+                });
                 break;
             case 'Watchlists':
                 navigation.navigate('TradeOrderList');

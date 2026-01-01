@@ -5,6 +5,9 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from './src/context/AuthContext';
+import { useEffect } from "react";
+import { onMarketMessage } from "./src/ws/marketWs";
+import { applyPriceMessage } from "./src/store/marketPrices";
 
 // 🔹 Import Screens
 import WelcomeScreen from "./src/screens/WelcomeScreen";
@@ -30,12 +33,25 @@ import StocksScreen from './src/screens/StocksScreen';
 import IndicesDetailScreen from './src/screens/IndicesDetailScreen';
 import IndicesListScreen from './src/screens/IndicesListScreen';
 import { AppQueryProvider } from './src/context/QueryClientProvider';
+import { connectMarketWS } from "./src/ws/marketWs";
 
 const Stack = createNativeStackNavigator();
 
 // ... imports
 
 export default function App() {
+  
+  useEffect(() => {
+    // 🔥 CONNECT ONCE
+  connectMarketWS();
+
+    // 🔥 GLOBAL MESSAGE LISTENER
+    onMarketMessage((msg) => {
+      if (msg?.type === "PRICE") {
+        applyPriceMessage(msg);
+      }
+    });
+  }, []);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

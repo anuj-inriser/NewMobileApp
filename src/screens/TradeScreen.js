@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Modal, ScrollView, AppState } from 'react-native';
 import TopHeader from "../components/TopHeader";
 import TopMenuSlider from "../components/TopMenuSlider";
 import { useRoute } from '@react-navigation/native';
@@ -9,6 +9,11 @@ import { Ionicons } from '@expo/vector-icons';
 import axiosInstance from "../api/axios";
 import TradeTopMenuSlider from '../components/Trade/TradeTopMenuSlider';
 import TradeCard from '../components/Trade/TradeCard';
+import { useFocusEffect } from "@react-navigation/native";
+import {
+    subscribeSymbols,
+    unsubscribeDelayed
+} from "../ws/marketSubscriptions";
 
 
 const filterOptions = [
@@ -22,7 +27,7 @@ const filterOptions = [
 const TradeScreen = () => {
 
     const route = useRoute();
-
+    const didSubscribeRef = useRef(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [tradeRecommendations, setTradeRecommendations] = useState([]);
     const [tradeCategories, setTradeCategories] = useState([]);
@@ -34,6 +39,50 @@ const TradeScreen = () => {
         setSelectedFilter(option);
         setIsFilterOpen(false);
     };
+    const getSymbols = () => {
+        return Array.from(
+            new Set(
+                tradeRecommendations
+                    .map(t => t?.token)
+                    .filter(Boolean)
+            )
+        );
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            const page = "Ideas";
+            const context =
+                selectedCategory?.scriptTypeName ||
+                selectedCategory?.name ||
+                "unknown";
+
+            const symbols = getSymbols();
+
+            if (!symbols.length) {
+                console.log(`⏭ SKIP SUBSCRIBE → ${page}::${context} (no symbols)`);
+                return;
+            }
+
+            console.log(`🟢 SUBSCRIBE → ${page}::${context}`, symbols);
+            subscribeSymbols(symbols, page, context);
+
+            const appStateSub = AppState.addEventListener("change", (state) => {
+                if (state !== "active") {
+                    unsubscribeDelayed(symbols, page, context);
+                } else {
+                    subscribeSymbols(symbols, page, context);
+                }
+            });
+
+            return () => {
+                unsubscribeDelayed(symbols, page, context);
+                appStateSub?.remove();
+            };
+        }, [tradeRecommendations, selectedCategory])
+    );
+
+
 
     useEffect(() => {
         const fetchTradeCategories = async () => {
@@ -43,7 +92,7 @@ const TradeScreen = () => {
                 setTradeCategories(categories);
             } catch (error) {
                 console.error("Error fetching trade categories:", error);
-                setTradeCategories([]); 
+                setTradeCategories([]);
             } finally {
                 setLoadingCategories(false);
             }

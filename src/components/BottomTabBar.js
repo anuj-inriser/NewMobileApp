@@ -11,7 +11,7 @@ const BottomTabBar = () => {
   const tabs = [
     { name: "Home", component: "Home", icon: require("../../assets/homemenu.png") },
     { name: "Portfolio", component: "PortfolioScreen", icon: require("../../assets/portfoliomenu.png") },
-    { name: "Community", component: "StockTimelineScreen", icon: require("../../assets/communitymenu.png"), badge: 3 },
+    { name: "Community", component: "StockTimelineScreen", icon: require("../../assets/communitymenu.png")},
     { name: "Ideas", component: "TradeScreen", icon: require("../../assets/ideasmenu.png") },
     { name: "Trade", component: "OrdersScreen", icon: require("../../assets/trademenu.png") },
   ];
@@ -50,7 +50,6 @@ const BottomTabBar = () => {
 };
 
 const styles = StyleSheet.create({
-  // ⭐⭐ BOTTOM BAR को स्क्रीन के बिलकुल नीचे FIX कर दिया ⭐⭐
   absoluteBar: {
     position: "absolute",
     bottom: 0,

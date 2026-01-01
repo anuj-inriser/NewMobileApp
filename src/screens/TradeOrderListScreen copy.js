@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
   View,
   Text,
   Alert,
-  AppState
 } from 'react-native'; // ✅ Correct: core RN components
 import { SafeAreaView } from 'react-native-safe-area-context'; // ✅ Only SafeAreaView from this lib
 import { useAuth } from '../context/AuthContext';
@@ -16,11 +15,6 @@ import { apiUrl } from '../utils/apiUrl';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomTabBar from '../components/BottomTabBar';
-import { useFocusEffect } from "@react-navigation/native";
-import {
-  subscribeSymbols,
-  unsubscribeDelayed
-} from "../ws/marketSubscriptions";
 
 
 export default function TradeOrderListScreen({ navigation }) {
@@ -32,57 +26,6 @@ export default function TradeOrderListScreen({ navigation }) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [stockSymbols, setStockSymbols] = useState([]);
   const ltpIntervalsRef = useRef([]);
-  const didSubscribeRef = useRef(false);
-
-  /* 🔹 symbols derived from watchlist */
-  const symbols = useMemo(() => {
-    if (!stocksInWatchlist?.length) return [];
-
-    return Array.from(
-      new Set(
-        stocksInWatchlist
-          .map(s => s?.token || s?.symbol)
-          .filter(Boolean)
-      )
-    );
-  }, [stocksInWatchlist]);
-
-  /* 🔹 WS subscribe / unsubscribe */
-  useFocusEffect(
-    useCallback(() => {
-      const page = "WatchlistPage";
-      const context = `Watchlist-${currentWatchlistId || "none"}`;
-
-      didSubscribeRef.current = false;
-
-      if (!symbols.length) {
-        console.log(`⏭ SKIP SUBSCRIBE → ${page}::${context} (no symbols)`);
-        return;
-      }
-
-      // 🟢 SUBSCRIBE
-      didSubscribeRef.current = true;
-      console.log(`🟢 SUBSCRIBE → ${page}::${context}`, symbols);
-      subscribeSymbols(symbols, page, context);
-
-      const appStateSub = AppState.addEventListener("change", state => {
-        if (state !== "active") {
-          if (didSubscribeRef.current) {
-            unsubscribeDelayed(symbols, page, context);
-          }
-        } else {
-          subscribeSymbols(symbols, page, context);
-        }
-      });
-
-      return () => {
-        if (didSubscribeRef.current) {
-          unsubscribeDelayed(symbols, page, context);
-        }
-        appStateSub?.remove();
-      };
-    }, [symbols, currentWatchlistId])
-  );
 
 
   const handleWatchlistAdded = useCallback((wishlistId) => {
@@ -239,7 +182,7 @@ export default function TradeOrderListScreen({ navigation }) {
             token: item.token,
             ltp: ltpData[item.symbol || item.script_name] || 0,
             name: item.script_name,
-            internaltype: 'Place'
+            internaltype:'Place'
           })
         }
         onRemoveItem={removeStockFromWatchlist}   // ✅ exact function
@@ -271,11 +214,11 @@ export default function TradeOrderListScreen({ navigation }) {
         }}>
           <TopMenuSlider />
           <TopWatchlistMenu onWatchlistChange={setCurrentWatchlistId} />
-        </View>
+        </View> 
         {renderContent()}
       </SafeAreaView>
 
-      <BottomTabBar />
+      <BottomTabBar/>
     </>
   );
 }

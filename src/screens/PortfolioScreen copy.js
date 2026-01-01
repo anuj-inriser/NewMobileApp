@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Modal, Image, AppState } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Modal, Image } from 'react-native';
 import TopHeader from "../components/TopHeader";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BottomTabBar from '../components/BottomTabBar';
@@ -10,12 +10,6 @@ import { apiUrl } from '../utils/apiUrl';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDeviceId } from "../utils/deviceId";
 import { useRoute } from '@react-navigation/native';
-import {
-    subscribeSymbols,
-    unsubscribeDelayed
-} from "../ws/marketSubscriptions";
-import { useFocusEffect } from "@react-navigation/native";
-import { useRealtimePrices } from "../hooks/useRealtimePrices";
 
 const filterOptions = [
     "All",
@@ -38,10 +32,6 @@ const PorfolioScreen = () => {
     const [sortOpen, setSortOpen] = useState(false);
     const [brokerFilters, setBrokerFilters] = useState([]);
     const [selectedBroker, setSelectedBroker] = useState(null);
-    const portfolioSymbols = orders
-        .map(o => o.tradingsymbol)
-        .filter(Boolean);
-    const { prices: realtimePrices } = useRealtimePrices();
 
     const applyBrokerFilter = (brokerId) => {
 
@@ -58,29 +48,6 @@ const PorfolioScreen = () => {
 
         setOrders(filtered);
     };
-    useFocusEffect(
-        useCallback(() => {
-            const page = "PortfolioScreen";
-            const context = "HOLDINGS"; // 🔥 FIX
-            if (!portfolioSymbols.length) return;
-
-            subscribeSymbols(portfolioSymbols, page, context);
-
-            const sub = AppState.addEventListener("change", (state) => {
-                if (state !== "active") {
-                    unsubscribeDelayed(portfolioSymbols, page, context);
-                } else {
-                    subscribeSymbols(portfolioSymbols, page, context);
-                }
-            });
-
-            return () => {
-                unsubscribeDelayed(portfolioSymbols, page, context);
-                sub?.remove();
-            };
-        }, [portfolioSymbols])
-    );
-
 
 
     useEffect(() => {
@@ -245,7 +212,6 @@ const PorfolioScreen = () => {
                             />
                             <Text style={styles.actionText}>Filter</Text>
                         </TouchableOpacity>
-
                     </View>
                 </View>
                 {/* SORT MODAL */}
@@ -322,56 +288,48 @@ const PorfolioScreen = () => {
                     </View>
                 ) : (
                     <ScrollView style={{ marginTop: 10 }}>
-                        {orders.map((item, index) => {
-                            const rt = realtimePrices[item.tradingsymbol];
+                        {orders.map((item, index) => (
+                            <PortfolioCard
+                                key={item.symboltoken + "-" + index}
+                                name={item.tradingsymbol}
 
-                            const ltp = rt?.price ?? Number(item.ltp || 0);
-                            const prevClose = rt?.prevClose ?? Number(item.close || 0);
+                                shares={Number(item.realisedquantity || 0)}
 
-                            return (
-                                <PortfolioCard
-                                    key={item.symboltoken + "-" + index}
-                                    name={item.tradingsymbol}
+                                invested={Number(
+                                    Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
+                                )}
 
-                                    shares={Number(item.realisedquantity || 0)}
+                                price={Number(
+                                    Number(item.averageprice || 0).toFixed(2)
+                                )}
 
-                                    invested={Number(
-                                        Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
-                                    )}
+                                currentValue={Number(
+                                    Number(item.ltp || 0).toFixed(2)
+                                )}
 
-                                    price={Number(
-                                        Number(item.averageprice || 0).toFixed(2)
-                                    )}
+                                profit={(Number(item.ltp).toFixed(2) * item.realisedquantity).toFixed(2)}
 
-                                    currentValue={Number(
-                                        Number(ltp || 0).toFixed(2)
-                                    )}
+                                profitPercent={Number(
+                                    (
+                                        (Number(item.ltp || 0) * Number(item.realisedquantity || 0)) -
+                                        (Number(item.averageprice || 0) * Number(item.realisedquantity || 0))
+                                    ) /
+                                    (Number(item.averageprice || 0) * Number(item.realisedquantity || 0)) * 100
+                                ).toFixed(2)}
 
-                                    profit={(Number(ltp).toFixed(2) * item.realisedquantity).toFixed(2)}
+                                today={(
+                                    (Number(item.ltp || 0) - Number(item.close || 0)) *
+                                    Number(item.realisedquantity || 0)
+                                )}
 
-                                    profitPercent={Number(
-                                        (
-                                            (Number(ltp || 0) * Number(item.realisedquantity || 0)) -
-                                            (Number(item.averageprice || 0) * Number(item.realisedquantity || 0))
-                                        ) /
-                                        (Number(item.averageprice || 0) * Number(item.realisedquantity || 0)) * 100
-                                    ).toFixed(2)}
-
-                                    today={(
-                                        (Number(ltp || 0) - Number(prevClose || 0)) *
-                                        Number(item.realisedquantity || 0)
-                                    )}
-
-                                    todayPercent={(((
-                                        (Number(ltp || 0) - Number(prevClose || 0)) *
-                                        Number(item.realisedquantity || 0)
-                                    ) / Number(
-                                        Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
-                                    )) * 100).toFixed(2)}
-                                />
-                            );
-                        })}
-
+                                todayPercent={(((
+                                    (Number(item.ltp || 0) - Number(item.close || 0)) *
+                                    Number(item.realisedquantity || 0)
+                                ) / Number(
+                                    Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
+                                )) * 100).toFixed(2)}
+                            />
+                        ))}
                     </ScrollView>
                 )}
             </SafeAreaView>

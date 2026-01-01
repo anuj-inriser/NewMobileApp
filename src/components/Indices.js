@@ -12,6 +12,15 @@ const CARD_WIDTH = 250; // Increased width to match Figma design
 const IndexCard = ({ name, value, change, changePercent, data, onPress }) => {
 
     const isPositive = change >= 0;
+    const displayChange =
+        typeof change === "number"
+            ? Math.abs(change).toFixed(2)
+            : "0.00";
+
+    const displayPercent =
+        typeof changePercent === "number"
+            ? Math.abs(changePercent).toFixed(2)
+            : "0.00";
 
     const chartData = React.useMemo(() => {
         const seed = name
@@ -70,7 +79,7 @@ const IndexCard = ({ name, value, change, changePercent, data, onPress }) => {
             <View style={styles.cardTopRow}>
                 <View>
                     <Text style={styles.indexName}>{name}</Text>
-                    <Text style={styles.timestamp}>{timestamp}</Text>
+                    {/* <Text style={styles.timestamp}>{timestamp}</Text> */}
                 </View>
 
                 <View style={{ alignItems: 'flex-end' }}>
@@ -83,14 +92,13 @@ const IndexCard = ({ name, value, change, changePercent, data, onPress }) => {
                             isPositive ? styles.positive : styles.negative,
                         ]}
                     >
-                        {isPositive ? '+' : ''}₹{change.toFixed(2)} (
-                        {isPositive ? '+' : ''}
-                        {changePercent.toFixed(2)}%)
+                        ₹{displayChange} ({displayPercent}%)
                     </Text>
+
                 </View>
             </View>
 
-            <View style={styles.chartContainer}>
+            {/* <View style={styles.chartContainer}>
                 <LineChart
                     data={chartData}
                     height={50}
@@ -112,7 +120,7 @@ const IndexCard = ({ name, value, change, changePercent, data, onPress }) => {
                     isAnimated
                     animationDuration={700}
                 />
-            </View>
+            </View> */}
         </TouchableOpacity>
     );
 };
@@ -127,6 +135,15 @@ const IndexVerticalCard = ({ index, onPress }) => {
     const intervalData = chartDataResponse; // Alias to match existing logic if needed or adapt below
     const isPositive = index.change >= 0;
     const color = isPositive ? '#22c55e' : '#ef4444';
+    const displayChange =
+        typeof index.change === "number"
+            ? Math.abs(index.change).toFixed(2)
+            : "0.00";
+
+    const displayPercent =
+        typeof index.changePercent === "number"
+            ? Math.abs(index.changePercent).toFixed(2)
+            : "0.00";
 
     const allCandles = intervalData?.candles || [];
     const recentCandles = allCandles;
@@ -185,68 +202,54 @@ const IndexVerticalCard = ({ index, onPress }) => {
         >
             <View style={styles.verticalCardLeft}>
                 <Text style={styles.verticalSymbol}>{index.name || index.symbol}</Text>
-                <Text style={styles.verticalTime}>
+                {/* <Text style={styles.verticalTime}>
                     {index.timestamp ?
                         `${new Date(index.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${new Date(index.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}`
                         : '--:--'}
-                </Text>
+                </Text> */}
             </View>
 
-            <View style={styles.verticalChartContainer}>
+            {/* <View style={styles.verticalChartContainer}>
                 {loading && chartData.length <= 3 && !recentCandles.length ? (
                     <ActivityIndicator size="small" color={color} />
                 ) : (
                     <LineChart
                         data={chartData}
-
-                        /* Chart size */
                         height={60}
                         width={140}
                         adjustToWidth={true}
                         initialSpacing={1}
                         endSpacing={1}
-
-                        /* Line style */
                         thickness={2}
                         color="#2ecc71"
                         curved
                         curvature={0.2}
-
-                        /* Area fill (important for your look) */
                         areaChart
                         startFillColor="rgba(46, 204, 113, 0.25)"
-
                         endFillColor="rgba(239, 225, 225, 0.02)"
                         startOpacity={0.5}
                         endOpacity={0.1}
-
-                        /* Hide grid & axes */
                         hideRules={true}
                         hideYAxisText={true}
                         hideAxesAndRules={true}
                         hideXAxisText={true}
-
-                        /* Pointer (optional) */
                         hideDataPoints
                         dataPointsHeight={0}
                         dataPointsWidth={0}
                         dataPointsRadius={0}
                         hidePointerStrip
-
-                        /* Smooth spike effect */
                         isAnimated
                         animationDuration={800}
-
                     />
                 )}
-            </View>
+            </View> */}
 
             <View style={styles.verticalCardRight}>
                 <Text style={styles.verticalPrice}>
                     ₹{index.value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
                 <Text style={[styles.verticalChange, { color }]}>
-                    {isPositive ? '+' : ''}{index.change.toFixed(2)} ({isPositive ? '+' : ''}{index.changePercent.toFixed(2)}%)
+                    {displayChange} ({displayPercent}%)
                 </Text>
             </View>
         </TouchableOpacity>
@@ -254,16 +257,10 @@ const IndexVerticalCard = ({ index, onPress }) => {
 };
 
 import { useQuery } from '@tanstack/react-query';
-
-// ... (imports remain the same)
-
 const Indices = ({ exchange = 'NSE', viewMode = 'horizontal', onViewAllPress, maxItems, externalData, onIndexPress }) => {
-    // Subscribe to real-time price updates
     const { prices: realtimePrices, isConnected } = useRealtimePrices();
-
-    // Query to fetch indices
     const { data: indicesData, isLoading, error: queryError, refetch } = useQuery({
-        queryKey: ['indicesList'], // Global cache for indices list
+        queryKey: ['indicesList'],
         queryFn: async () => {
             const response = await fetch(`${apiUrl}/api/indices`);
             if (!response.ok) {
@@ -280,40 +277,75 @@ const Indices = ({ exchange = 'NSE', viewMode = 'horizontal', onViewAllPress, ma
     });
 
     // Determine the source of indices (External or Query)
-    const indicesSource = externalData || indicesData || [];
+    const normalizedExternalData = useMemo(() => {
+        if (!Array.isArray(externalData) || externalData.length === 0) return [];
+
+        return externalData.map(item => {
+            const value = Number(item.ltp || 0);
+            const prevClose = Number(item.prev_close || 0);
+
+            const change = prevClose > 0 ? value - prevClose : 0;
+            const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+
+            return {
+                symbol: item.symbol || item.group_name,
+                name: item.group_name,
+                value,
+                prevClose,
+                change,
+                changePercent,
+                timestamp: new Date().toISOString()
+            };
+        });
+    }, [externalData]);
+
+    // ✅ 2. Then choose source
+    const indicesSource = externalData ? normalizedExternalData : indicesData || [];
     const loading = isLoading && !externalData;
     const error = queryError ? queryError.message : null;
+
 
     // Merge real-time prices with fetched indices
     const indicesWithRealtimeData = useMemo(() => {
         if (!indicesSource || indicesSource.length === 0) return [];
+        const NSE_SYMBOLS = ["NIFTY", "BANKNIFTY", "FINNIFTY"];
+        const BSE_SYMBOLS = ["SENSEX", "BANKEX"];
 
         const baseIndices = indicesSource.filter(index => {
-            if (exchange === 'NSE') {
-                return index.symbol.includes('NIFTY') || index.symbol === 'NIFTY';
-            } else {
-                return index.symbol.includes('BSE') || index.symbol === 'SENSEX';
+            const name = (index.name || index.symbol || "").toUpperCase();
+
+            if (exchange === "NSE") {
+                return NSE_SYMBOLS.some(sym => name.includes(sym));
             }
+            if (exchange === "BSE") {
+                // Match "SENSEX", "BSE SENSEX", etc.
+                return name.includes("SENSEX") || BSE_SYMBOLS.includes(name);
+            }
+            return false;
         });
 
         return baseIndices.map(index => {
             // ... (Realtime merge logic remains largely the same, referencing baseIndices)
             const realtimeData = realtimePrices[index.symbol];
             if (realtimeData) {
-                const initialPrevClose = index.value - index.change;
-                const effectivePrevClose = (initialPrevClose > 0) ? initialPrevClose : (realtimeData.prevClose || realtimeData.open);
+                const prevClose =
+                    index.prevClose ||
+                    realtimeData.prevClose ||
+                    realtimeData.open ||
+                    index.value;
 
-                const newChange = realtimeData.price - effectivePrevClose;
-                const newPercent = effectivePrevClose > 0 ? (newChange / effectivePrevClose) * 100 : 0;
+                const newChange = realtimeData.price - prevClose;
+                const newPercent = prevClose > 0 ? (newChange / prevClose) * 100 : 0;
 
                 return {
                     ...index,
                     value: realtimeData.price,
                     change: newChange,
                     changePercent: newPercent,
-                    timestamp: realtimeData.timestamp
+                    timestamp: realtimeData.timestamp,
                 };
             }
+
             return index;
         });
     }, [indicesSource, realtimePrices, exchange]);
@@ -394,7 +426,7 @@ const Indices = ({ exchange = 'NSE', viewMode = 'horizontal', onViewAllPress, ma
                 >
                     {displayIndices.map((index, i) => (
                         <IndexCard
-                            key={index.symbol || i}
+                            key={`${exchange}-IDX-${index.name}-${i}`}
                             name={index.name || index.symbol}
                             value={index.value}
                             change={index.change}
@@ -415,7 +447,7 @@ const Indices = ({ exchange = 'NSE', viewMode = 'horizontal', onViewAllPress, ma
                 <View style={styles.verticalList}>
                     {indicesWithRealtimeData.map((index, i) => (
                         <IndexVerticalCard
-                            key={index.symbol || i}
+                            key={`${exchange}-IDX-V-${index.name}-${i}`}
                             index={index}
                             onPress={onIndexPress}
                         />
@@ -441,7 +473,8 @@ const Indices = ({ exchange = 'NSE', viewMode = 'horizontal', onViewAllPress, ma
                         </Text>
                         <Text style={styles.indexValue}>₹ {index.value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                         <Text style={[styles.changeText, index.change >= 0 ? styles.positive : styles.negative]}>
-                            {index.change >= 0 ? '+' : ''}{index.change.toFixed(2)} ({index.change >= 0 ? '+' : ''}{index.changePercent.toFixed(2)}%)
+                            {index.change.toFixed(2)}
+                            ({index.changePercent.toFixed(2)}%)
                         </Text>
 
                         <View style={styles.chartContainer}>
@@ -488,10 +521,10 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
+        shadowOpacity: 0.06,
+        shadowRadius: 3,
         elevation: 3,
-        minHeight: 130,
+        // minHeight: 130,
     },
     cardTopRow: {
         flexDirection: 'row',

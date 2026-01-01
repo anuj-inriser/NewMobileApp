@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View, Image, Text, TouchableOpacity, Modal, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { ScrollView, StyleSheet, View, Image, Text, TouchableOpacity, Modal, Alert, AppState } from 'react-native';
 import TopHeader from "../components/TopHeader";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BottomTabBar from '../components/BottomTabBar';
@@ -13,6 +13,11 @@ import TradeOrderTabs from '../components/Trade/TradeOrderTabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDeviceId } from "../utils/deviceId";
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect } from "@react-navigation/native";
+import {
+    subscribeSymbols,
+    unsubscribeDelayed,
+} from "../ws/marketSubscriptions";
 
 const filterOptions = [
     "All",
@@ -45,6 +50,67 @@ const OrdersScreen = () => {
         2: ["A-Z", "Z-A", "High-Low", "Low-High"], // Orders
         3: ["A-Z", "Z-A", "High-Low", "Low-High"], // Positions
     };
+
+    const getSymbolsForTab = () => {
+        if (!orders.length) return [];
+
+        // ❌ Orders tab → no market data
+        if (selectedTab === 2) return [];
+
+        // ✅ Trade & Positions
+        return Array.from(
+            new Set(
+                orders
+                    .map(o =>
+                        o.symboltoken ||
+                        o.symbol_token ||
+                        o.tradingsymbol ||
+                        null
+                    )
+                    .filter(Boolean)
+            )
+        );
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            const page = "OrdersScreen";
+            const tabName =
+                selectedTab === 1
+                    ? "Trade"
+                    : selectedTab === 2
+                        ? "Orders"
+                        : "Positions";
+
+            const context = `Tab-${tabName}`;
+            const symbols = getSymbolsForTab();
+
+            // ❌ Orders tab OR empty symbols
+            if (!symbols.length) {
+                console.log(`⏭ SKIP SUBSCRIBE → ${page}::${context} (no symbols)`);
+                return;
+            }
+
+            // 🟢 SUBSCRIBE
+            console.log(`🟢 SUBSCRIBE → ${page}::${context}`, symbols);
+            subscribeSymbols(symbols, page, context);
+
+            // 📱 App state handling
+            const appStateSub = AppState.addEventListener("change", (state) => {
+                if (state !== "active") {
+                    unsubscribeDelayed(symbols, page, context);
+                } else {
+                    subscribeSymbols(symbols, page, context);
+                }
+            });
+
+            return () => {
+                // 🔴 Screen blur / tab change
+                unsubscribeDelayed(symbols, page, context);
+                appStateSub?.remove();
+            };
+        }, [orders, selectedTab])
+    );
 
     useEffect(() => {
         if (route.params?.defaultTab) {
