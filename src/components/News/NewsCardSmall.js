@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: "#E5E7EB",
         borderRadius: 18,
-        padding: 10,              
+        padding: 10,
         marginBottom: 16,
         elevation: 3,
         height: 100,
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     },
     top: {
         flexDirection: "row",
-        marginBottom: 3,         
+        marginBottom: 3,
     },
     image: {
         width: 90,
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     },
     bottom: {
         flexDirection: "row",
-        justifyContent: "space-between",   
+        justifyContent: "space-between",
     },
     title: {
         fontSize: 16,

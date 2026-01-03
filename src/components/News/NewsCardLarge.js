@@ -10,9 +10,13 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { apiUrl } from "../../utils/apiUrl";
-import {formatPublishedTime} from "../../utils/dateFormat"
+import { formatPublishedTime } from "../../utils/dateFormat"
+
+
 
 const NewsCardLarge = ({ item, onPress }) => {
+
+    console.log('item', item.news_content)
     const [menuVisible, setMenuVisible] = useState(false);
     const [cardLayout, setCardLayout] = useState({ x: 0, y: 0 });
     const [iconLayout, setIconLayout] = useState({ x: 0, y: 0, w: 0, h: 0 });
@@ -49,6 +53,8 @@ const NewsCardLarge = ({ item, onPress }) => {
                     <Text style={styles.description} numberOfLines={3}>
                         {item.brief_description}
                     </Text>
+
+
 
                     <View style={styles.footer}>
                         <Text style={styles.time}>{formatPublishedTime(item.published_at)}</Text>

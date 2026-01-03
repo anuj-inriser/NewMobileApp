@@ -9,6 +9,13 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const SequenceCard = ({ item, onPlay }) => {
     const [expanded, setExpanded] = useState(false);
 
+    const truncateWords = (str, numWords) => {
+        if (!str) return '';
+        const words = str.split(' ');
+        if (words.length <= numWords) return str;
+        return words.slice(0, numWords).join(' ') + '...';
+    };
+
     const toggleExpand = () => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setExpanded(!expanded);
