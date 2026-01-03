@@ -1,3 +1,4 @@
+// useRealtimePrices.js — Final Corrected
 import { useEffect, useRef, useState } from "react";
 import { onMarketMessage } from "../ws/marketWs";
 
@@ -6,42 +7,34 @@ export const useRealtimePrices = () => {
   const bufferRef = useRef({});
 
   useEffect(() => {
-    // 🔔 Listen WS messages
     const unsubscribe = onMarketMessage((msg) => {
-      if (msg.type !== "PRICE") return;
+      // ✅ Handle v2 format
+      if (msg?.type?.toLowerCase() !== "price") return;
+      const data = msg.data;
+      if (!data) return;
 
-      const { symbol, price, prevClose, open, ts } = msg;
+      const { symbol, value: price, close: prevClose, open } = data;
       if (!symbol || price == null) return;
 
       const prev = bufferRef.current[symbol];
-      const base =
-        prev?.prevClose ??
-        prevClose ??
-        open ??
-        prev?.price ??
-        price;
+      const base = prev?.prevClose ?? prevClose ?? open ?? prev?.price ?? price;
 
       bufferRef.current[symbol] = {
         price,
         prevClose: base,
         change: price - base,
-        changePercent: base > 0 ? ((price - base) / base) * 100 : 0,
-        timestamp: ts || Date.now(),
+        changePercent: base ? ((price - base) / base) * 100 : 0,
+        __ui_ts: Date.now(), // for flash
       };
     });
 
-    // 🔥 FORCE RE-RENDER (MOST IMPORTANT PART)
     const flush = setInterval(() => {
-      if (Object.keys(bufferRef.current).length) {
-        const snapshot = { ...bufferRef.current };
-        bufferRef.current = {}; // 🔥 CLEAR BUFFER
-
-        setPrices((prev) => ({
-          ...prev,
-          ...snapshot,
-        }));
+      const snapshot = { ...bufferRef.current };
+      if (Object.keys(snapshot).length > 0) {
+        bufferRef.current = {};
+        setPrices(prev => ({ ...prev, ...snapshot }));
       }
-    }, 800);
+    }, 400);
 
     return () => {
       unsubscribe?.();

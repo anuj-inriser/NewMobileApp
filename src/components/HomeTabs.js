@@ -1,5 +1,5 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import HomeScreen from "../screens/HomeScreen";
+import EquityScreen from "../screens/EquityScreen";
 import TradeOrderListScreen from "../screens/TradeOrderListScreen";
 import Learning from "../screens/Learning";
 import NewsScreen from "../screens/NewsScreen";
@@ -11,7 +11,7 @@ const Tab = createBottomTabNavigator();
 export default function HomeTabs() {
     return (
         <Tab.Navigator screenOptions={{ headerShown: false }}>
-            <Tab.Screen name="Home" component={HomeScreen} />
+            <Tab.Screen name="Equity" component={EquityScreen} />
             <Tab.Screen name="Watchlist" component={TradeOrderListScreen} />
             <Tab.Screen name="Learning" component={Learning} />
             <Tab.Screen name="NewsScreen" component={NewsScreen} />

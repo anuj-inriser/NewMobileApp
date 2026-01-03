@@ -24,7 +24,7 @@ import watchlistIcon from "../../assets/dropdownwatchlist.png";
 import Profile from "../../assets/Profile.png";
 
 const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
-const TopHeader = ({ onWatchlistAdded }) => {
+const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const { authToken, clientId, clearAuth } = useAuth();
   const [menuVisible, setMenuVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -37,6 +37,7 @@ const TopHeader = ({ onWatchlistAdded }) => {
   const [loadingWatchlists, setLoadingWatchlists] = useState(false);
   const [userId, setUserId] = useState(null);
   const [addingToWishlist, setAddingToWishlist] = useState({});
+  const [profileImage, setProfileImage] = useState(null);
   useEffect(() => {
     fetchMaster();
     loadUserId();
@@ -50,7 +51,29 @@ const TopHeader = ({ onWatchlistAdded }) => {
       console.log("User ID load error:", err);
     }
   };
+  const getUserById = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const res = await axios.get(`${apiUrl}/api/users/${userId}`);
+      const user = res.data.data;
+      setProfileImage(user.userimage || null);
 
+    } catch (err) {
+      console.log("API Error =>", err);
+    }
+  };
+  const getImageSource = (img) => {
+    if (!img) return Profile;
+
+    if (img.startsWith("file://") || img.startsWith("content://")) {
+      return { uri: img };
+    }
+
+    return { uri: `data:image/jpeg;base64,${img}` };
+  };
+  useEffect(() => {
+    getUserById();
+  }, []);
   const fetchMaster = async () => {
     try {
       const res = await fetch(`${apiUrl}/api/scripts`);
@@ -237,14 +260,22 @@ const TopHeader = ({ onWatchlistAdded }) => {
     <View style={styles.container}>
       <StatusBar backgroundColor="#f2edf9" barStyle="dark-content" />
       <View style={styles.header}>
-        {/* Avatar */}
-        {/* Avatar → Click to open ProfileScreen */}
-        <TouchableOpacity onPress={() => navigation.navigate("ProfileScreen")}>
-          <Image
-            source={Profile} 
-            style={styles.avatar}
-          />
-        </TouchableOpacity>
+        {/* <TouchableOpacity onPress={() => navigation.navigate("ProfileScreen")}>
+          <Image source={getImageSource(profileImage)} style={styles.avatar} />
+        </TouchableOpacity> */}
+        {/* Avatar (only if NOT showing back button) */}
+        {!showBackButton && (
+          <TouchableOpacity onPress={() => navigation.navigate("ProfileScreen")}>
+            <Image source={getImageSource(profileImage)} style={styles.avatar} />
+          </TouchableOpacity>
+        )}
+
+        {/* Back Button (only if showBackButton is true) */}
+        {showBackButton && (
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={22} color="#fff" />
+          </TouchableOpacity>
+        )}
 
         {/* SEARCH BAR */}
         <View style={styles.searchContainer}>
@@ -324,9 +355,9 @@ const TopHeader = ({ onWatchlistAdded }) => {
         </TouchableOpacity>
 
         {/* Menu Button */}
-        <TouchableOpacity style={styles.circleButton} onPress={showMenu}>
+        {/* <TouchableOpacity style={styles.circleButton} onPress={showMenu}>
           <Ionicons name="menu" size={20} color="#fff" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Menu Modal */}
@@ -594,6 +625,19 @@ const styles = StyleSheet.create({
   iconImage: {
     width: 22,
     height: 22,
+  },
+  backButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#210F47",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 1,
+    elevation: 1,
   },
 });
 

@@ -9,7 +9,7 @@ const BottomTabBar = () => {
   const insets = useSafeAreaInsets();
 
   const tabs = [
-    { name: "Home", component: "Home", icon: require("../../assets/homemenu.png") },
+    { name: "Home", component: "Equity", icon: require("../../assets/homemenu.png") },
     { name: "Portfolio", component: "PortfolioScreen", icon: require("../../assets/portfoliomenu.png") },
     { name: "Community", component: "StockTimelineScreen", icon: require("../../assets/communitymenu.png")},
     { name: "Ideas", component: "TradeScreen", icon: require("../../assets/ideasmenu.png") },

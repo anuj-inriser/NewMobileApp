@@ -645,7 +645,7 @@ const ProfileScreen = () => {
     return (
         <>
             <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-                <TopHeader />
+                <TopHeader showBackButton={true} />
                 <ScrollView
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 100 }}
@@ -1255,13 +1255,6 @@ const ProfileScreen = () => {
                     <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                         <Text style={styles.logoutText}>Logout</Text>
                     </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.deleteBtn} onPress={() => setDeleteModalVisible(true)}>
-                        <Text style={styles.deleteText}>
-                            <Image
-                                source={DeleteIcon} style={{ height: 12, width: 11, }}
-                            />&nbsp; Delete Account</Text>
-                    </TouchableOpacity>
                 </ScrollView>
                 <Modal
                     visible={successModalOpen}
@@ -1579,6 +1572,11 @@ const ProfileScreen = () => {
                                     Policies may be updated periodically. Continued use of the app implies
                                     acceptance of updated terms.
                                 </Text>
+                                <TouchableOpacity onPress={() => setDeleteModalVisible(true)}>
+                                    <Text style={styles.termsText}>
+                                        Delete Account
+                                    </Text>
+                                </TouchableOpacity>
                             </ScrollView>
                         </View>
                     </View>

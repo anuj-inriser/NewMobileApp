@@ -18,7 +18,7 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
         }
         // Map route names to tab names
         const routeToTabMap = {
-            'Home': 'Home',
+            'Equity': 'Equity',
             'TradeOrderList': 'Watchlists',
             // 'TradeOrder': 'Watchlists',
             'Learning': 'Learning',
@@ -28,7 +28,7 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
             'NewsScreen': 'NewsScreen',
             'OrdersScreen': 'OrdersScreen',
             'TradeScreen': 'TradeScreen',
-            'Stocks': 'Stocks',
+            // 'Stocks': 'Stocks',
         };
 
         return routeToTabMap[currentRoute] === tabName;
@@ -37,14 +37,14 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
     // Function to handle tab press
     const handleTabPress = (tabName) => {
         switch (tabName) {
-            case 'Home':
-                navigation.navigate('Home');
+            case 'Equity':
+                navigation.navigate('Equity');
                 break;
-            case 'Stocks':
-                navigation.navigate('Stocks', {
-                    defaultTab: 'All'
-                });
-                break;
+            // case 'Stocks':
+            //     navigation.navigate('Stocks', {
+            //         defaultTab: 'All'
+            //     });
+            //     break;
             case 'Watchlists':
                 navigation.navigate('TradeOrderList');
                 break;
@@ -72,23 +72,23 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContainer}
             >
-                {/* Home */}
+                {/* Equity */}
                 <TouchableOpacity
                     style={[
                         styles.tabWhite,
-                        isActiveTab('Home') && styles.activeTab
+                        isActiveTab('Equity') && styles.activeTab
                     ]}
-                    onPress={() => handleTabPress('Home')}
+                    onPress={() => handleTabPress('Equity')}
                 >
                     <Text style={[
                         styles.tabTextDark,
-                        isActiveTab('Home') && styles.activeTabText
+                        isActiveTab('Equity') && styles.activeTabText
                     ]}>
-                        Home
+                        Equity
                     </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
+                {/* <TouchableOpacity
                     style={[
                         styles.tabWhite,
                         isActiveTab('Stocks') && styles.activeTab
@@ -101,7 +101,7 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
                     ]}>
                         Stocks
                     </Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <TouchableOpacity
                     style={[

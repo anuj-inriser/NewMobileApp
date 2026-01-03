@@ -73,9 +73,9 @@ const FundamentalTopHeader = () => {
                 </TouchableOpacity>
 
                 {/* ☰ Menu Button */}
-                <TouchableOpacity style={styles.circleButton} onPress={showMenu}>
+                {/* <TouchableOpacity style={styles.circleButton} onPress={showMenu}>
                     <Ionicons name="menu" size={20} color="#fff" />
-                </TouchableOpacity>
+                </TouchableOpacity> */}
             </View>
             {/* Dropdown Menu Modal */}
             <Modal

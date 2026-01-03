@@ -82,14 +82,13 @@ const TradeScreen = () => {
         }, [tradeRecommendations, selectedCategory])
     );
 
-
-
     useEffect(() => {
         const fetchTradeCategories = async () => {
             try {
                 const res = await axiosInstance.get('/scripttype');
                 const categories = res?.data?.data || [];
                 setTradeCategories(categories);
+                console.log("categories",categories);
             } catch (error) {
                 console.error("Error fetching trade categories:", error);
                 setTradeCategories([]);
@@ -259,7 +258,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 3,
         justifyContent: 'flex-start',
-        alignItems: 'center'
+        alignItems: 'center',
+        // backgroundColor:"#fff",
+        // left:'-47',
+        // paddingLeft:"10"
     },
 
     loader: {

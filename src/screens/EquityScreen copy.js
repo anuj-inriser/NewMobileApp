@@ -19,7 +19,7 @@ import MarketTabs from '../components/MarketTabs';
 import Indices from '../components/Indices';
 import { apiUrl } from '../utils/apiUrl';
 
-export default function HomeScreen({ navigation }) {
+export default function EquityScreen({ navigation }) {
     const route = useRoute();
     const { clientId, authToken, feedToken, refreshToken } = useAuth();
 
@@ -169,7 +169,7 @@ export default function HomeScreen({ navigation }) {
                 <MarketTabs
                     onExchangeChange={handleExchangeChange}
                     onCategoryChange={handleCategoryChange}
-                    activeTab={selectedCategory} // Control the active tab from HomeScreen
+                    activeTab={selectedCategory}
                 />
 
                 <View style={styles.content}>

@@ -44,7 +44,7 @@ const KycChart = ({
 
       {/* Center Text */}
       <View style={{ position: "absolute" }}>
-        <Text style={{ fontSize: 9, fontWeight: "700", color: "#210F47" }}>
+        <Text style={{ fontSize: 7, fontWeight: "700", color: "#210F47" }}>
           {percentage}%
         </Text>
       </View>

@@ -188,7 +188,7 @@ const StockListCard = ({ stock, realtime }) => {
                     {loading && currentPrice === 0 ? '--' : `₹${currentPrice.toFixed(2)}`}
                 </Text>
                 <Text style={[styles.change, { color }]}>
-                    {displayChange} ({displayPercent}%)
+                    ₹{displayChange} ({displayPercent}%)
                 </Text>
                 {/* <Text style={[styles.change, { color }]}>
                     {loading && currentPrice === 0 ? '--' : `${isPositive ? '+' : ''}${currentChange.toFixed(2)} (${currentChangePercent.toFixed(2)}%)`}

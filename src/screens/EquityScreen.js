@@ -8,7 +8,7 @@ import {
     FlatList,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { AppState } from "react-native";
+import { AppState, BackHandler, ToastAndroid } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -66,7 +66,8 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy }) => {
                 onPress={() =>
                     navigation.navigate("Stocks", {
                         exchange,
-                        filterIndex: item.name,
+                        from: "Market Cap",
+                        filterIndex: item.name, // e.g., "Large Cap"
                     })
                 }
             >
@@ -88,7 +89,7 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy }) => {
                             isPositive ? styles.positive : styles.negative,
                         ]}
                     >
-                        {displayChange} ({displayPercent}%)
+                        ₹{displayChange} ({displayPercent}%)
                     </Text>
 
                 </View>
@@ -129,7 +130,8 @@ const SectorsList = ({ data, exchange, category, navigation }) => {
                 onPress={() =>
                     navigation.navigate("Stocks", {
                         exchange,
-                        filterIndex: item.name, // ✅ VERY IMPORTANT
+                        from: "Sectors",
+                        filterIndex: item.name, // e.g., "IT"
                     })
                 }
             >
@@ -151,9 +153,8 @@ const SectorsList = ({ data, exchange, category, navigation }) => {
                             isPositive ? styles.positive : styles.negative,
                         ]}
                     >
-                        {displayChange} ({displayPercent}%)
+                        ₹{displayChange} ({displayPercent}%)
                     </Text>
-
                 </View>
             </TouchableOpacity>
         );
@@ -180,7 +181,8 @@ const ThemesList = ({ data, exchange, category, navigation }) => {
             onPress={() =>
                 navigation.navigate("Stocks", {
                     exchange,
-                    filterIndex: item.name, // ✅ VERY IMPORTANT
+                    from: "Themes",
+                    filterIndex: item.name, // e.g., "Defence"
                 })
             }
         >
@@ -204,7 +206,7 @@ const ThemesList = ({ data, exchange, category, navigation }) => {
     );
 };
 
-export default function HomeScreen({ navigation }) {
+export default function EquityScreen({ navigation }) {
     const subscribedOnceRef = useRef(false);
     const { prices: realtimePrices } = useRealtimePrices();
     const route = useRoute();
@@ -252,10 +254,37 @@ export default function HomeScreen({ navigation }) {
 
         return [];
     };
-
     useFocusEffect(
         useCallback(() => {
-            const page = "HomeScreen";
+            let backPressCount = 0;
+            let timeout;
+
+            const onBackPress = () => {
+                if (backPressCount === 0) {
+                    backPressCount = 1;
+                    ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+                    timeout = setTimeout(() => {
+                        backPressCount = 0;
+                    }, 2000);
+                    return true; // prevent exit
+                } else {
+                    clearTimeout(timeout);
+                    BackHandler.exitApp(); // ✅ exits app
+                    return false;
+                }
+            };
+
+            const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+            return () => {
+                backHandler.remove();
+                clearTimeout(timeout);
+            };
+        }, [])
+    );
+    useFocusEffect(
+        useCallback(() => {
+            const page = "EquityScreen";
             const context = selectedCategory; // 🔥 VERY IMPORTANT
             const symbols = getCurrentSymbols();
 
@@ -295,7 +324,7 @@ export default function HomeScreen({ navigation }) {
         const symbols = getCurrentSymbols();
         if (!symbols.length) return;
 
-        const page = "HomeScreen";
+        const page = "EquityScreen";
         const context = selectedCategory;
 
         console.log("🚀 AUTO SUBSCRIBE (DATA READY)", symbols);
@@ -365,8 +394,8 @@ export default function HomeScreen({ navigation }) {
             try {
                 const url =
                     exchange === "BSE"
-                        ? `${apiUrl}/api/indicesNew/bsethemes`
-                        : `${apiUrl}/api/indicesNew/nsethemes`;
+                        ? `${apiUrl}/api/indicesNew/bsetheme`
+                        : `${apiUrl}/api/indicesNew/nsetheme`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const result = await response.json();
@@ -424,7 +453,7 @@ export default function HomeScreen({ navigation }) {
 
             console.log("🚀 LOGIN AUTO SUBSCRIBE (INDICES)", symbols);
 
-            subscribeSymbols(symbols, "HomeScreen", "Indices");
+            subscribeSymbols(symbols, "EquityScreen", "Indices");
             subscribedOnceRef.current = true;
         }
     });
@@ -449,7 +478,9 @@ export default function HomeScreen({ navigation }) {
     const handleIndexPress = (index) => {
         navigation.navigate("Stocks", {
             exchange: selectedExchange,
-            filterIndex: index.name, // Pass index name or group as a filter
+            // ✅ NEW: track source context
+            from: "Indices",
+            filterIndex: index.name,  // e.g., "Nifty 50"
         });
     };
 
@@ -794,5 +825,4 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         color: "#210F47",
     },
-
 });

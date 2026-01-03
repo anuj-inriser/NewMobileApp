@@ -15,7 +15,7 @@ import LoginScreen from "./src/screens/LoginScreen";
 import SignupScreen from "./src/screens/SignupScreen";
 import PasswordScreen from "./src/screens/PasswordScreen";
 import DematScreen from "./src/screens/DematScreen";
-import HomeScreen from "./src/screens/HomeScreen";
+import EquityScreen from "./src/screens/EquityScreen";
 import TradeOrderListScreen from "./src/screens/TradeOrderListScreen";
 import TradeOrderScreen from "./src/screens/TradeOrderScreen";
 import Learning from "./src/screens/Learning";
@@ -40,10 +40,10 @@ const Stack = createNativeStackNavigator();
 // ... imports
 
 export default function App() {
-  
+
   useEffect(() => {
     // 🔥 CONNECT ONCE
-  connectMarketWS();
+    connectMarketWS();
 
     // 🔥 GLOBAL MESSAGE LISTENER
     onMarketMessage((msg) => {
@@ -94,9 +94,9 @@ export default function App() {
 
                 {/* 🏠 Main Screens */}
                 <Stack.Screen
-                  name="Home"
-                  component={HomeScreen}
-                  options={{ headerShown: false }}
+                  name="Equity"
+                  component={EquityScreen}
+                  options={{ headerShown: false, gestureEnabled: false }}
                 />
                 <Stack.Screen
                   name="TradeOrderList"

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 
-const MarketTabs = ({ onExchangeChange, onCategoryChange, tabs = ['Indices', 'Market Cap', 'Sectors', 'Themes'], selectedExchange, activeTab: controlledActiveTab, initialActiveTab = null }) => {
+const MarketTabs = ({ Pointer, onExchangeChange, onCategoryChange, tabs = ['Indices', 'Market Cap', 'Sectors', 'Themes'], selectedExchange, activeTab: controlledActiveTab, initialActiveTab = null }) => {
     const [exchange, setExchange] = useState(selectedExchange || 'NSE');
 
     // Sync if selectedExchange prop changes

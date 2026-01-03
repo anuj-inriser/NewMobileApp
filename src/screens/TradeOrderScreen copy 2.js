@@ -436,7 +436,7 @@ export default function TradeOrderScreen({ navigation }) {
         }
       );
       const data = await res.json();
-      console.log("ex",data);
+
       if (data.success) {
         const ltp = parseFloat(data.ltp || 0).toFixed(2);
 

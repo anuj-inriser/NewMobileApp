@@ -1,282 +1,217 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
-  ActivityIndicator,
   View,
+  ActivityIndicator,
   Text,
+  AppState,
   Alert,
-  AppState
-} from 'react-native'; // ✅ Correct: core RN components
-import { SafeAreaView } from 'react-native-safe-area-context'; // ✅ Only SafeAreaView from this lib
-import { useAuth } from '../context/AuthContext';
-import TopHeader from '../components/TopHeader';
-import TopMenuSlider from '../components/TopMenuSlider';
-import TopWatchlistMenu from '../components/TopWatchlistMenu';
-import WatchlistItemCard from '../components/WatchlistItemCard';
-import { apiUrl } from '../utils/apiUrl';
-import axios from 'axios';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import axios from "axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import BottomTabBar from '../components/BottomTabBar';
-import { useFocusEffect } from "@react-navigation/native";
+
+import TopHeader from "../components/TopHeader";
+import TopMenuSlider from "../components/TopMenuSlider";
+import TopWatchlistMenu from "../components/TopWatchlistMenu";
+import WatchlistItemCard from "../components/WatchlistItemCard";
+import BottomTabBar from "../components/BottomTabBar";
+
+import { apiUrl } from "../utils/apiUrl";
+import { useRealtimePrices } from "../hooks/useRealtimePrices";
 import {
   subscribeSymbols,
-  unsubscribeDelayed
+  unsubscribeDelayed,
 } from "../ws/marketSubscriptions";
 
+const mergeWithRealtime = (list, realtimePrices) => {
+  return list.map(item => {
+    const rt = realtimePrices[item.token] || realtimePrices[item.script_id];
+
+    // ✅ LTP: realtime > item.ltp > 0
+    const ltp = rt?.price != null
+      ? Number(rt.price)
+      : Number(item.ltp || item.value || 0);
+    // ✅ Prev Close: realtime > item.prev_close > ltp (no change fallback)
+    const prevClose = rt?.prevClose != null
+      ? Number(rt.prevClose)
+      : Number(item.prev_close || item.prevClose || ltp);
+
+    // ✅ Recalculate every ,time — fresh & consistent
+    const change = ltp - prevClose;
+    const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
+    // console.log("ltp",ltp)
+    // console.log("prevClose",prevClose)
+    // console.log("change",change)
+    // console.log("changePercent",changePercent)
+
+    return {
+      ...item,
+      value: ltp,
+      prevClose,          // ✅ expose for debugging/UI
+      change,
+      changePercent,
+      timestamp: rt?.timestamp || item.timestamp || new Date().toISOString(),
+    };
+  });
+};
 
 export default function TradeOrderListScreen({ navigation }) {
-  const { authToken } = useAuth();
-  const [ltpData, setLtpData] = useState({});
   const [currentWatchlistId, setCurrentWatchlistId] = useState(null);
-  const [stocksInWatchlist, setStocksInWatchlist] = useState([]);
+  const [stocks, setStocks] = useState([]); // ✅ raw DB data
+  const [enrichedStocks, setEnrichedStocks] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [stockSymbols, setStockSymbols] = useState([]);
-  const ltpIntervalsRef = useRef([]);
-  const didSubscribeRef = useRef(false);
+  const [removingScriptId, setRemovingScriptId] = useState(null);
 
-  /* 🔹 symbols derived from watchlist */
-  const symbols = useMemo(() => {
-    if (!stocksInWatchlist?.length) return [];
+  const { prices: realtimePrices } = useRealtimePrices();
+  const symbolsRef = useRef([]);
+  const fetchedPrevCloseRef = useRef(false);
 
-    return Array.from(
-      new Set(
-        stocksInWatchlist
-          .map(s => s?.token || s?.symbol)
-          .filter(Boolean)
-      )
-    );
-  }, [stocksInWatchlist]);
-
-  /* 🔹 WS subscribe / unsubscribe */
-  useFocusEffect(
-    useCallback(() => {
-      const page = "WatchlistPage";
-      const context = `Watchlist-${currentWatchlistId || "none"}`;
-
-      didSubscribeRef.current = false;
-
-      if (!symbols.length) {
-        console.log(`⏭ SKIP SUBSCRIBE → ${page}::${context} (no symbols)`);
-        return;
-      }
-
-      // 🟢 SUBSCRIBE
-      didSubscribeRef.current = true;
-      console.log(`🟢 SUBSCRIBE → ${page}::${context}`, symbols);
-      subscribeSymbols(symbols, page, context);
-
-      const appStateSub = AppState.addEventListener("change", state => {
-        if (state !== "active") {
-          if (didSubscribeRef.current) {
-            unsubscribeDelayed(symbols, page, context);
-          }
-        } else {
-          subscribeSymbols(symbols, page, context);
-        }
-      });
-
-      return () => {
-        if (didSubscribeRef.current) {
-          unsubscribeDelayed(symbols, page, context);
-        }
-        appStateSub?.remove();
-      };
-    }, [symbols, currentWatchlistId])
-  );
-
-
-  const handleWatchlistAdded = useCallback((wishlistId) => {
-    // Only refresh the current watchlist if item was added to the same watchlist
-    // Don't switch to the watchlist where item was added
-    if (currentWatchlistId && currentWatchlistId === wishlistId) {
-      setRefreshTrigger(prev => prev + 1);
-    }
-    // If item was added to a different watchlist, do nothing (stay on current)
-  }, [currentWatchlistId]);
-
-  const removeStockFromWatchlist = async (item) => {
-    const userId = await AsyncStorage.getItem('userId'); // ✅ 'userId' (not 'user_id')
-
-    if (!userId) {
-      Alert.alert('❌ Auth Error', 'User ID not found. Please log in again.');
-      return;
-    }
-
-    if (!currentWatchlistId) {
-      Alert.alert('⚠️ Error', 'No watchlist selected.');
-      return;
-    }
-    if (!item?.script_id) {
-      Alert.alert('⚠️ Error', 'Invalid stock selected.');
-      return;
-    }
-
-    try {
-
-      const response = await axios.post(`${apiUrl}/api/wishlistcontrol/remove`, {
-        user_id: parseInt(userId, 10),
-        wishlist_id: parseInt(currentWatchlistId, 10),
-        script_id: item.script_id,
-      });
-
-
-      if (response.data.success === true) {
-        setStocksInWatchlist(prev =>
-          prev.filter(stock => stock.script_id !== item.script_id)
-        );
-        Alert.alert('✅ Done', `${item.script_name} removed from watchlist`);
-      } else {
-        throw new Error(response.data.message || 'Operation failed');
-      }
-    } catch (err) {
-      console.error("💥 API Error:", err.response?.data || err.message);
-      Alert.alert('❌ Failed', `Could not remove ${item.script_name}`);
-    }
-  };
-
-  // 🔹 Fetch LTP
-  const fetchLtp = async (symbol) => {
-    try {
-      const res = await fetch(
-        `${apiUrl}/api/buyshare/search?symbol=${symbol}&exchange=NSE`,
-        {
-          headers: {
-            Authorization: "Bearer " + authToken,
-          },
-        }
-      );
-      const data = await res.json();
-      if (data.success && typeof data.ltp === 'number') {
-        setLtpData((prev) => ({ ...prev, [symbol]: data.ltp }));
-      }
-    } catch (err) {
-      console.warn(`LTP fetch failed for ${symbol}`);
-    }
-  };
-
-  // 🔹 Fetch stocks for active watchlist
-  const fetchWatchlistStocks = async (wishlistId) => {
+  // ---------------- FETCH WATCHLIST ----------------
+  const fetchWatchlistStocks = useCallback(async (wishlistId) => {
     if (!wishlistId) {
-      setStocksInWatchlist([]);
-      setStockSymbols([]);
+      setStocks([]);
+      setEnrichedStocks([]);
+      symbolsRef.current = [];
       return;
     }
 
     setLoading(true);
     try {
-      const response = await axios.get(`${apiUrl}/api/wishlistcontrol/stocks`, {
-        params: { wishlist_id: wishlistId },
-      });
+      const res = await axios.get(
+        `${apiUrl}/api/wishlistcontrol/stocks`,
+        { params: { wishlist_id: wishlistId } }
+      );
+      const data = res.data?.data || [];
+      setStocks(data);
+      const enriched = data.map(item => {
+        const value = Number(item.ltp || item.last_price || item.lastPrice || item.value || 0);
+        const prevClose = Number(item.prev_close || item.prevClose || 0);
+        const change = prevClose > 0 ? value - prevClose : 0;
+        const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
 
-      if (response.data.success) {
-        const stocks = response.data.data || [];
-        setStocksInWatchlist(stocks);
-        setStockSymbols(stocks.map(s => s.symbol)); // ✅ now safe
-      } else {
-        setStocksInWatchlist([]);
-        setStockSymbols([]);
-      }
+        return {
+          ...item,
+          symbol: String(item.script_id),
+          name: item.script_name,
+          value,           // ✅ current LTP (DB)
+          prevClose,       // ✅ DB prev close
+          change,
+          changePercent,
+          timestamp: new Date().toISOString()
+        };
+      });
+      setEnrichedStocks(enriched);
+      symbolsRef.current = enriched.map(i => i.symbol).filter(Boolean);
+
     } catch (err) {
-      console.error('API fetch error:', err.response?.data || err.message);
-      setStocksInWatchlist([]);
-      setStockSymbols([]);
+      console.error("❌ Failed to fetch watchlist stocks:", err.message);
+      Alert.alert("Error", "Failed to load watchlist.");
+      setStocks([]);
+      setEnrichedStocks([]);
+      symbolsRef.current = [];
     } finally {
       setLoading(false);
     }
-  };
-  // 🔹 Watchlist change → reload
-  useEffect(() => {
-    fetchWatchlistStocks(currentWatchlistId);
-  }, [currentWatchlistId, refreshTrigger]);
-
-  // 🔹 LTP polling cleanup
-  useEffect(() => {
-    return () => {
-      ltpIntervalsRef.current.forEach((timer) => clearInterval(timer));
-    };
   }, []);
 
   useEffect(() => {
-    ltpIntervalsRef.current.forEach((timer) => clearInterval(timer));
-    ltpIntervalsRef.current = [];
+    fetchWatchlistStocks(currentWatchlistId);
+  }, [currentWatchlistId, fetchWatchlistStocks]);
 
-    stocksInWatchlist.forEach((stock) => {
-      const interval = setInterval(() => fetchLtp(stock.script_id), 5000);
-      ltpIntervalsRef.current.push(interval);
+  // ---------------- WEBSOCKET SUBSCRIPTION ----------------
+  useEffect(() => {
+    const symbols = symbolsRef.current;
+    if (symbols.length === 0) return;
+
+    const page = "WatchlistPage";
+    const context = `Watchlist-${currentWatchlistId}`;
+    subscribeSymbols(symbols, page, context);
+
+    const appStateSub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        subscribeSymbols(symbols, page, context);
+      } else {
+        unsubscribeDelayed(symbols, page, context);
+      }
     });
-  }, [stocksInWatchlist]);
 
-  // 🔹 UI
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#210F47" />
-          <Text style={{ marginTop: 10, color: '#555' }}>Loading stocks...</Text>
-        </View>
-      );
+    return () => {
+      unsubscribeDelayed(symbols, page, context);
+      appStateSub.remove();
+    };
+  }, [enrichedStocks, currentWatchlistId]);
+
+  // ---------------- REMOVE STOCK ----------------
+  const removeStockFromWatchlist = useCallback(async (item) => {
+    if (!currentWatchlistId) return;
+    const { script_id, script_name } = item;
+    if (!script_id) {
+      Alert.alert('❌ Error', 'Invalid stock.');
+      return;
     }
 
-    if (stocksInWatchlist.length === 0) {
-      return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Text style={{ fontSize: 16, color: '#888', textAlign: 'center' }}>
-            {currentWatchlistId
-              ? 'No stocks in this watchlist.'
-              : 'Select a watchlist to view stocks.'}
-          </Text>
-        </View>
-      );
+    setRemovingScriptId(script_id);
+
+    try {
+      const userIdStr = await AsyncStorage.getItem('userId');
+      if (!userIdStr) {
+        Alert.alert('❌ Auth Error', 'User ID not found. Please log in again.');
+        setRemovingScriptId(null);
+        return;
+      }
+
+      const response = await axios.post(`${apiUrl}/api/wishlistcontrol/remove`, {
+        user_id: parseInt(userIdStr, 10),
+        wishlist_id: parseInt(currentWatchlistId, 10),
+        script_id: script_id,
+      });
+
+      if (response.data.success) {
+        // Optimistic update on enrichedStocks (not raw stocks)
+        setEnrichedStocks(prev => prev.filter(s => s.symbol !== String(script_id)));
+        symbolsRef.current = symbolsRef.current.filter(s => s !== String(script_id));
+      } else {
+        throw new Error(response.data.message || 'Remove failed');
+      }
+    } catch (err) {
+      console.error("❌ Remove stock failed:", err.response?.data || err.message);
+      Alert.alert('❌ Failed', `Could not remove "${script_name}".`);
+    } finally {
+      setRemovingScriptId(null);
     }
+  }, [currentWatchlistId]);
 
-    return (
-      <WatchlistItemCard
-        data={stocksInWatchlist}
-        ltpData={ltpData}
-        onPressItem={(item) =>
-          navigation.navigate('TradeOrder', {
-            symbol: item.script_id,
-            token: item.token,
-            ltp: ltpData[item.symbol || item.script_name] || 0,
-            name: item.script_name,
-            internaltype: 'Place'
-          })
-        }
-        onRemoveItem={removeStockFromWatchlist}   // ✅ exact function
-      />
-    );
-  };
+  const displayStocks = mergeWithRealtime(enrichedStocks, realtimePrices);
 
+  // ---------------- UI ----------------
   return (
     <>
-      <SafeAreaView
-        edges={['top', 'bottom']}
-        style={{ flex: 1, backgroundColor: '#fff' }}
-      >
-        <TopHeader
-          onWatchlistAdded={handleWatchlistAdded}
-        />
-        <View style={{
-          backgroundColor: "#fff",
-          elevation: 10, // Android shadow
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 }, // bottom direction
-          shadowOpacity: 0.2,
-          shadowRadius: 3,
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+        <TopHeader />
+        <TopMenuSlider />
+        <TopWatchlistMenu onWatchlistChange={setCurrentWatchlistId} />
 
-          // Trick to hide top shadow impact
-          marginTop: -3,
-          paddingTop: 3,
-          marginBottom: 10
-        }}>
-          <TopMenuSlider />
-          <TopWatchlistMenu onWatchlistChange={setCurrentWatchlistId} />
-        </View>
-        {renderContent()}
+        {loading ? (
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <ActivityIndicator size="large" color="#210F47" />
+            <Text style={{ marginTop: 8, color: "#666" }}>Loading watchlist...</Text>
+          </View>
+        ) : (
+          <WatchlistItemCard
+            data={displayStocks}
+            realtimePrices={{}}
+            prevCloses={{}}
+            onPressItem={(item) =>
+              navigation.navigate("TradeOrder", {
+                symbol: item.symbol,
+                name: item.name,
+              })
+            }
+            onRemoveItem={removeStockFromWatchlist}
+          />
+        )}
       </SafeAreaView>
-
       <BottomTabBar />
     </>
   );
 }
-

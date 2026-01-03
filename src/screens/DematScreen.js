@@ -64,8 +64,6 @@ export default function DematScreen({ navigation }) {
           console.warn('⚠️ Could not decode JWT for clientId');
         }
 
-        // ⭐⭐⭐ MOST IMPORTANT ⭐⭐⭐
-        // Update AuthContext immediately so HomeScreen sees tokens right away
         await setAuthData({
           authToken: auth_token,
           feedToken: feed_token,
@@ -75,9 +73,8 @@ export default function DematScreen({ navigation }) {
 
         Alert.alert('Success', 'Angel One login successful!');
 
-        // Close popup & go to home
         setShowAngelOneModal(false);
-        navigation.navigate('Home');
+        navigation.navigate('Equity');
       } catch (err) {
         console.error('❌ Token save failed:', err);
         Alert.alert('Error', 'Login succeeded but token save failed.');
@@ -139,7 +136,7 @@ export default function DematScreen({ navigation }) {
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={styles.nextBtn}
-            onPress={() => navigation.navigate('Home')}
+            onPress={() => navigation.navigate('Equity')}
           >
             <Text style={styles.nextText}>Let's Drive in</Text>
           </TouchableOpacity>
