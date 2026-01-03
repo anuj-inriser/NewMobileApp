@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
@@ -47,7 +47,7 @@ const StockTimelineScreen = () => {
     // 🔥 SEQUENCE NAVIGATION STATE
     const [selectedSequenceId, setSelectedSequenceId] = useState(null);
     const [currentPostIndex, setCurrentPostIndex] = useState(0);
-    const { posts: sequencePosts, loading: postsLoading, error: postsError } = useCommunityPosts(selectedSequenceId);
+    const { posts: sequencePosts, loading: postsLoading, error: postsError, refetch: refetchPosts } = useCommunityPosts(selectedSequenceId);
 
     // 🔥 LIKE SYSTEM
     const { userId } = useAuth();
@@ -110,16 +110,17 @@ const StockTimelineScreen = () => {
             case "Latest":
                 return allStocks.map(stock => ({
                     ...stock,
-                    analysis: truncateWords(stock.news_description, 12) || "Real-time market analysis and insights.",
+                    analysis: truncateWords(stock.news_description, 10) || "Real-time market analysis and insights.",
                     news_title: stock.news_title || "Market Analysis",
                     news_date: stock.news_date,
+                    news_items: stock.news_items, // Pass news array from backend
                     stats: stock.stats || defaultStats
                 }));
 
             case "Watchlists":
                 return watchlistStocks.map(stock => ({
                     ...stock,
-                    analysis: truncateWords(stock.news_description, 12) || "Stock in your watchlist.",
+                    analysis: truncateWords(stock.news_description, 10) || "Stock in your watchlist.",
                     news_title: stock.news_title || "Market Analysis",
                     news_date: stock.news_date,
                     stats: stock.stats || defaultStats
@@ -140,7 +141,7 @@ const StockTimelineScreen = () => {
             default:
                 return allStocks.map(stock => ({
                     ...stock,
-                    analysis: truncateWords(stock.news_description, 12) || "Real-time market analysis and insights.",
+                    analysis: truncateWords(stock.news_description, 10) || "Real-time market analysis and insights.",
                     news_title: stock.news_title || "Market Analysis",
                     news_date: stock.news_date,
                     stats: stock.stats || defaultStats
@@ -151,22 +152,35 @@ const StockTimelineScreen = () => {
     const subscribedRef = useRef(new Set());
 
 
-    const stockData = getStockData();
+    // 🔥 Memoize stockData to prevent unnecessary re-renders
+    const stockData = useMemo(() => getStockData(), [allStocks, stockTab, watchlistStocks, moversData]);
+
+    // 🔥 Refetch Data on Focus
+    useFocusEffect(
+        useCallback(() => {
+            if (userId) {
+                fetchUserLikes(userId);
+            }
+            if (selectedSequenceId) {
+                refetchPosts();
+            }
+        }, [userId, selectedSequenceId])
+    );
 
     const getTimelineSymbols = () => {
-    if (!stockData?.length) return [];
-    if (topTab === "News" || topTab === "Sequence") return [];
+        if (!stockData?.length) return [];
+        if (topTab === "News" || topTab === "Sequence") return [];
 
-    return stockData
-        .map(s =>
-            s.token ??
-            s.symboltoken ??
-            s.script_id ??
-            s.id ??
-            null
-        )
-        .filter(Boolean);
-};
+        return stockData
+            .map(s =>
+                s.token ??
+                s.symboltoken ??
+                s.script_id ??
+                s.id ??
+                null
+            )
+            .filter(Boolean);
+    };
 
     const subscribeIncremental = (symbols, page, context) => {
         const newOnes = symbols.filter(s => !subscribedRef.current.has(s));
@@ -180,53 +194,54 @@ const StockTimelineScreen = () => {
     };
 
 
+    // 🔥 Subscription Logic
     useFocusEffect(
-    useCallback(() => {
-        const page = "StockTimelineScreen";
-        const context = `${topTab}-${stockTab}`;
+        useCallback(() => {
+            const page = "StockTimelineScreen";
+            const context = `${topTab}-${stockTab}`;
 
-        const symbols = getTimelineSymbols();
+            const symbols = getTimelineSymbols();
 
-        if (!symbols.length) {
-            console.log(`⏭ SKIP SUBSCRIBE → ${page}::${context}`);
-            return;
-        }
+            if (!symbols.length) {
+                console.log(`⏭ SKIP SUBSCRIBE → ${page}::${context}`);
+                return;
+            }
 
-        // 🔥 incremental subscribe
-        const newOnes = symbols.filter(
-            s => !subscribedRef.current.has(s)
-        );
-
-        if (newOnes.length) {
-            newOnes.forEach(s => subscribedRef.current.add(s));
-            console.log(
-                `🟢 SUBSCRIBE (INCREMENTAL) → ${page}::${context}`,
-                newOnes
+            // 🔥 incremental subscribe
+            const newOnes = symbols.filter(
+                s => !subscribedRef.current.has(s)
             );
-            subscribeSymbols(newOnes, page, context);
-        }
 
-        const appSub = AppState.addEventListener("change", state => {
-            if (state !== "active") {
+            if (newOnes.length) {
+                newOnes.forEach(s => subscribedRef.current.add(s));
+                console.log(
+                    `🟢 SUBSCRIBE (INCREMENTAL) → ${page}::${context}`,
+                    newOnes
+                );
+                subscribeSymbols(newOnes, page, context);
+            }
+
+            const appSub = AppState.addEventListener("change", state => {
+                if (state !== "active") {
+                    unsubscribeDelayed(
+                        Array.from(subscribedRef.current),
+                        page,
+                        context
+                    );
+                }
+            });
+
+            return () => {
                 unsubscribeDelayed(
                     Array.from(subscribedRef.current),
                     page,
                     context
                 );
-            }
-        });
-
-        return () => {
-            unsubscribeDelayed(
-                Array.from(subscribedRef.current),
-                page,
-                context
-            );
-            subscribedRef.current.clear();
-            appSub?.remove();
-        };
-    }, [stockData, topTab, stockTab])
-);
+                subscribedRef.current.clear();
+                appSub?.remove();
+            };
+        }, [stockData, topTab, stockTab])
+    );
 
 
 
@@ -277,44 +292,32 @@ const StockTimelineScreen = () => {
         <>
             <SafeAreaView style={styles.container}>
 
-                {/* 🔥 ANIMATED HEADER WRAPPER */}
-                <Animated.View
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        zIndex: 1000,
-                        backgroundColor: '#fff',
-                        transform: [{ translateY }]
-                    }}
-                    onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-                >
-                    <View onLayout={(e) => setCollapsibleHeight(e.nativeEvent.layout.height)}>
-                        <TopHeader />
-                    </View>
 
-                    {/* 🔥 TOP TWO MENUS */}
-                    <View style={styles.topSliders}>
+                <View >
+                    <TopHeader />
+                </View>
 
-                        {/* TOP: Timeline / Posts / Messages */}
-                        <CommunitySecondMenuSlider
-                            activeFilter={topTab}
-                            onTabChange={(t) => setTopTab(t)}
-                        />
+                {/* 🔥 TOP TWO MENUS */}
+                <View style={styles.topSliders}>
 
-                        {/* SECOND: Latest / Watchlists / Gainers / Losers */}
-                        <TopFundamentalSlider
-                            selectedCategory={stockTab}
-                            onTabChange={(id) => setStockTab(id)}
-                        />
+                    {/* TOP: Timeline / Posts / Messages */}
+                    <CommunitySecondMenuSlider
+                        activeFilter={topTab}
+                        onTabChange={(t) => setTopTab(t)}
+                    />
 
-                    </View>
-                </Animated.View>
+                    {/* SECOND: Latest / Watchlists / Gainers / Losers */}
+                    {/* <TopFundamentalSlider
+                        selectedCategory={stockTab}
+                        onTabChange={(id) => setStockTab(id)}
+                    /> */}
+
+                </View>
+
 
 
                 {/* 🔥 MAIN CONTENT AREA */}
-                <View style={{ flex: 1, paddingBottom: 80 }}>
+                <View style={{ flex: 1, paddingBottom: 10 }}>
 
                     {topTab === 'Sequence' ? (
                         sequencesLoading ? (
@@ -339,7 +342,7 @@ const StockTimelineScreen = () => {
                                     />
                                 )}
                                 keyExtractor={item => item.id.toString()}
-                                contentContainerStyle={{ paddingTop: headerHeight + 16, paddingBottom: 16, paddingHorizontal: 16 }}
+                                contentContainerStyle={{ paddingBottom: 16, paddingHorizontal: 16 }}
                                 onScroll={handleScroll}
                             />
                         )
@@ -355,7 +358,7 @@ const StockTimelineScreen = () => {
                                 data={stockData}
                                 renderItem={renderGainerLoserItem}
                                 keyExtractor={(item) => item.id || item.symbol}
-                                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20, marginTop: 10, paddingTop: headerHeight }}
+                                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20, marginTop: 10 }}
                                 showsVerticalScrollIndicator={true}
                                 onScroll={handleScroll}
                             />
@@ -373,19 +376,24 @@ const StockTimelineScreen = () => {
                                             const stockInfo = allStocks.find(s => String(s.token) === String(item.content_script_id));
                                             return (
                                                 <View style={{ height: ITEM_HEIGHT }}>
+                                                    {/* DEBUG LOG */}
+                                                    {/* {console.log(`Rendering Item ${index}: News Items Count:`, item.news_items?.length)} */}
                                                     <StockCard
                                                         stock={{
                                                             id: item.content_id,
-                                                            name: item.content_symbol || getSymbolFromScriptId(item.content_script_id),
-                                                            symbol: item.content_symbol || stockInfo?.symbol || 'Unknown',
+                                                            name: item.stock_name || item.content_symbol || getSymbolFromScriptId(item.content_script_id),
+                                                            symbol: item.content_symbol || item.stock_name || stockInfo?.symbol || 'Unknown',
                                                             price: 430.92,
                                                             ltp: 430.92,
                                                             change: 45.30,
                                                             changePercent: 11.77,
-                                                            // Prioritize News Description, then Post Content
-                                                            analysis: truncateWords(stockInfo?.news_description, 12) || item.content || 'Stocks continue upward trend...',
-                                                            news_title: stockInfo?.news_title || "Market Analysis",
-                                                            news_date: stockInfo?.news_date || item.created_at,
+                                                            // Prioritize News Description/Title from Backend Enrichment
+                                                            // If backend successfully found news (via script_id/tags match), show that.
+                                                            // Otherwise fallback to post content/title, then generic watchlist info.
+                                                            analysis: truncateWords(item.news_description || item.content || stockInfo?.news_description, 10) || 'Stocks continue upward trend...',
+                                                            news_title: item.news_title || item.title || stockInfo?.news_title || "Market Analysis",
+                                                            news_date: item.news_date || item.created_at || stockInfo?.news_date,
+                                                            news_items: item.news_items, // Pass full array for navigation
                                                             content_script_timeframe: item.content_script_timeframe,
                                                             stats: {
                                                                 likes: item.likes_count || 0,
@@ -428,7 +436,7 @@ const StockTimelineScreen = () => {
                                         viewabilityConfig={viewabilityConfig}
                                         showsVerticalScrollIndicator={false}
                                         onScroll={handleScroll}
-                                        contentContainerStyle={{ paddingTop: headerHeight }}
+                                        contentContainerStyle={{ flexGrow: 0 }}
                                     />
                                 )
                             ) : (
@@ -442,7 +450,7 @@ const StockTimelineScreen = () => {
                                     decelerationRate="fast"
                                     snapToInterval={ITEM_HEIGHT}
                                     onScroll={handleScroll}
-                                    contentContainerStyle={{ paddingTop: headerHeight }}
+                                    contentContainerStyle={{ flexGrow: 0 }}
                                     getItemLayout={(data, index) => ({
                                         length: ITEM_HEIGHT,
                                         offset: ITEM_HEIGHT * index,
@@ -478,8 +486,8 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 3,
-        marginTop: -3,
-        paddingTop: 3
+        paddingTop: 3,
+        marginBottom: 10
     },
     container: {
         flex: 1,

@@ -58,7 +58,47 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   const [issueDescription, setIssueDescription] = useState("");
   const [attachment, setAttachment] = useState(null);
   const [successIssueModalOpen, setSuccessIssueModalOpen] = useState(false);
+  const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
 
+  // Helper
+  const truncateWords = (str, numWords) => {
+    if (!str) return '';
+    const words = str.split(' ');
+    if (words.length <= numWords) return str;
+    return words.slice(0, numWords).join(' ') + '...';
+  };
+
+  // DEBUG: Monitor Index Changes
+  useEffect(() => {
+    if (stock.news_items?.length > 1) {
+      console.log(`[StockCard ${stock.symbol}] Index Changed: ${currentNewsIndex}. Item:`, stock.news_items[currentNewsIndex]?.title);
+    }
+  }, [currentNewsIndex, stock.news_items, stock.symbol]);
+
+  const handleNextNews = useCallback(() => {
+    console.log(`[StockCard ${stock.symbol}] NEXT Clicked. Current: ${currentNewsIndex}, Total: ${stock.news_items?.length}`);
+    if (stock.news_items && stock.news_items.length > 0) {
+      setCurrentNewsIndex((prev) => (prev + 1) % stock.news_items.length);
+    }
+  }, [stock.news_items, currentNewsIndex, stock.symbol]);
+
+  const handlePrevNews = useCallback(() => {
+    console.log(`[StockCard ${stock.symbol}] PREV Clicked.`);
+    if (stock.news_items && stock.news_items.length > 0) {
+      setCurrentNewsIndex((prev) => (prev - 1 + stock.news_items.length) % stock.news_items.length);
+    }
+  }, [stock.news_items, stock.symbol]);
+
+
+  useEffect(() => {
+    if (successIssueModalOpen) {
+      setTimeout(() => {
+        setSuccessIssueModalOpen(false);
+        // Assuming setIssueModalVisible is defined elsewhere or should be set to false
+        // setIssueModalVisible(false); 
+      }, 2000);
+    }
+  }, [successIssueModalOpen]);
 
   useEffect(() => {
     const parseCount = (val) => {
@@ -69,7 +109,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
     setLikeCount(parseCount(stock.stats?.likes));
     setDislikeCount(parseCount(stock.stats?.dislikes));
     setCommentCount(parseCount(stock.stats?.comments));
-  }, [stock.stats]);
+  }, [stock.id, stock.stats]);
 
   useEffect(() => {
     if (userReaction) {
@@ -487,11 +527,12 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
 
       {/* Market Analysis / Sequence Post */}
       <SequencePost
-        title={stock.news_title}
-        content={stock.analysis}
-        timestamp={stock.news_date}
-        onNext={() => console.log('Next post')} // Manage sequence logic here or in parent
-        onPrev={() => console.log('Prev post')}
+        title={stock.news_items && stock.news_items.length > 0 ? `(${currentNewsIndex + 1}/${stock.news_items.length}) ${stock.news_items[currentNewsIndex]?.title}` : stock.news_title}
+        content={stock.news_items && stock.news_items.length > 0 ? truncateWords(stock.news_items[currentNewsIndex]?.description, 10) : stock.analysis}
+        timestamp={stock.news_items && stock.news_items.length > 0 ? stock.news_items[currentNewsIndex]?.date : stock.news_date}
+        showNavigation={stock.news_items && stock.news_items.length > 1}
+        onNext={handleNextNews}
+        onPrev={handlePrevNews}
       />
 
       {/* Action Buttons */}
@@ -681,7 +722,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     marginHorizontal: 16,
-    marginVertical: 10,
+    marginVertical: 5,
     borderWidth: 1,
     borderColor: '#eee'
   },
@@ -739,6 +780,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    margin: 'auto'
   },
   postNumberText: {
     fontSize: 11,
@@ -787,7 +829,7 @@ const styles = StyleSheet.create({
   },
   activeIntervalText: { color: '#000' },
   actionsContainer: {
-    padding: 16,
+    padding: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingTop: 15,

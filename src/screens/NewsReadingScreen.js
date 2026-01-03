@@ -7,8 +7,11 @@ import BottomTabBar from "../components/BottomTabBar";
 import FundamentalTopHeader from "../components/FundamentalTopHeader";
 import { apiUrl } from "../utils/apiUrl";
 import { formatPublishedDate } from "../utils/dateFormat"
+import RenderHTML from "react-native-render-html";
+import { useWindowDimensions } from "react-native";
 
 const NewsReadingScreen = ({ route }) => {
+    const { width } = useWindowDimensions();
     const { item } = route.params;
 
     const titleWords = item.title?.trim().split(/\s+/).length || 0;
@@ -17,7 +20,7 @@ const NewsReadingScreen = ({ route }) => {
 
     const totalWords = titleWords + descriptionWords + contentWords;
 
-    const readTime = Math.ceil(totalWords / 100); 
+    const readTime = Math.ceil(totalWords / 100);
 
     return (
         <>
@@ -39,6 +42,8 @@ const NewsReadingScreen = ({ route }) => {
                             <Text style={styles.abstractLabel}>Abstracts: </Text>
                             {item.brief_description}
                         </Text>
+
+
 
                         {/* Image Container */}
                         <View style={styles.imageCard}>
@@ -66,11 +71,40 @@ const NewsReadingScreen = ({ route }) => {
                                 {/* <Text style={styles.metaText}>{item.readTime}</Text> */}
                                 <Text style={styles.metaText}>{readTime}min Read</Text>
                             </View>
+
                         </View>
                     </View>
 
                     {/* Actual Content */}
-                    <Text style={styles.content}>{item.news_content}</Text>
+                    {item.news_content && (
+                        <RenderHTML
+                            contentWidth={width}
+                            source={{ html: item.news_content }}
+
+                            baseStyle={{
+                                paddingHorizontal: 6
+                            }}
+
+                            tagsStyles={{
+                                h1: {
+                                    fontSize: 15,
+                                    fontWeight: "700",
+                                    marginBottom: 10,
+                                },
+                                h2: {
+                                    fontSize: 12,
+                                    fontWeight: "600",
+                                    marginTop: 12,
+                                    marginBottom: 8,
+                                },
+                                p: {
+                                    marginBottom: 12,
+                                },
+                            }}
+                        />
+                    )}
+
+                    {/* <Text style={styles.content}>{item.news_content}</Text> */}
                 </ScrollView>
             </SafeAreaView>
 
