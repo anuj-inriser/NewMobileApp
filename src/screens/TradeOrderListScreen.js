@@ -10,11 +10,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import TopHeader from "../components/TopHeader";
+// import TopHeader from "../components/TopHeader";
 import TopMenuSlider from "../components/TopMenuSlider";
 import TopWatchlistMenu from "../components/TopWatchlistMenu";
 import WatchlistItemCard from "../components/WatchlistItemCard";
-import BottomTabBar from "../components/BottomTabBar";
+// import BottomTabBar from "../components/BottomTabBar";
 
 import { apiUrl } from "../utils/apiUrl";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
@@ -186,8 +186,9 @@ export default function TradeOrderListScreen({ navigation }) {
   // ---------------- UI ----------------
   return (
     <>
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-        <TopHeader />
+      <SafeAreaView edges={["bottom"]} style={{ flex: 1, backgroundColor: "#F5F5F7" }}>
+
+        {/* <TopHeader /> */}
         <TopMenuSlider />
         <TopWatchlistMenu onWatchlistChange={setCurrentWatchlistId} />
 
@@ -211,7 +212,7 @@ export default function TradeOrderListScreen({ navigation }) {
           />
         )}
       </SafeAreaView>
-      <BottomTabBar />
+      {/* <BottomTabBar /> */}
     </>
   );
 }

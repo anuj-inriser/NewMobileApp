@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import FundamentalTopHeader from '../components/FundamentalTopHeader';
+// import FundamentalTopHeader from '../components/FundamentalTopHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BottomTabBar from '../components/BottomTabBar';
+// import BottomTabBar from '../components/BottomTabBar';
 import axiosInstance from '../api/axios';
 
 export default function ChapterDetails({ route }) {
@@ -50,8 +50,8 @@ export default function ChapterDetails({ route }) {
 
     return (
         <>
-            <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-                <FundamentalTopHeader />
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
+                {/* <FundamentalTopHeader /> */}
                 <ScrollView style={styles.content}>
                     <View style={styles.box}>
                         <Text style={styles.chapterNumber}>{chapters.chapter_name}</Text>
@@ -59,7 +59,7 @@ export default function ChapterDetails({ route }) {
                     </View>
                     {chapterContent.map((item, index) => (
                         <View
-                        key={index}>
+                            key={index}>
                             <View style={styles.chapterCard}>
                                 <View style={styles.numCircle}>
                                     <Text style={styles.numText}>{index + 1}</Text>
@@ -76,7 +76,7 @@ export default function ChapterDetails({ route }) {
                     }
                 </ScrollView>
             </SafeAreaView>
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 }

@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -25,6 +26,7 @@ import Profile from "../../assets/Profile.png";
 
 const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
+  const insets = useSafeAreaInsets();
   const { authToken, clientId, clearAuth } = useAuth();
   const [menuVisible, setMenuVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -259,13 +261,13 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="#f2edf9" barStyle="dark-content" />
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 10) }]}>
         {/* <TouchableOpacity onPress={() => navigation.navigate("ProfileScreen")}>
           <Image source={getImageSource(profileImage)} style={styles.avatar} />
         </TouchableOpacity> */}
         {/* Avatar (only if NOT showing back button) */}
         {!showBackButton && (
-          <TouchableOpacity onPress={() => navigation.navigate("ProfileScreen")}>
+          <TouchableOpacity onPress={() => navigation.navigate("App", { screen: "Profile" })}>
             <Image source={getImageSource(profileImage)} style={styles.avatar} />
           </TouchableOpacity>
         )}
@@ -444,7 +446,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
+    </View >
   );
 };
 
@@ -598,7 +600,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     borderBottomWidth: 1,
     borderColor: "#E5E5E5",
-    width: "100vw",
+    width: "100%", // Fixed from 100vw
     zIndex: 99999,
   },
   dropdownScroll: {

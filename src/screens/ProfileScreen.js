@@ -13,6 +13,7 @@ import TopHeader from "../components/TopHeader";
 import BottomTabBar from "../components/BottomTabBar";
 import DonutChart from "../components/DonutChart";
 import KycChart from "../components/KycChart";
+import PreferencesSection from "../components/PreferencesSection";
 import Profile from "../../assets/Profile.png";
 import ProfileImg1 from "../../assets/ProfileImg1.png";
 import ProfilePencil from "../../assets/ProfilePencil.png";
@@ -39,6 +40,7 @@ import ArrowUp from "../../assets/arrow_up.png";
 const ProfileScreen = () => {
 
     const [kycOpen, setKycOpen] = useState(false);
+    const [preferencesOpen, setPreferencesOpen] = useState(false);
     const [setting, setSetting] = useState(false);
     const [linkedAccount, setLinkedAccount] = useState(false);
     const [accountPrivacy, setAccountPrivacy] = useState(false);
@@ -412,7 +414,16 @@ const ProfileScreen = () => {
 
             if (!userIdStored || !authTokenStored || !clientIdStored) {
                 await clearAuth();
-                navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+                // Reset to Auth stack
+                navigation.reset({
+                    index: 0,
+                    routes: [{
+                        name: "Auth",
+                        state: {
+                            routes: [{ name: "Login" }]
+                        }
+                    }],
+                });
                 return;
             }
 
@@ -430,9 +441,15 @@ const ProfileScreen = () => {
 
             if (data.status) {
                 await clearAuth();
+                // Reset to Auth stack
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: "Login" }],
+                    routes: [{
+                        name: "Auth",
+                        state: {
+                            routes: [{ name: "Login" }]
+                        }
+                    }],
                 });
             }
 
@@ -644,8 +661,8 @@ const ProfileScreen = () => {
     const isKycCompleted = kycPercent === 100;
     return (
         <>
-            <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-                <TopHeader showBackButton={true} />
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
+                {/* <TopHeader showBackButton={true} /> */}
                 <ScrollView
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 100 }}
@@ -1049,6 +1066,20 @@ const ProfileScreen = () => {
                         </View>
                     )}
 
+                    <TouchableOpacity style={preferencesOpen ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setPreferencesOpen(!preferencesOpen)}>
+                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                            <Image source={AccountPrivacy} style={{ width: 30, height: 30, marginRight: 8 }} />
+                            <Text style={styles.kycTitle}>Preferences</Text>
+                        </View>
+                        <Image source={preferencesOpen ? ArrowUp : ArrowDown} style={{ width: 15, height: 8 }} />
+                    </TouchableOpacity>
+
+                    {preferencesOpen && (
+                        <View style={styles.settingsCard}>
+                            <PreferencesSection />
+                        </View>
+                    )}
+
                     <TouchableOpacity style={setting ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setSetting(!setting)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
                             <Image source={Setting} style={{ width: 30, height: 30, marginRight: 8, }} />
@@ -1077,6 +1108,8 @@ const ProfileScreen = () => {
                             </View>
 
                             <View style={styles.divider} /> */}
+
+                            <View style={styles.divider} />
 
                             <Text style={styles.label}>Change Password</Text>
                             <View style={styles.inputField}>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 
-const MarketTabs = ({ Pointer, onExchangeChange, onCategoryChange, tabs = ['Indices', 'Market Cap', 'Sectors', 'Themes'], selectedExchange, activeTab: controlledActiveTab, initialActiveTab = null }) => {
+const MarketTabs = ({ Pointer, onExchangeChange, onCategoryChange, tabs = ['Indices', 'Market Cap', 'Sectors'], selectedExchange, activeTab: controlledActiveTab, initialActiveTab = null }) => {
     const [exchange, setExchange] = useState(selectedExchange || 'NSE');
 
     // Sync if selectedExchange prop changes
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     toggleText: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#888',
+        color: '#666666',
     },
     activeToggleText: {
         color: '#2F0079',
@@ -115,6 +115,10 @@ const styles = StyleSheet.create({
     activeTabItem: {
         // borderBottomWidth: 2,
         // borderBottomColor: '#2F0079',
+        backgroundColor: '#E6E0E9',
+        borderRadius: 20,
+        paddingVertical: 4,
+        paddingHorizontal: 15,
     },
     tabText: {
         fontSize: 14,
@@ -122,7 +126,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     activeTabText: {
-        color: '#2F0079',
+        color: '#333333',
         fontWeight: '700',
     },
 });

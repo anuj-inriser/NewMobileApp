@@ -3,10 +3,10 @@ import { ScrollView, StyleSheet, View, Text, ActivityIndicator } from 'react-nat
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import LearningCard from '../components/LearningCard'; // relative import
 import learning_image from "../../assets/learning_image.jpg"
-import TopHeader from "../components/TopHeader";
+// import TopHeader from "../components/TopHeader";
 import TopMenuSlider from "../components/TopMenuSlider";
 import { SafeAreaView } from "react-native-safe-area-context";
-import BottomTabBar from '../components/BottomTabBar';
+// import BottomTabBar from '../components/BottomTabBar';
 import TopFundamentalSlider from '../components/TopFundamentalSlider';
 import axiosInstance from "../api/axios";
 import { apiUrl } from '../utils/apiUrl';
@@ -78,9 +78,9 @@ const Learning = () => {
 
     return (
         <>
-            <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-                <TopHeader />
-                <View style={styles.topSliders}>
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
+                {/* <TopHeader /> */}
+                <View >
                     <TopMenuSlider />
                     <TopFundamentalSlider
                         learningCategory={categories}
@@ -117,13 +117,13 @@ const Learning = () => {
                     )}
                 </ScrollView>
             </SafeAreaView>
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { backgroundColor: '#FFFFFF', flex: 1 },
+    container: { backgroundColor: '#F5F5F7', flex: 1 },
     topSliders: {
         backgroundColor: "#fff",
         elevation: 10, // Android shadow

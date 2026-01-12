@@ -11,8 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import BottomTabBar from '../components/BottomTabBar';
-import TopHeader from '../components/TopHeader';
+// import BottomTabBar from '../components/BottomTabBar';
+// import TopHeader from '../components/TopHeader';
 import TopMenuSlider from '../components/TopMenuSlider';
 import MarketTabs from '../components/MarketTabs';
 import StockListCard from '../components/StockListCard';
@@ -135,7 +135,7 @@ const StocksScreen = () => {
     if (isLoading && stocksData.length === 0) {
         return (
             <SafeAreaView style={styles.container}>
-                <TopHeader />
+                {/* <TopHeader /> */}
                 <TopMenuSlider currentRoute="Stocks" />
                 <View style={styles.placeholderContainer}>
                     <ActivityIndicator size="large" color="#1a1a1a" />
@@ -143,7 +143,7 @@ const StocksScreen = () => {
                         Loading {selectedCategory} stocks...
                     </Text>
                 </View>
-                <BottomTabBar />
+                {/* <BottomTabBar /> */}
             </SafeAreaView>
         );
     }
@@ -151,7 +151,7 @@ const StocksScreen = () => {
     if (error) {
         return (
             <SafeAreaView style={styles.container}>
-                <TopHeader />
+                {/* <TopHeader /> */}
                 <TopMenuSlider currentRoute="Stocks" />
                 <View style={styles.placeholderContainer}>
                     <Text style={styles.errorText}>⚠️ {error.message}</Text>
@@ -159,7 +159,7 @@ const StocksScreen = () => {
                         <Text style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
                 </View>
-                <BottomTabBar />
+                {/* <BottomTabBar /> */}
             </SafeAreaView>
         );
     }
@@ -174,8 +174,8 @@ const StocksScreen = () => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <TopHeader />
+        <SafeAreaView edges={['bottom']} style={styles.container}>
+            {/* <TopHeader /> */}
             <TopMenuSlider currentRoute="Equity" />
 
             {/* ✅ MarketTabs */}
@@ -233,7 +233,7 @@ const StocksScreen = () => {
                     </View>
                 }
             />
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </SafeAreaView>
     );
 };

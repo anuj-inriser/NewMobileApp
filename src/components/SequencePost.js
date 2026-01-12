@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, Animated } from 'react-native
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 const SequencePost = ({
-    title = "Market Analysis",
+    title,
     content,
     timestamp,
     onNext,
@@ -20,16 +20,13 @@ const SequencePost = ({
 
     // Trigger animation when props change
     useEffect(() => {
-        // console.log(`[SequencePost Effect] Title Changed: "${title}" vs Display: "${displayTitle}"`);
         if (title !== displayTitle || content !== displayContent) {
-            console.log(`[SequencePost Animation] Starting Fade Out for new title: "${title}"`);
             // Fade Out
             Animated.timing(fadeAnim, {
                 toValue: 0,
                 duration: 150,
                 useNativeDriver: true,
             }).start(() => {
-                console.log(`[SequencePost Animation] Fade Out Done. Updating State.`);
                 // Update State to New Content
                 setDisplayTitle(title);
                 setDisplayContent(content);
@@ -40,13 +37,13 @@ const SequencePost = ({
                     toValue: 1,
                     duration: 250,
                     useNativeDriver: true,
-                }).start(() => console.log(`[SequencePost Animation] Fade In Done.`));
+                }).start();
             });
         }
     }, [title, content, timestamp]);
 
     const timeAgo = (dateString) => {
-        if (!dateString) return 'Just now';
+        if (!dateString) return '';
         const date = new Date(dateString);
         const now = new Date();
         const seconds = Math.floor((now - date) / 1000);
@@ -63,26 +60,51 @@ const SequencePost = ({
         return Math.floor(seconds) + " seconds ago";
     };
 
+    // Smart Truncation Helper
+    const smartTruncate = (text, maxLength) => {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+
+        // Cut at maxLength
+        let truncated = text.substr(0, maxLength);
+
+        // Find last space to avoid cutting word in half
+        const lastSpaceIndex = truncated.lastIndexOf(' ');
+        if (lastSpaceIndex > 0) {
+            truncated = truncated.substr(0, lastSpaceIndex);
+        }
+
+        return truncated + '...';
+    };
+
     return (
         <View style={styles.analysisContainer}>
             <View style={styles.analysisHeader}>
                 <Animated.Text style={[styles.analysisTitle, { opacity: fadeAnim }]}>
                     {displayTitle}
                 </Animated.Text>
-                {showNavigation && (
-                    <View style={styles.chevronGroup}>
-                        <TouchableOpacity style={styles.navButton} onPress={onPrev}>
-                            <ChevronLeft size={16} color="#666" />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.navButton} onPress={onNext}>
-                            <ChevronRight size={16} color="#666" />
-                        </TouchableOpacity>
-                    </View>
-                )}
             </View>
+
             <Animated.View style={{ opacity: fadeAnim }}>
-                <Text style={styles.analysisText}>{displayContent}</Text>
-                <Text style={styles.timestampText}>{timeAgo(displayTimestamp)}</Text>
+                <Text style={styles.analysisText}>
+                    {smartTruncate(displayContent, 90)}
+                </Text>
+
+                {/* Bottom Row: Date Left, Nav Right */}
+                <View style={styles.bottomRow}>
+                    <Text style={styles.timestampText}>{timeAgo(displayTimestamp)}</Text>
+
+                    {showNavigation && (
+                        <View style={styles.chevronGroup}>
+                            <TouchableOpacity style={styles.navButton} onPress={onPrev}>
+                                <ChevronLeft size={16} color="#666" />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.navButton} onPress={onNext}>
+                                <ChevronRight size={16} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
             </Animated.View>
         </View>
     );
@@ -98,25 +120,34 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     analysisHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 10,
-        position: 'relative', // Context for absolute positioning
+        marginBottom: 8,
     },
     analysisTitle: {
         fontSize: 13,
         fontWeight: '700',
         color: '#000',
-        paddingRight: 80,
+        // Removed paddingRight to allow full width
+    },
+    analysisText: {
+        fontSize: 14,
+        color: '#444',
+        lineHeight: 20, // Improved line height for readability
+        marginBottom: 10,
+    },
+    bottomRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 5,
+    },
+    timestampText: {
+        fontSize: 12,
+        color: '#999',
     },
     chevronGroup: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        position: 'absolute',
-        right: 0,
-        top: 0,
-        zIndex: 10,
+        gap: 10,
     },
     navButton: {
         width: 28,
@@ -125,17 +156,5 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5F5F7',
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    analysisText: {
-        fontSize: 14,
-        color: '#444',
-        lineHeight: 14,
-        marginBottom: 3,
-    },
-    timestampText: {
-        fontSize: 12,
-        color: '#999',
-        alignSelf: 'flex-end',
-        marginTop: 2
     },
 });

@@ -12,9 +12,9 @@ import { useRoute } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 
 import TopMenuSlider from '../components/TopMenuSlider';
-import TopHeader from '../components/TopHeader';
+// import TopHeader from '../components/TopHeader';
 import { useAuth } from '../context/AuthContext';
-import BottomTabBar from '../components/BottomTabBar';
+// import BottomTabBar from '../components/BottomTabBar';
 import MarketTabs from '../components/MarketTabs';
 import Indices from '../components/Indices';
 import { apiUrl } from '../utils/apiUrl';
@@ -162,8 +162,8 @@ export default function EquityScreen({ navigation }) {
 
     return (
         <>
-            <SafeAreaView edges={["top", "bottom"]} style={{ flex: 1, backgroundColor: "#fff" }}>
-                <TopHeader />
+            <SafeAreaView edges={["bottom"]} style={{ flex: 1, backgroundColor: "#fff" }}>
+                {/* <TopHeader /> */}
                 <TopMenuSlider currentRoute={route.name} />
 
                 <MarketTabs
@@ -177,7 +177,7 @@ export default function EquityScreen({ navigation }) {
                 </View>
 
             </SafeAreaView>
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 }

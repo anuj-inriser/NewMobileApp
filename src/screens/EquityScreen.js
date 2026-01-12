@@ -14,7 +14,7 @@ import { useRoute } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import TopMenuSlider from "../components/TopMenuSlider";
 import TopHeader from "../components/TopHeader";
-import BottomTabBar from "../components/BottomTabBar";
+// import BottomTabBar from "../components/BottomTabBar";
 import MarketTabs from "../components/MarketTabs";
 import Indices from "../components/Indices";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
@@ -75,7 +75,7 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy }) => {
                     <Text style={styles.marketCapName}>
                         {item.group_name || item.name}
                     </Text>
-                    <Text style={styles.marketCapSymbol}>{exchange}</Text>
+                    <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
                 </View>
 
                 <View style={{ alignItems: "flex-end" }}>
@@ -139,7 +139,7 @@ const SectorsList = ({ data, exchange, category, navigation }) => {
                     <Text style={styles.marketCapName}>
                         {item.group_name || item.name}
                     </Text>
-                    <Text style={styles.marketCapSymbol}>{exchange}</Text>
+                    <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
                 </View>
 
                 <View style={{ alignItems: "flex-end" }}>
@@ -697,10 +697,10 @@ export default function EquityScreen({ navigation }) {
     return (
         <>
             <SafeAreaView
-                edges={["top", "bottom"]}
+                edges={["bottom"]}
                 style={{ flex: 1, backgroundColor: "#fff" }}
             >
-                <TopHeader />
+                {/* <TopHeader /> */}
                 <TopMenuSlider currentRoute={route.name} />
                 <MarketTabs
                     onExchangeChange={handleExchangeChange}
@@ -711,7 +711,7 @@ export default function EquityScreen({ navigation }) {
                 />
                 <View style={styles.content}>{renderContent()}</View>
             </SafeAreaView>
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 }
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F5F5F7",
+        backgroundColor: "#fff",
     },
     placeholderText: { fontSize: 16, color: "#888", fontWeight: "500" },
     loadingText: { fontSize: 16, color: "#666", fontWeight: "500", marginTop: 12 },

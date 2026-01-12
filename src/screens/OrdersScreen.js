@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ScrollView, StyleSheet, View, Image, Text, TouchableOpacity, Modal, Alert, AppState } from 'react-native';
-import TopHeader from "../components/TopHeader";
+// import TopHeader from "../components/TopHeader";
 import { SafeAreaView } from "react-native-safe-area-context";
-import BottomTabBar from '../components/BottomTabBar';
+// import BottomTabBar from '../components/BottomTabBar';
 import { Ionicons } from "@expo/vector-icons";
 import OrderItemCard from "../components/OrderItemCard";
 import TradeExecutedCard from "../components/TradeExecutedCard";
@@ -330,15 +330,15 @@ const OrdersScreen = () => {
 
     return (
         <>
-            <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-                <TopHeader />
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
+                {/* <TopHeader /> */}
 
                 {/* Tabs */}
                 <View style={styles.topSliders}>
-                    <TradeOrderTabs
+                    {/* <TradeOrderTabs
                         activeTab={selectedTab}
                         onTabChange={(tab) => setSelectedTab(tab)}
-                    />
+                    /> */}
 
                 </View>
 
@@ -545,7 +545,7 @@ const OrdersScreen = () => {
                 )}
 
             </SafeAreaView>
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 };

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View, Text, ActivityIndicator } from 'react-native';
-import TopHeader from "../components/TopHeader";
+// import TopHeader from "../components/TopHeader";
 import TopMenuSlider from "../components/TopMenuSlider";
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from "react-native-safe-area-context";
-import BottomTabBar from '../components/BottomTabBar';
+// import BottomTabBar from '../components/BottomTabBar';
 import NewsCardLarge from '../components/News/NewsCardLarge';
 import NewsCardSmall from '../components/News/NewsCardSmall';
 import axiosInstance from "../api/axios";
@@ -35,9 +35,9 @@ const NewsScreen = () => {
 
     return (
         <>
-            <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-                <TopHeader />
-                <View style={styles.topSliders}>
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
+                {/* <TopHeader /> */}
+                <View>
                     <TopMenuSlider />
                 </View>
 
@@ -74,7 +74,7 @@ const NewsScreen = () => {
 
             </SafeAreaView>
 
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 };
@@ -85,7 +85,7 @@ export default NewsScreen;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff'
+        backgroundColor: '#F5F5F7'
     },
     topSliders: {
         backgroundColor: "#fff",

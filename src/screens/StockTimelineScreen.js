@@ -12,8 +12,8 @@ import {
     AppState
 } from 'react-native';
 
-import BottomTabBar from '../components/BottomTabBar';
-import TopHeader from "../components/TopHeader";
+// import BottomTabBar from '../components/BottomTabBar';
+// import TopHeader from "../components/TopHeader";
 import GainerLoserCard from '../components/GainerLoserCard';
 import CommunitySecondMenuSlider from '../components/CommunitySecondMenuSlider';
 import TopFundamentalSlider from '../components/TopFundamentalSlider';
@@ -110,8 +110,8 @@ const StockTimelineScreen = () => {
             case "Latest":
                 return allStocks.map(stock => ({
                     ...stock,
-                    analysis: truncateWords(stock.news_description, 10) || "Real-time market analysis and insights.",
-                    news_title: stock.news_title || "Market Analysis",
+                    analysis: truncateWords(stock.news_description, 10) || "",
+                    news_title: stock.news_title || "",
                     news_date: stock.news_date,
                     news_items: stock.news_items, // Pass news array from backend
                     stats: stock.stats || defaultStats
@@ -120,8 +120,8 @@ const StockTimelineScreen = () => {
             case "Watchlists":
                 return watchlistStocks.map(stock => ({
                     ...stock,
-                    analysis: truncateWords(stock.news_description, 10) || "Stock in your watchlist.",
-                    news_title: stock.news_title || "Market Analysis",
+                    analysis: truncateWords(stock.news_description, 10) || "",
+                    news_title: stock.news_title || "",
                     news_date: stock.news_date,
                     stats: stock.stats || defaultStats
                 }));
@@ -141,8 +141,8 @@ const StockTimelineScreen = () => {
             default:
                 return allStocks.map(stock => ({
                     ...stock,
-                    analysis: truncateWords(stock.news_description, 10) || "Real-time market analysis and insights.",
-                    news_title: stock.news_title || "Market Analysis",
+                    analysis: truncateWords(stock.news_description, 10) || "",
+                    news_title: stock.news_title || "",
                     news_date: stock.news_date,
                     stats: stock.stats || defaultStats
                 }));
@@ -247,7 +247,7 @@ const StockTimelineScreen = () => {
 
     // 🔥 Vertical Stock Pagination Layout
     const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-    const ITEM_HEIGHT = SCREEN_HEIGHT - 60; // Adjust for bottom tab mostly
+    const ITEM_HEIGHT = SCREEN_HEIGHT - 160; // Adjust for bottom tab mostly
 
     const renderStockItem = ({ item }) => (
         <View style={{ height: ITEM_HEIGHT }}>
@@ -255,6 +255,7 @@ const StockTimelineScreen = () => {
                 stock={item}
                 contentType="stock" // Explicitly stock
                 userReaction={userLikes[`stock_${item.id}`]} // Composite key
+                fullScreen={true}
             />
         </View>
     );
@@ -294,7 +295,7 @@ const StockTimelineScreen = () => {
 
 
                 <View >
-                    <TopHeader />
+                    {/* <TopHeader /> */}
                 </View>
 
                 {/* 🔥 TOP TWO MENUS */}
@@ -369,75 +370,83 @@ const StockTimelineScreen = () => {
                                 postsLoading ? (
                                     <ActivityIndicator size="large" color="#210F47" style={{ marginTop: headerHeight + 20 }} />
                                 ) : (
-                                    <Animated.FlatList
-                                        key="sequence-posts-list"
-                                        data={sequencePosts || []}
-                                        renderItem={({ item, index }) => {
-                                            const stockInfo = allStocks.find(s => String(s.token) === String(item.content_script_id));
-                                            return (
-                                                <View style={{ height: ITEM_HEIGHT }}>
-                                                    {/* DEBUG LOG */}
-                                                    {/* {console.log(`Rendering Item ${index}: News Items Count:`, item.news_items?.length)} */}
-                                                    <StockCard
-                                                        stock={{
-                                                            id: item.content_id,
-                                                            name: item.stock_name || item.content_symbol || getSymbolFromScriptId(item.content_script_id),
-                                                            symbol: item.content_symbol || item.stock_name || stockInfo?.symbol || 'Unknown',
-                                                            price: 430.92,
-                                                            ltp: 430.92,
-                                                            change: 45.30,
-                                                            changePercent: 11.77,
-                                                            // Prioritize News Description/Title from Backend Enrichment
-                                                            // If backend successfully found news (via script_id/tags match), show that.
-                                                            // Otherwise fallback to post content/title, then generic watchlist info.
-                                                            analysis: truncateWords(item.news_description || item.content || stockInfo?.news_description, 10) || 'Stocks continue upward trend...',
-                                                            news_title: item.news_title || item.title || stockInfo?.news_title || "Market Analysis",
-                                                            news_date: item.news_date || item.created_at || stockInfo?.news_date,
-                                                            news_items: item.news_items, // Pass full array for navigation
-                                                            content_script_timeframe: item.content_script_timeframe,
-                                                            stats: {
-                                                                likes: item.likes_count || 0,
-                                                                dislikes: item.dislikes_count || 0,
-                                                                comments: item.comments_count || 0
-                                                            }
-                                                        }}
-                                                        postNumber={`${index + 1}/${sequencePosts.length}`}
-                                                        contentType="post"
-                                                        userReaction={userLikes[`post_${item.content_id}`]}
-                                                    />
-                                                </View>
-                                            );
-                                        }}
-                                        ListHeaderComponent={
-                                            <TouchableOpacity
-                                                style={{
-                                                    padding: 10,
-                                                    backgroundColor: '#f2edf9',
-                                                    flexDirection: 'row',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    marginBottom: 0
-                                                }}
-                                                onPress={() => setSelectedSequenceId(null)}
-                                            >
-                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                    <Ionicons name="arrow-back" size={20} color="#210F47" />
-                                                    <Text style={{ marginLeft: 10, fontWeight: '700', color: '#210F47' }}>Viewing Sequence</Text>
-                                                </View>
-                                                <Ionicons name="close-circle" size={24} color="#210F47" />
-                                            </TouchableOpacity>
-                                        }
-                                        keyExtractor={(item) => item.content_id.toString()}
-                                        pagingEnabled
-                                        snapToAlignment="start"
-                                        decelerationRate="fast"
-                                        snapToInterval={ITEM_HEIGHT}
-                                        onViewableItemsChanged={onViewableItemsChanged}
-                                        viewabilityConfig={viewabilityConfig}
-                                        showsVerticalScrollIndicator={false}
-                                        onScroll={handleScroll}
-                                        contentContainerStyle={{ flexGrow: 0 }}
-                                    />
+                                    <>
+                                        <TouchableOpacity
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                zIndex: 100,
+                                                backgroundColor: '#f2edf9',
+                                                flexDirection: 'row',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: 3,
+                                                elevation: 5,
+                                                opacity: 0.8,
+                                            }}
+                                            onPress={() => setSelectedSequenceId(null)}
+                                        >
+                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                <Ionicons name="arrow-back" size={20} color="#210F47" />
+                                                <Text style={{ marginLeft: 10, fontWeight: '700', color: '#210F47' }}>Viewing Sequence</Text>
+                                            </View>
+                                            <Ionicons name="close-circle" size={24} color="#210F47" />
+                                        </TouchableOpacity>
+                                        <Animated.FlatList
+                                            key="sequence-posts-list"
+                                            data={sequencePosts || []}
+                                            renderItem={({ item, index }) => {
+                                                const stockInfo = allStocks.find(s => String(s.token) === String(item.content_script_id));
+                                                return (
+                                                    <View style={{ height: ITEM_HEIGHT }}>
+                                                        {/* DEBUG LOG */}
+                                                        {/* {console.log(`Rendering Item ${index}: News Items Count:`, item.news_items?.length)} */}
+                                                        <StockCard
+                                                            stock={{
+                                                                id: item.content_id,
+                                                                name: item.stock_name || item.content_symbol || getSymbolFromScriptId(item.content_script_id),
+                                                                symbol: item.content_symbol || item.stock_name || stockInfo?.symbol || 'Unknown',
+                                                                price: 430.92,
+                                                                ltp: 430.92,
+                                                                change: 45.30,
+                                                                changePercent: 11.77,
+                                                                // Prioritize News Description/Title from Backend Enrichment
+                                                                // If backend successfully found news (via script_id/tags match), show that.
+                                                                // Otherwise fallback to post content/title, then generic watchlist info.
+                                                                analysis: truncateWords(item.news_description || item.content || stockInfo?.news_description, 10) || "",
+                                                                news_title: item.news_title || item.title || stockInfo?.news_title || "",
+                                                                news_date: item.news_date || item.created_at || stockInfo?.news_date,
+                                                                news_items: item.news_items, // Pass full array for navigation
+                                                                content_script_timeframe: item.content_script_timeframe,
+                                                                stats: {
+                                                                    likes: item.likes_count || 0,
+                                                                    dislikes: item.dislikes_count || 0,
+                                                                    comments: item.comments_count || 0
+                                                                }
+                                                            }}
+                                                            postNumber={`${index + 1}/${sequencePosts.length}`}
+                                                            contentType="post"
+                                                            userReaction={userLikes[`post_${item.content_id}`]}
+                                                            fullScreen={true}
+                                                        />
+                                                    </View>
+                                                );
+                                            }}
+                                            // Header removed from here to top overlay
+                                            keyExtractor={(item) => item.content_id.toString()}
+                                            pagingEnabled
+                                            snapToAlignment="start"
+                                            decelerationRate="fast"
+                                            snapToInterval={ITEM_HEIGHT}
+                                            onViewableItemsChanged={onViewableItemsChanged}
+                                            viewabilityConfig={viewabilityConfig}
+                                            showsVerticalScrollIndicator={false}
+                                            onScroll={handleScroll}
+                                            contentContainerStyle={{ flexGrow: 0 }}
+                                        />
+                                    </>
                                 )
                             ) : (
                                 <Animated.FlatList
@@ -472,7 +481,7 @@ const StockTimelineScreen = () => {
                 </View>
             </SafeAreaView>
 
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 };

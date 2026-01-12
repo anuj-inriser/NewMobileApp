@@ -14,7 +14,7 @@ import WatchlistItemCard from '../components/WatchlistItemCard';
 import { apiUrl } from '../utils/apiUrl';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import BottomTabBar from '../components/BottomTabBar';
+// import BottomTabBar from '../components/BottomTabBar';
 
 
 export default function TradeOrderListScreen({ navigation }) {
@@ -182,7 +182,7 @@ export default function TradeOrderListScreen({ navigation }) {
             token: item.token,
             ltp: ltpData[item.symbol || item.script_name] || 0,
             name: item.script_name,
-            internaltype:'Place'
+            internaltype: 'Place'
           })
         }
         onRemoveItem={removeStockFromWatchlist}   // ✅ exact function
@@ -214,11 +214,11 @@ export default function TradeOrderListScreen({ navigation }) {
         }}>
           <TopMenuSlider />
           <TopWatchlistMenu onWatchlistChange={setCurrentWatchlistId} />
-        </View> 
+        </View>
         {renderContent()}
       </SafeAreaView>
 
-      <BottomTabBar/>
+      {/* <BottomTabBar/> */}
     </>
   );
 }

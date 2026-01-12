@@ -105,7 +105,7 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
 
                 <TouchableOpacity
                     style={[
-                        styles.tabButton,
+                        styles.tabWhite,
                         isActiveTab('Watchlists') && styles.tabButtonActive
                     ]}
                     onPress={() => handleTabPress('Watchlists')}
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: "#fff",
         borderRadius: 40,
-        paddingVertical: 5,
+        paddingVertical: 7,
         paddingHorizontal: 16,
         marginRight: 8,
         shadowColor: "#000",

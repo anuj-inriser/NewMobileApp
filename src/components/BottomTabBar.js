@@ -1,18 +1,28 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Helper to find the current active route name recursively
+const getActiveRouteName = (state) => {
+  if (!state || !state.routes || state.index == null) return null;
+  const route = state.routes[state.index];
+  if (route.state) {
+    return getActiveRouteName(route.state);
+  }
+  return route.name;
+};
 
 const BottomTabBar = () => {
   const navigation = useNavigation();
-  const route = useRoute();
+  const currentRouteName = useNavigationState((state) => getActiveRouteName(state));
   const insets = useSafeAreaInsets();
 
   const tabs = [
     { name: "Home", component: "Equity", icon: require("../../assets/homemenu.png") },
-    { name: "Portfolio", component: "PortfolioScreen", icon: require("../../assets/portfoliomenu.png") },
-    { name: "Community", component: "StockTimelineScreen", icon: require("../../assets/communitymenu.png")},
-    { name: "Ideas", component: "TradeScreen", icon: require("../../assets/ideasmenu.png") },
+    { name: "Portfolio", component: "Portfolio", icon: require("../../assets/portfoliomenu.png") },
+    { name: "Community", component: "StockTimelineScreen", icon: require("../../assets/communitymenu.png") },
+    { name: "Ideas", component: "Trade", icon: require("../../assets/ideasmenu.png") },
     { name: "Trade", component: "OrdersScreen", icon: require("../../assets/trademenu.png") },
   ];
 
@@ -20,14 +30,18 @@ const BottomTabBar = () => {
     <View style={[styles.absoluteBar, { paddingBottom: insets.bottom }]}>
       <View style={styles.container}>
         {tabs.map((tab) => {
-          const isActive = route.name === tab.component;
-
+          const isActive = currentRouteName === tab.component;
+          // console.log("isActive", isActive)
           return (
             <TouchableOpacity
               key={tab.name}
               style={styles.tabItem}
               activeOpacity={0.7}
-              onPress={() => navigation.navigate(tab.component)}
+              onPress={() =>
+                navigation.navigate("App", {
+                  screen: tab.component,
+                })
+              }
             >
               <View style={[styles.iconWrapper, isActive && styles.activeBackground]}>
                 <Image source={tab.icon} style={styles.iconImg} resizeMode="contain" />
@@ -48,6 +62,7 @@ const BottomTabBar = () => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   absoluteBar: {

@@ -96,24 +96,24 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         marginRight: 10,
         elevation: 2,
-        shadowColor: "#000",
+        shadowColor: "#E6E0E9",
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.15,
         shadowRadius: 1.5,
     },
 
     tabText: {
-        color: "#210F47",
+        color: "#666666",
         fontSize: 12,
         fontWeight: "500",
     },
 
     activeTab: {
-        backgroundColor: "#e6e6e6",
+        backgroundColor: "#E6E0E9",
     },
 
     activeTabText: {
-        color: "#210F47",
+        color: "#333333",
         fontWeight: "600",
     },
 });

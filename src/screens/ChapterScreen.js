@@ -13,7 +13,7 @@ import FundamentalTopHeader from '../components/FundamentalTopHeader';
 import { SafeAreaView } from "react-native-safe-area-context";
 import TopMenuSlider from '../components/TopMenuSlider';
 import TopFundamentalSlider from '../components/TopFundamentalSlider';
-import BottomTabBar from '../components/BottomTabBar';
+// import BottomTabBar from '../components/BottomTabBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import axiosInstance from '../api/axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -129,8 +129,8 @@ export default function ChapterScreen({ route, navigation }) {
 
     return (
         <>
-            <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-                <FundamentalTopHeader />
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
+                {/* <FundamentalTopHeader /> */}
                 <View style={styles.topSliders}>
 
                     <TopMenuSlider />
@@ -192,7 +192,7 @@ export default function ChapterScreen({ route, navigation }) {
                     </View>
                 </ScrollView>
             </SafeAreaView>
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 }

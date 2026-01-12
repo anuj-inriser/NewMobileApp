@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import TopMenuSlider from "../components/TopMenuSlider";
 import { MaterialIcons } from "@expo/vector-icons";
-import BottomTabBar from "../components/BottomTabBar";
-import FundamentalTopHeader from "../components/FundamentalTopHeader";
+// import BottomTabBar from "../components/BottomTabBar";
+// import FundamentalTopHeader from "../components/FundamentalTopHeader";
 import { apiUrl } from "../utils/apiUrl";
 import { formatPublishedDate } from "../utils/dateFormat"
 import RenderHTML from "react-native-render-html";
@@ -24,8 +24,8 @@ const NewsReadingScreen = ({ route }) => {
 
     return (
         <>
-            <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-                <FundamentalTopHeader />
+            <SafeAreaView style={styles.container} edges={["bottom"]}>
+                {/* <FundamentalTopHeader /> */}
                 {/* <TopMenuSlider /> */}
 
                 <ScrollView
@@ -108,7 +108,7 @@ const NewsReadingScreen = ({ route }) => {
                 </ScrollView>
             </SafeAreaView>
 
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 };

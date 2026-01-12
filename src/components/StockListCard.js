@@ -136,12 +136,13 @@ const StockListCard = ({ stock, realtime }) => {
         finalRange = chartRange + 2 * padding;
     }
 
+
     return (
         <View style={styles.card}>
             {/* Left: Info */}
             <View style={styles.leftContainer}>
-                <Text style={styles.symbol}>{stock.symbol}</Text>
-                <Text style={styles.time}>{stock.exchange}</Text>
+                <Text style={styles.symbol}>{stock.name}</Text>
+                <Text style={styles.time}>{stock.symbol}</Text>
                 {/* <Text style={styles.time}>{lastTime}</Text> */}
             </View>
 

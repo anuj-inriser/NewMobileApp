@@ -20,13 +20,17 @@ const IndexVerticalCard = ({ index, onPress }) => {
       ? Math.abs(index.changePercent).toFixed(2)
       : "0.00";
 
+  // console.log('index', index)
+
+
   return (
     <TouchableOpacity
       style={styles.verticalCard}
       onPress={() => onPress && onPress(index)}
     >
       <View style={styles.verticalCardLeft}>
-        <Text style={styles.verticalSymbol}>{index.name || index.symbol}</Text>
+        <Text style={styles.verticalSymbol}>{index.name}</Text>
+        <Text style={[styles.verticalSymbol, { color: "#888", fontSize: 12 }]}>{`${index.symbol}`}</Text>
       </View>
 
       <View style={styles.verticalCardRight}>
@@ -42,10 +46,10 @@ const IndexVerticalCard = ({ index, onPress }) => {
 };
 
 // ✅ Main Component — Vertical Only
-const Indices = ({ 
-  exchange = 'NSE', 
-  externalData, 
-  onIndexPress 
+const Indices = ({
+  exchange = 'NSE',
+  externalData,
+  onIndexPress
 }) => {
   const { prices: realtimePrices } = useRealtimePrices();
 
@@ -53,10 +57,10 @@ const Indices = ({
   const { data: indicesData, isLoading, error } = useQuery({
     queryKey: ['indicesList', exchange],
     queryFn: async () => {
-      const url = exchange === 'BSE' 
-        ? `${apiUrl}/api/indicesNew/bse` 
+      const url = exchange === 'BSE'
+        ? `${apiUrl}/api/indicesNew/bse`
         : `${apiUrl}/api/indicesNew/nse`;
-      
+
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = await response.json();
@@ -69,7 +73,7 @@ const Indices = ({
   // ✅ Normalize externalData (HomeScreen style)
   const normalizedExternalData = useMemo(() => {
     if (!Array.isArray(externalData) || externalData.length === 0) return [];
-    
+
     return externalData.map(item => {
       const value = Number(item.ltp || item.value || 0);
       const prevClose = Number(item.prev_close || item.prevClose || 0);
@@ -98,7 +102,7 @@ const Indices = ({
     // Filter based on exchange
     const NSE_SYMBOLS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "NIFTY50"];
     const BSE_SYMBOLS = ["SENSEX", "BANKEX", "BSE"];
-    
+
     const filtered = indicesSource.filter(index => {
       const name = (index.name || index.symbol || "").toUpperCase();
       if (exchange === "NSE") {
@@ -114,10 +118,10 @@ const Indices = ({
       const rt = realtimePrices[index.symbol] || realtimePrices[index.name];
       if (!rt) return index; // Stable DB data
 
-      const prevClose = 
-        rt.prevClose || 
-        index.prevClose || 
-        rt.open || 
+      const prevClose =
+        rt.prevClose ||
+        index.prevClose ||
+        rt.open ||
         index.value;
 
       const change = rt.price - prevClose;
@@ -149,8 +153,8 @@ const Indices = ({
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
         <Text style={styles.errorText}>Failed to load indices</Text>
-        <TouchableOpacity 
-          style={styles.retryButton} 
+        <TouchableOpacity
+          style={styles.retryButton}
           onPress={() => window.location.reload()}
         >
           <Text style={styles.retryButtonText}>Retry</Text>
@@ -171,8 +175,8 @@ const Indices = ({
 
   // ✅ ONLY VERTICAL LIST — NO HORIZONTAL, NO GRID
   return (
-    <ScrollView 
-      style={styles.container} 
+    <ScrollView
+      style={styles.container}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.verticalList}>

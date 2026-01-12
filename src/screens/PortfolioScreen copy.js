@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Modal, Image } from 'react-native';
-import TopHeader from "../components/TopHeader";
+// import TopHeader from "../components/TopHeader";
 import { SafeAreaView } from "react-native-safe-area-context";
-import BottomTabBar from '../components/BottomTabBar';
+// import BottomTabBar from '../components/BottomTabBar';
 import { Ionicons } from "@expo/vector-icons";
 import PortfolioCard from "../components/PortfolioCard";
 import { useAuth } from '../context/AuthContext';
@@ -185,8 +185,8 @@ const PorfolioScreen = () => {
 
     return (
         <>
-            <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-                <TopHeader />
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
+                {/* <TopHeader /> */}
 
                 {/* Sort + Filter Bar */}
                 <View style={styles.orderTopBar}>
@@ -333,7 +333,7 @@ const PorfolioScreen = () => {
                     </ScrollView>
                 )}
             </SafeAreaView>
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 };

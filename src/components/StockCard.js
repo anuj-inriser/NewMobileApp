@@ -30,6 +30,7 @@ import {
   ScrollView,
   Alert,
   Share,
+  useWindowDimensions,
 } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import * as ImagePicker from 'expo-image-picker';
@@ -40,6 +41,7 @@ import { useAuth } from '../context/AuthContext';
 import CommentOverlay from './CommentOverlay';
 import SequencePost from './SequencePost';
 const { width } = Dimensions.get('window');
+import { useNavigation, useNavigationState } from "@react-navigation/native";
 
 import { Asset } from 'expo-asset';
 
@@ -59,7 +61,9 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   const [attachment, setAttachment] = useState(null);
   const [successIssueModalOpen, setSuccessIssueModalOpen] = useState(false);
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
+  const [chartHeight, setChartHeight] = useState(100);
 
+  const navigation = useNavigation();
   // Helper
   const truncateWords = (str, numWords) => {
     if (!str) return '';
@@ -400,13 +404,13 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   };
 
   return (
-    <View style={fullScreen ? styles.cardFullScreen : styles.card}>
+    <View style={[styles.card, fullScreen && { flex: 1 }]}>
       {/* Header */}
       <View style={styles.stockHeader}>
         <View style={styles.headerLeft}>
           <View style={styles.textColumn}>
             <Text style={styles.stockName}>{stock.name}</Text>
-            <Text style={styles.stockSymbol}>NSE: {stock.symbol}</Text>
+            <Text style={styles.stockSymbol}>{stock.exchange}: {stock.symbol}</Text>
           </View>
 
           {postNumber && (
@@ -416,7 +420,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
           )}
         </View>
         <View style={styles.priceContainer}>
-          <View style={{ alignItems: 'flex-end', marginRight: 2 }}>
+          <View style={{}}>
             <Text style={styles.price}>
               {loading && currentPrice === 0 ? '--' : `₹${currentPrice.toFixed(2)}`}
             </Text>
@@ -451,14 +455,22 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
       </View>
 
       {/* Main Chart */}
-      <View style={styles.chartContainer}>
+      <View
+        style={[styles.chartContainer, { flex: 1 }]}
+        onLayout={(event) => {
+          const { height } = event.nativeEvent.layout;
+          if (height > 50) {
+            setChartHeight(height);
+          }
+        }}
+      >
         {loading ? (
           <ActivityIndicator size="small" color={color} style={{ flex: 1 }} />
         ) : chartData.length > 0 ? (
           <>
             <LineChart
               data={displayData}
-              height={200}
+              height={chartHeight > 0 ? chartHeight - 50 : 100}
               width={width - 40}
               isAnimated
               color={color}
@@ -495,7 +507,11 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
             {/* Overlay Date Badge - Moved to Top */}
 
             {/* Overlay Maximize Icon */}
-            <TouchableOpacity style={{ position: 'absolute', right: 10, bottom: 10 }}>
+            {/* Overlay Maximize Icon */}
+            <TouchableOpacity
+              style={{ position: 'absolute', right: 10, bottom: 10 }}
+              onPress={() => navigation.navigate('AdvancedChart', { symbol: stock.symbol })}
+            >
               <Maximize2 size={20} color="#666" />
             </TouchableOpacity>
           </>
@@ -526,10 +542,11 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
       </View>
 
       {/* Market Analysis / Sequence Post */}
+      {/* Market Analysis / Sequence Post */}
       <SequencePost
-        title={stock.news_items && stock.news_items.length > 0 ? `(${currentNewsIndex + 1}/${stock.news_items.length}) ${stock.news_items[currentNewsIndex]?.title}` : stock.news_title}
-        content={stock.news_items && stock.news_items.length > 0 ? truncateWords(stock.news_items[currentNewsIndex]?.description, 10) : stock.analysis}
-        timestamp={stock.news_items && stock.news_items.length > 0 ? stock.news_items[currentNewsIndex]?.date : stock.news_date}
+        title={((stock.news_items && stock.news_items.length > 0) ? stock.news_items[currentNewsIndex]?.title : stock.news_title) || ""}
+        content={((stock.news_items && stock.news_items.length > 0) ? stock.news_items[currentNewsIndex]?.description : stock.analysis) || ""}
+        timestamp={((stock.news_items && stock.news_items.length > 0) ? stock.news_items[currentNewsIndex]?.date : "") || ""}
         showNavigation={stock.news_items && stock.news_items.length > 1}
         onNext={handleNextNews}
         onPrev={handlePrevNews}
@@ -707,7 +724,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
           </View>
         </View>
       </Modal>
-    </View>
+    </View >
   );
 };
 
@@ -738,7 +755,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   stockHeader: {
-    backgroundColor: '#fff',
+    backgroundColor: '#f2edf9',
     padding: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -787,12 +804,11 @@ const styles = StyleSheet.create({
     color: '#555',
     fontWeight: '600',
   },
-  priceContainer: { flexDirection: 'row', alignItems: 'center' },
+  priceContainer: { flexDirection: 'row', alignItems: 'left', justifyContent: 'flex-start', border: '1px solid red' },
   price: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
     color: '#000',
-    marginRight: 15,
   },
   change: {
     fontSize: 12,
@@ -800,7 +816,7 @@ const styles = StyleSheet.create({
   },
 
   chartContainer: {
-    height: 250,
+    // height: 300, 
     backgroundColor: '#fff',
     overflow: 'hidden',
     paddingHorizontal: 10,
@@ -849,7 +865,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 20,
   },
   noDataText: { fontSize: 14, color: '#999', fontWeight: '500' },
 

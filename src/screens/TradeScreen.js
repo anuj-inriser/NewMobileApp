@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Modal, ScrollView, AppState } from 'react-native';
-import TopHeader from "../components/TopHeader";
+// import TopHeader from "../components/TopHeader";
 import TopMenuSlider from "../components/TopMenuSlider";
 import { useRoute } from '@react-navigation/native';
 import { SafeAreaView } from "react-native-safe-area-context";
-import BottomTabBar from '../components/BottomTabBar';
+// import BottomTabBar from '../components/BottomTabBar';
 import { Ionicons } from '@expo/vector-icons';
 import axiosInstance from "../api/axios";
 import TradeTopMenuSlider from '../components/Trade/TradeTopMenuSlider';
@@ -86,9 +86,32 @@ const TradeScreen = () => {
         const fetchTradeCategories = async () => {
             try {
                 const res = await axiosInstance.get('/scripttype');
-                const categories = res?.data?.data || [];
+                let categories = res?.data?.data || [];
+
+                // 🟢 Custom Sort: Equity First, then F&O
+                categories.sort((a, b) => {
+                    const nameA = (a.scriptTypeName || a.name || "").toLowerCase();
+                    const nameB = (b.scriptTypeName || b.name || "").toLowerCase();
+
+                    const isEquityA = nameA.includes("equity");
+                    const isEquityB = nameB.includes("equity");
+
+                    const isFnoA = nameA.includes("f&o") || nameA.includes("fno");
+                    const isFnoB = nameB.includes("f&o") || nameB.includes("fno");
+
+                    // 1. Equity First
+                    if (isEquityA && !isEquityB) return -1;
+                    if (!isEquityA && isEquityB) return 1;
+
+                    // 2. F&O Second
+                    if (isFnoA && !isFnoB) return -1;
+                    if (!isFnoA && isFnoB) return 1;
+
+                    return 0;
+                });
+
                 setTradeCategories(categories);
-                console.log("categories",categories);
+                console.log("categories sorted", categories);
             } catch (error) {
                 console.error("Error fetching trade categories:", error);
                 setTradeCategories([]);
@@ -141,8 +164,8 @@ const TradeScreen = () => {
 
     return (
         <>
-            <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-                <TopHeader />
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
+                {/* <TopHeader /> */}
 
                 <View style={styles.topSliders}>
                     <View style={styles.tradeContainer}>
@@ -220,7 +243,7 @@ const TradeScreen = () => {
 
             </SafeAreaView>
 
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 };
