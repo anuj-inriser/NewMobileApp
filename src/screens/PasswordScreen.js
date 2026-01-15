@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,88 +9,93 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
-} from 'react-native';
-import * as Device from 'expo-device';
-import * as Network from 'expo-network';
-import { apiUrl } from '../utils/apiUrl';
+} from "react-native";
+import * as Device from "expo-device";
+import { apiUrl } from "../utils/apiUrl";
 
 export default function PasswordScreen({ navigation, route }) {
-  const { name, email, phone } = route.params;
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [ip, setIp] = useState('');
-  const [deviceId, setDeviceId] = useState('');
+  const { name, email, phone, fcmToken } = route.params;
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [ip, setIp] = useState("");
+  const [deviceId, setDeviceId] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-  async function fetchDeviceInfo() {
-    try {
-      // Device ID
-      const id = Device.osBuildId || Device.modelId || Device.deviceName || 'Unknown';
-      setDeviceId(id);
+    async function init() {
+      try {
+        setDeviceId(
+          Device.osBuildId ||
+            Device.modelId ||
+            Device.deviceName ||
+            "Unknown"
+        );
 
-      // Public IP via external API (works everywhere)
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      setIp(data.ip || 'Unknown');
-    } catch (err) {
-      setDeviceId('Unknown');
-      setIp('Unknown');
+        const res = await fetch("https://api.ipify.org?format=json");
+        const data = await res.json();
+        setIp(data.ip || "Unknown");
+      } catch {
+        setDeviceId("Unknown");
+        setIp("Unknown");
+      }
     }
-  }
-  fetchDeviceInfo();
-}, []);
+    init();
+  }, []);
 
   const handleSubmit = async () => {
     if (!password || !confirmPassword) {
-      Alert.alert('Missing Fields', 'Please enter and confirm password.');
+      Alert.alert("Missing", "Enter password");
       return;
     }
+
     if (password !== confirmPassword) {
-      Alert.alert('Mismatch', 'Passwords do not match.');
-      return;
-    }
-    if (!/^\d{10}$/.test(phone)) {
-      Alert.alert('Invalid Phone', 'Phone number must be 10 digits.');
+      Alert.alert("Mismatch", "Passwords do not match");
       return;
     }
 
     setLoading(true);
+
     try {
-      const response = await fetch(`${apiUrl}/api/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(`${apiUrl}/api/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           email,
           phone,
-          signupip: ip || 'Unknown',
-          signupdeviceid: deviceId || 'Unknown',
           password,
+          signupip: ip,
+          signupdeviceid: deviceId,
+          fcmToken,
         }),
       });
 
-      const result = await response.json();
+      const result = await res.json();
       setLoading(false);
 
-      if (result.status) {
-        Alert.alert('Success', 'Signup completed successfully.');
-        navigation.navigate('Demat');
+      if (result?.status) {
+        Alert.alert("Success", "Signup completed");
+        navigation.replace("Demat");
       } else {
-        Alert.alert('Error', result.message || 'Signup failed.');
+        Alert.alert("Error", result.message || "Signup failed");
       }
-    } catch (error) {
+    } catch (err) {
       setLoading(false);
-      console.error('Signup error:', error);
-      Alert.alert('Error', 'Unable to connect to server.');
+      Alert.alert("Error", "Server not reachable");
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Image source={require('../../assets/password.png')} style={styles.image} resizeMode="contain" />
-        <Text style={styles.title}>Set Your Password</Text>
+        <Image
+          source={require("../../assets/password.png")}
+          style={styles.image}
+          resizeMode="contain"
+        />
+
+        <Text style={styles.title}>Set Password</Text>
 
         <TextInput
           style={styles.input}
@@ -99,44 +104,72 @@ export default function PasswordScreen({ navigation, route }) {
           value={password}
           onChangeText={setPassword}
         />
+
         <TextInput
           style={styles.input}
-          placeholder="Retype Password"
+          placeholder="Confirm Password"
           secureTextEntry
           value={confirmPassword}
           onChangeText={setConfirmPassword}
         />
 
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>Back</Text>
+        <View style={styles.btnRow}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+          >
+            <Text>Back</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.nextBtn, loading && { opacity: 0.6 }]}
+            style={styles.nextBtn}
             onPress={handleSubmit}
             disabled={loading}
           >
-            <Text style={styles.nextText}>{loading ? 'Submitting...' : 'Next'}</Text>
+            <Text style={{ color: "#fff" }}>
+              {loading ? "Submitting..." : "Finish"}
+            </Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={styles.note}>Device ID: {deviceId || '...'} | IP: {ip || '...'}</Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  scroll: { padding: 24, alignItems: 'center' },
-  image: { width: '100%', height: 250 },
-  title: { fontSize: 22, fontWeight: '700', color: '#210F47', marginVertical: 10, alignSelf: 'flex-start' },
-  input: { width: '100%', borderWidth: 1, borderColor: '#ccc', borderRadius: 10, height: 45, paddingHorizontal: 12, marginTop: 12 },
-  buttonRow: { flexDirection: 'row', marginTop: 25, justifyContent: 'space-between', width: '100%' },
-  backBtn: { backgroundColor: '#EAEAEA', borderRadius: 25, paddingVertical: 10, paddingHorizontal: 25 },
-  backText: { color: '#000', fontWeight: '600' },
-  nextBtn: { backgroundColor: '#210F47', borderRadius: 25, paddingVertical: 10, paddingHorizontal: 25 },
-  nextText: { color: '#fff', fontWeight: '600' },
-  note: { fontSize: 12, color: '#666', marginTop: 25, textAlign: 'center' },
+  container: { flex: 1, backgroundColor: "#fff" },
+  scroll: { padding: 24 },
+  image: { width: "100%", height: 220 },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#210F47",
+    marginVertical: 10,
+  },
+  input: {
+    width: "100%",
+    height: 45,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginTop: 12,
+  },
+  btnRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 25,
+  },
+  backBtn: {
+    backgroundColor: "#EAEAEA",
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    borderRadius: 25,
+  },
+  nextBtn: {
+    backgroundColor: "#210F47",
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+    borderRadius: 25,
+  },
 });

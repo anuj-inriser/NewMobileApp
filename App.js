@@ -1,6 +1,7 @@
-
-import 'react-native-gesture-handler';
+import "react-native-gesture-handler";
 import React, { useEffect } from "react";
+import { Platform } from "react-native";
+import { apiUrl } from "./src/utils/apiUrl";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -14,6 +15,8 @@ import { applyPriceMessage } from "./src/store/marketPrices";
 import MainLayout from "./src/Layout/MainLayout";
 
 // 🔹 Screens
+import messaging from "@react-native-firebase/messaging";
+import * as Notifications from "expo-notifications";
 import WelcomeScreen from "./src/screens/WelcomeScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import SignupScreen from "./src/screens/SignupScreen";
@@ -66,20 +69,30 @@ function AppNavigator() {
         <AppStack.Screen name="Equity" component={EquityScreen} />
         <AppStack.Screen name="Trade" component={TradeScreen} />
         <AppStack.Screen name="NewsScreen" component={NewsScreen} />
-        <AppStack.Screen name="NewsReadingScreen" component={NewsReadingScreen} />
+        <AppStack.Screen
+          name="NewsReadingScreen"
+          component={NewsReadingScreen}
+        />
         <AppStack.Screen name="Portfolio" component={PortfolioScreen} />
-        <AppStack.Screen name="Profile"
+        <AppStack.Screen
+          name="Profile"
           component={Profile}
           options={{
             headerShown: false,
-            presentation: 'modal',
-            animation: 'slide_from_left'
+            presentation: "modal",
+            animation: "slide_from_left",
           }}
         />
         {/* <AppStack.Screen name="TradeOrder" component={TradeOrderScreen} /> */}
-        <AppStack.Screen name="TradeOrderList" component={TradeOrderListScreen} />
+        <AppStack.Screen
+          name="TradeOrderList"
+          component={TradeOrderListScreen}
+        />
         <AppStack.Screen name="OrdersScreen" component={OrdersScreen} />
-        <AppStack.Screen name="StockTimelineScreen" component={StockTimelineScreen} />
+        <AppStack.Screen
+          name="StockTimelineScreen"
+          component={StockTimelineScreen}
+        />
         <AppStack.Screen name="Stocks" component={StocksScreen} />
         <AppStack.Screen name="IndicesList" component={IndicesListScreen} />
         <AppStack.Screen name="IndicesDetail" component={IndicesDetailScreen} />
@@ -92,19 +105,116 @@ function AppNavigator() {
   );
 }
 
+/* 🔔 GLOBAL NOTIFICATION UI HANDLER */
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
+/* 🔥 BACKGROUND / KILLED STATE HANDLER */
+messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  const { title, body, notificationId } = remoteMessage.data || {};
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: title || "Notification",
+      body: body || "",
+      sound: "default",
+      channelId: "default",
+      data: { notificationId },
+    },
+    trigger: null,
+  });
+
+  // ✅ mark delivered in backend
+  if (notificationId) {
+    await fetch(`${apiUrl}/api/notification/mark-delivered`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notificationId }),
+    }).catch(() => {});
+  }
+});
+
 /* ---------------- ROOT APP ---------------- */
 export default function App() {
-
   useEffect(() => {
     // 🔥 WebSocket connect once
-    connectMarketWS();
+    // connectMarketWS();
 
     // 🔥 Global WS listener
+    /* 🔔 ANDROID 13 / 14 PERMISSION */
+    const setupNotifications = async () => {
+      await Notifications.requestPermissionsAsync();
+
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("default", {
+          name: "default",
+          importance: Notifications.AndroidImportance.MAX,
+          sound: "default",
+        });
+      }
+    };
+
+    setupNotifications();
+
+    /* 🔥 FOREGROUND MESSAGE */
+    const unsubscribeFCM = messaging().onMessage(async (remoteMessage) => {
+      console.log("🔥 FCM FOREGROUND RECEIVED:", remoteMessage);
+
+      const { title, body, notificationId } = remoteMessage.data || {};
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          sound: "default",
+          channelId: "default",
+          data: { notificationId },
+        },
+        trigger: null,
+      });
+
+      // ✅ mark delivered
+      if (notificationId) {
+        fetch(`${apiUrl}/api/notification/mark-delivered`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notificationId }),
+        }).catch(() => {});
+      }
+    });
+
+    /* 🔔 NOTIFICATION OPEN (opened_at) */
+    const openSub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const notificationId =
+          response.notification.request.content.data?.notificationId;
+
+        if (notificationId) {
+          fetch(`${apiUrl}/api/notification/mark-opened`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notificationId }),
+          }).catch(() => {});
+        }
+      }
+    );
+
+    /* 🔥 MARKET WS (UNCHANGED) */
+    connectMarketWS();
     onMarketMessage((msg) => {
       if (msg?.type === "PRICE") {
         applyPriceMessage(msg);
       }
     });
+    return () => {
+      unsubscribeFCM();
+      openSub.remove();
+    };
   }, []);
 
   return (
@@ -116,8 +226,15 @@ export default function App() {
               <RootStack.Navigator screenOptions={{ headerShown: false }}>
                 <RootStack.Screen name="Auth" component={AuthNavigator} />
                 <RootStack.Screen name="App" component={AppNavigator} />
-                <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
-                <RootStack.Screen name="AdvancedChart" component={AdvancedChartScreen} options={{ headerShown: true }} />
+                <RootStack.Screen
+                  name="TradeOrder"
+                  component={TradeOrderScreen}
+                />
+                <RootStack.Screen
+                  name="AdvancedChart"
+                  component={AdvancedChartScreen}
+                  options={{ headerShown: true }}
+                />
               </RootStack.Navigator>
             </NavigationContainer>
           </AuthProvider>
