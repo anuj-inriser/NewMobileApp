@@ -37,7 +37,11 @@ const WatchlistItemCard = ({
         "Remove from Watchlist?",
         `Remove ${item.script_name}?`,
         [
-          { text: "Cancel", style: "cancel", onPress: () => closeSwipe(item.script_id) },
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () => closeSwipe(item.script_id),
+          },
           {
             text: "Remove",
             style: "destructive",
@@ -58,19 +62,11 @@ const WatchlistItemCard = ({
     const rt = realtimePrices[symbol] || realtimePrices[item.token]; // ✅ token fallback
 
     // ✅ LTP: rt.price → item.value → item.ltp → 0
-    const ltp = Number(
-      rt?.price ||
-      item.value ||
-      item.ltp ||
-      0
-    );
+    const ltp = Number(rt?.price || item.value || item.ltp || 0);
 
     // ✅ Prev Close: rt.prevClose → item.prevClose → item.prev_close → ltp (no change)
     const prev = Number(
-      rt?.prevClose ||
-      item.prevClose ||
-      item.prev_close ||
-      ltp
+      rt?.prevClose || item.prevClose || item.prev_close || ltp
     );
 
     // ✅ Recalculate — fresh & consistent
@@ -81,7 +77,7 @@ const WatchlistItemCard = ({
     const initials =
       item.script_name
         ?.split(" ")
-        .map(w => w[0]?.toUpperCase())
+        .map((w) => w[0]?.toUpperCase())
         .join("")
         .slice(0, 2) || "?";
 
@@ -109,9 +105,9 @@ const WatchlistItemCard = ({
             style={styles.gradientWave}
           />
           <TouchableOpacity style={styles.card} activeOpacity={0.9}>
-            <View style={styles.logoFallback}>
+            {/* <View style={styles.logoFallback}>
               <Text style={styles.logoFallbackText}>{initials}</Text>
-            </View>
+            </View> */}
             <View style={styles.infoContainer}>
               <Text style={styles.companyName} numberOfLines={1}>
                 {item.script_name}
@@ -119,10 +115,14 @@ const WatchlistItemCard = ({
               <Text style={styles.symbol}>{symbol}</Text>
             </View>
             <View style={styles.rightContainer}>
-              <Text style={[styles.price, { color: isUp ? "#2E7D32" : "#C62828" }]}>
+              <Text
+                style={[styles.price, { color: isUp ? "#2E7D32" : "#C62828" }]}
+              >
                 ₹ {ltp > 0 ? ltp.toFixed(2) : "--"}
               </Text>
-              <Text style={[styles.change, { color: isUp ? "#2E7D32" : "#C62828" }]}>
+              <Text
+                style={[styles.change, { color: isUp ? "#2E7D32" : "#C62828" }]}
+              >
                 {change.toFixed(2)} ({changePercent.toFixed(2)}%)
               </Text>
             </View>
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   logoFallbackText: { color: "#fff", fontWeight: "700", fontSize: 13 },
-  infoContainer: { flex: 1 },
+  infoContainer: { flex: 1, height: "68px", width: "327px" },
   companyName: { fontSize: 14, fontWeight: "600" },
   symbol: { fontSize: 11, color: "#666" },
   rightContainer: { alignItems: "flex-end" },
