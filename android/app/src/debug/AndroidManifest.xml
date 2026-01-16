@@ -1,0 +1,22 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Debug only permission -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <application
+        android:usesCleartextTraffic="true"
+        tools:targetApi="28"
+        tools:ignore="GoogleAppIndexingWarning"
+        tools:replace="android:usesCleartextTraffic">
+
+        <!-- 🔥 THIS IS THE IMPORTANT FIX 🔥 -->
+        <!-- Firebase notification color conflict resolve -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@android:color/white"
+            tools:replace="android:resource" />
+
+    </application>
+
+</manifest>
