@@ -2,11 +2,12 @@ import "react-native-gesture-handler";
 import React, { useEffect } from "react";
 import { Platform } from "react-native";
 import { apiUrl } from "./src/utils/apiUrl";
+import { Audio } from "expo-av";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-
+import { playNotificationSound } from "./src/utils/soundPlayer";
 import { AuthProvider } from "./src/context/AuthContext";
 import { AppQueryProvider } from "./src/context/QueryClientProvider";
 import { connectMarketWS, onMarketMessage } from "./src/ws/marketWs";
@@ -60,8 +61,7 @@ function AuthNavigator() {
   );
 }
 
-/* ---------------- APP NAVIGATOR (GLOBAL HEADER) ---------------- */
-/* ---------------- APP NAVIGATOR (GLOBAL HEADER) ---------------- */
+/* ---------------- APP NAVIGATOR ---------------- */
 function AppNavigator() {
   return (
     <MainLayout>
@@ -83,7 +83,6 @@ function AppNavigator() {
             animation: "slide_from_left",
           }}
         />
-        {/* <AppStack.Screen name="TradeOrder" component={TradeOrderScreen} /> */}
         <AppStack.Screen
           name="TradeOrderList"
           component={TradeOrderListScreen}
@@ -105,115 +104,110 @@ function AppNavigator() {
   );
 }
 
-/* 🔔 GLOBAL NOTIFICATION UI HANDLER */
+/* 🔔 GLOBAL NOTIFICATION HANDLER */
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
-    shouldPlaySound: true,
+    shouldPlaySound: false, // We play sound manually
     shouldSetBadge: true,
   }),
-});
-
-/* 🔥 BACKGROUND / KILLED STATE HANDLER */
-messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-  const { title, body, notificationId } = remoteMessage.data || {};
-
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: title || "Notification",
-      body: body || "",
-      sound: "default",
-      channelId: "default",
-      data: { notificationId },
-    },
-    trigger: null,
-  });
-
-  // ✅ mark delivered in backend
-  if (notificationId) {
-    await fetch(`${apiUrl}/api/notification/mark-delivered`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notificationId }),
-    }).catch(() => {});
-  }
 });
 
 /* ---------------- ROOT APP ---------------- */
 export default function App() {
   useEffect(() => {
-    // 🔥 WebSocket connect once
-    // connectMarketWS();
-
-    // 🔥 Global WS listener
-    /* 🔔 ANDROID 13 / 14 PERMISSION */
     const setupNotifications = async () => {
       await Notifications.requestPermissionsAsync();
 
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("default", {
-          name: "default",
+          name: "Default Channel",
           importance: Notifications.AndroidImportance.MAX,
-          sound: "default",
+          sound: null,
+          vibrationPattern: [0, 250, 250, 250],
+          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         });
       }
     };
 
     setupNotifications();
 
-    /* 🔥 FOREGROUND MESSAGE */
+    /* 🔥 FOREGROUND MESSAGE HANDLER */
     const unsubscribeFCM = messaging().onMessage(async (remoteMessage) => {
-      console.log("🔥 FCM FOREGROUND RECEIVED:", remoteMessage);
+      const data = remoteMessage.data || {};
+      const { title, body, notificationId, imageUrl, soundUrl } = data;
 
-      const { title, body, notificationId } = remoteMessage.data || {};
+      console.log("Received FCM foreground message with imageUrl:", imageUrl);
+
+      const attachments = [];
+      if (imageUrl && typeof imageUrl === "string") {
+        let safeImageUrl = imageUrl.trim();
+        if (safeImageUrl.startsWith("http://")) {
+          safeImageUrl = safeImageUrl.replace("http://", "https://");
+        }
+        if (safeImageUrl.startsWith("https://")) {
+          attachments.push({ identifier: "notif-image", url: safeImageUrl });
+        }
+      }
 
       await Notifications.scheduleNotificationAsync({
         content: {
-          title,
-          body,
-          sound: "default",
+          title: title || "New Notification",
+          body: body || "",
+          sound: false,
           channelId: "default",
-          data: { notificationId },
+          data: { notificationId }, // ✅ FIXED: 'data' keyword added
+          attachments,
         },
         trigger: null,
       });
 
-      // ✅ mark delivered
+      if (soundUrl) {
+        setTimeout(() => playNotificationSound(soundUrl), 300);
+      }
+
       if (notificationId) {
-        fetch(`${apiUrl}/api/notification/mark-delivered`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ notificationId }),
-        }).catch(() => {});
+        try {
+          await fetch(`${apiUrl}/api/notification/mark-delivered`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notificationId }),
+          });
+        } catch (err) {
+          console.warn("Failed to mark notification as delivered", err);
+        }
       }
     });
 
-    /* 🔔 NOTIFICATION OPEN (opened_at) */
+    /* 🔔 NOTIFICATION TAP HANDLER */
     const openSub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const notificationId =
           response.notification.request.content.data?.notificationId;
-
         if (notificationId) {
           fetch(`${apiUrl}/api/notification/mark-opened`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ notificationId }),
-          }).catch(() => {});
+          }).catch((err) =>
+            console.warn("Failed to mark notification as opened", err)
+          );
         }
       }
     );
 
-    /* 🔥 MARKET WS (UNCHANGED) */
+    /* 🔥 MARKET WEBSOCKET */
     connectMarketWS();
-    onMarketMessage((msg) => {
+    const wsUnsubscribe = onMarketMessage((msg) => {
       if (msg?.type === "PRICE") {
         applyPriceMessage(msg);
       }
     });
+
     return () => {
       unsubscribeFCM();
       openSub.remove();
+      if (wsUnsubscribe) wsUnsubscribe();
     };
   }, []);
 
