@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
+import axiosInstance from "../api/axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // import TopHeader from "../components/TopHeader";
@@ -77,7 +78,7 @@ export default function TradeOrderListScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const res = await axios.get(
+      const res = await axiosInstance.get(
         `${apiUrl}/api/wishlistcontrol/stocks`,
         { params: { wishlist_id: wishlistId } }
       );
@@ -160,7 +161,7 @@ export default function TradeOrderListScreen({ navigation }) {
         return;
       }
 
-      const response = await axios.post(`${apiUrl}/api/wishlistcontrol/remove`, {
+      const response = await axiosInstance.post(`${apiUrl}/api/wishlistcontrol/remove`, {
         user_id: parseInt(userIdStr, 10),
         wishlist_id: parseInt(currentWatchlistId, 10),
         script_id: script_id,
