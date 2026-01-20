@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
+import axiosInstance from "../api/axios";
 import { apiUrl } from "../utils/apiUrl";
 import { useAuth } from "../context/AuthContext";
 import rupeeIcon from "../../assets/dropdownrupees.png";
@@ -56,7 +56,7 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const getUserById = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
-      const res = await axios.get(`${apiUrl}/api/users/${userId}`);
+      const res = await axiosInstance.get(`${apiUrl}/api/users/${userId}`);
       const user = res.data.data;
       setProfileImage(user.userimage || null);
     } catch (err) {
@@ -190,7 +190,7 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
     if (!userId) return;
     setLoadingWatchlists(true);
     try {
-      const res = await axios.get(`${WISHLIST_API}?user_id=${userId}`);
+      const res = await axiosInstance.get(`${WISHLIST_API}?user_id=${userId}`);
       const listData = res?.data?.data || [];
       setWatchlists(
         listData.map((item) => ({
@@ -225,7 +225,7 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
     };
 
     try {
-      const response = await axios.post(
+      const response = await axiosInstance.post(
         `${apiUrl}/api/wishlistcontrol/add`,
         payload
       );

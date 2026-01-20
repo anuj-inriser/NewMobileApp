@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import axiosInstance from "../api/axios";
 import { apiUrl } from "../utils/apiUrl";
 
 export const usePrevCloses = (symbols = []) => { 
@@ -14,7 +14,7 @@ export const usePrevCloses = (symbols = []) => {
       try {
         console.log("📡 PREV-CLOSE API CALL →", symbol);
 
-        const res = await axios.get(
+        const res = await axiosInstance.get(
           `${apiUrl}/api/market/prev-close`,
           {
             params: {

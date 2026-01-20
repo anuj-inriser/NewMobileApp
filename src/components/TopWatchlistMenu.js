@@ -14,6 +14,7 @@ import {
 import { Entypo, Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import axiosInstance from "../api/axios";
 import { apiUrl } from "../utils/apiUrl";
 
 const API = `${apiUrl}/api/wishlistcontrol`;
@@ -66,7 +67,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
 
   const fetchLists = async (uid) => {
     try {
-      const res = await axios.get(`${API}?user_id=${uid}`);
+      const res = await axiosInstance.get(`${API}?user_id=${uid}`);
       const listData = res?.data?.data || [];
       setLists(
         listData.map((item) => ({
@@ -87,7 +88,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
     try {
       if (editIndex !== null) {
         const target = lists[editIndex];
-        await axios.put(`${API}/${target.id}`, {
+        await axiosInstance.put(`${API}/${target.id}`, {
           wishlist_name: inputValue.trim(),
           user_id: userId,
         });
@@ -95,7 +96,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
         updated[editIndex].name = inputValue.trim();
         setLists(updated);
       } else {
-        const res = await axios.post(API, {
+        const res = await axiosInstance.post(API, {
           wishlist_name: inputValue.trim(),
           user_id: userId,
         });
@@ -123,7 +124,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
       }
 
       // ✅ Bhejo URL params mein: /api/wishlistcontrol/:id?user_id=:userId
-      await axios.delete(`${API}/${target.id}`, {
+      await axiosInstance.delete(`${API}/${target.id}`, {
         params: { user_id: userId } // 👈 query param
       });
 
