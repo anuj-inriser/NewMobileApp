@@ -16,6 +16,8 @@ export const AuthProvider = ({ children }) => {
   const [refreshToken, setRefreshToken] = useState(null);
   const [clientId, setClientId] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [permissions, setPermissions] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -26,12 +28,18 @@ export const AuthProvider = ({ children }) => {
       const r = await AsyncStorage.getItem(TOKENS.REFRESH_TOKEN);
       const c = await AsyncStorage.getItem(TOKENS.CLIENT_ID);
       const u = await AsyncStorage.getItem("userId");
+      const d = await AsyncStorage.getItem("userData");
+      const p = await AsyncStorage.getItem("permissions");
 
       setAuthToken(a);
       setFeedToken(f);
       setRefreshToken(r);
       setClientId(c);
       setUserId(u);
+      if (d) setUserData(JSON.parse(d));
+      if (p) {
+        setPermissions(JSON.parse(p));
+      }
     } finally {
       setLoading(false);
     }
@@ -41,7 +49,7 @@ export const AuthProvider = ({ children }) => {
     loadTokens();
   }, []);
 
-  const setAuthData = async ({ authToken, feedToken, refreshToken, clientId, userId }) => {
+  const setAuthData = async ({ authToken, feedToken, refreshToken, clientId, userId, userData, permissions, token }) => {
     if (authToken) {
       await AsyncStorage.setItem(TOKENS.AUTH_TOKEN, authToken.toString());
       setAuthToken(authToken.toString());
@@ -62,6 +70,17 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem("userId", userId.toString());
       setUserId(userId.toString());
     }
+    if (userData) {
+      await AsyncStorage.setItem("userData", JSON.stringify(userData));
+      setUserData(userData);
+    }
+    if (permissions) {
+      await AsyncStorage.setItem("permissions", JSON.stringify(permissions));
+      setPermissions(permissions);
+    }
+    if (token) {
+      await AsyncStorage.setItem("token", token)
+    }
   };
 
   const clearAuth = async () => {
@@ -71,12 +90,16 @@ export const AuthProvider = ({ children }) => {
     await AsyncStorage.removeItem(TOKENS.CLIENT_ID);
     await AsyncStorage.removeItem(SHOW_KEY);
     await AsyncStorage.removeItem("userId");
+    await AsyncStorage.removeItem("userData");
+    await AsyncStorage.removeItem("permissions")
 
     setAuthToken(null);
     setFeedToken(null);
     setRefreshToken(null);
     setClientId(null);
     setUserId(null);
+    setUserData(null);
+    setPermissions([])
   };
 
   return (
@@ -87,9 +110,11 @@ export const AuthProvider = ({ children }) => {
         refreshToken,
         clientId,
         userId,
+        userData,
         loading,
         setAuthData,
         clearAuth,
+        permissions
       }}
     >
       {children}

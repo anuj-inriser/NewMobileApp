@@ -46,25 +46,25 @@ export async function playNotificationSound(soundUrl) {
 
 // Register foreground notification
 export function registerForegroundNotification() {
- messaging().onMessage(async (remoteMessage) => {
-  const data = remoteMessage.data || {};
-  const { title, body, notificationId, imageUrl, soundUrl } = data;
+  messaging().onMessage(async (remoteMessage) => {
+    const data = remoteMessage.data || {};
+    const { title, body, notificationId, imageUrl, soundUrl } = data;
 
-  // ✅ Foreground notification with image
-  await showNotificationWithImage({ title, body, notificationId, imageUrl });
+    // ✅ Foreground notification with image
+    await showNotificationWithImage({ title, body, notificationId, imageUrl });
 
-  if (soundUrl) {
-    setTimeout(() => playNotificationSound(soundUrl), 300);
-  }
+    if (soundUrl) {
+      setTimeout(() => playNotificationSound(soundUrl), 300);
+    }
 
-  if (notificationId) {
-    fetch(`${data.apiUrl || ""}/api/notification/mark-delivered`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notificationId }),
-    }).catch(() => {});
-  }
-});
+    if (notificationId) {
+      fetch(`${data.apiUrl || ""}/api/notification/mark-delivered`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId }),
+      }).catch(() => { });
+    }
+  });
 
 }
 

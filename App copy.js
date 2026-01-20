@@ -44,8 +44,6 @@ import LearningDetail from "./src/screens/LearningDetail";
 import ChapterScreen from "./src/screens/ChapterScreen";
 import ChapterDetails from "./src/screens/ChapterDetails";
 import AdvancedChartScreen from "./src/screens/AdvancedChartScreen";
-import NotificationScreen from "./src/screens/NotificationScreen";
-import PermissionGuard from "./src/guards/PermissionGuard";
 
 const RootStack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
@@ -69,46 +67,20 @@ function AppNavigator() {
       <AppStack.Navigator screenOptions={{ headerShown: false }}>
         <AppStack.Screen name="Equity" component={EquityScreen} />
         <AppStack.Screen name="Trade" component={TradeScreen} />
-      <AppStack.Screen name="NewsScreen"
-          children={() => (
-            <PermissionGuard permission="VIEW_NEWS">
-              <NewsScreen />
-            </PermissionGuard>
-          )} />
+        <AppStack.Screen name="NewsScreen" component={NewsScreen} />
         <AppStack.Screen name="NewsReadingScreen" component={NewsReadingScreen} />
-        <AppStack.Screen name="Portfolio"
-          // component={PortfolioScreen}
-          children={() => (
-            <PermissionGuard permission="VIEW_PORTFOLIO">
-              <PortfolioScreen />
-            </PermissionGuard>
-          )}
-        />
+        <AppStack.Screen name="Portfolio" component={PortfolioScreen} />
         <AppStack.Screen name="Profile" component={Profile} options={{ presentation: "modal", animation: "slide_from_left" }} />
-       <AppStack.Screen
-          name="TradeOrderList"
-          // component={TradeOrderListScreen}
-          children={() => (
-            <PermissionGuard permission="VIEW_WATCHLIST">
-              <TradeOrderListScreen />
-            </PermissionGuard>
-          )}
-        />
+        <AppStack.Screen name="TradeOrderList" component={TradeOrderListScreen} />
         <AppStack.Screen name="OrdersScreen" component={OrdersScreen} />
         <AppStack.Screen name="StockTimelineScreen" component={StockTimelineScreen} />
         <AppStack.Screen name="Stocks" component={StocksScreen} />
         <AppStack.Screen name="IndicesList" component={IndicesListScreen} />
         <AppStack.Screen name="IndicesDetail" component={IndicesDetailScreen} />
-       <AppStack.Screen name="Learning"
-          children={() => (
-            <PermissionGuard permission="VIEW_LEARNING">
-              <Learning />
-            </PermissionGuard>
-          )} />
+        <AppStack.Screen name="Learning" component={Learning} />
         <AppStack.Screen name="LearningDetail" component={LearningDetail} />
         <AppStack.Screen name="ChapterScreen" component={ChapterScreen} />
         <AppStack.Screen name="ChapterDetails" component={ChapterDetails} />
-        <AppStack.Screen name="NotificationScreen" component={NotificationScreen} />
       </AppStack.Navigator>
     </MainLayout>
   );
@@ -129,46 +101,46 @@ export default function App() {
     const setupNotifications = async () => {
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') console.log("Permission not granted!");
+
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("default", {
           name: "Default Channel",
-          importance: Notifications.AndroidImportance.MAX, // Compulsory for Popup
+          importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          enableVibrate: true,
           showBadge: true,
-           lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         });
       }
     };
 
     setupNotifications();
-    /* 🔥 FCM HANDLER - UPDATED FOR ANDROID CONTENT URI */
-    /* 🔥 FCM HANDLER - FIXED VERSION (No More Undefined Error) */
+
+    /* 🔥 FCM HANDLER WITH LOGGING */
+    /* 🔥 FCM HANDLER - FIXED VERSION */
     const fcmUnsubscribe = messaging().onMessage(async (remoteMessage) => {
       const data = remoteMessage.data || {};
       const { title, body, notificationId, imageUrl, soundUrl } = data;
 
       let localImageUri = null;
 
+      // 1. Download Logic (Same as before)
       if (imageUrl && imageUrl.startsWith('http')) {
         try {
           const extension = imageUrl.split('.').pop().split(/\#|\?/)[0] || 'jpg';
           const filename = `notif_${Date.now()}.${extension}`;
           const downloadPath = `${FileSystem.cacheDirectory}${filename}`;
           const result = await FileSystem.downloadAsync(imageUrl, downloadPath);
-
           if (result.status === 200) {
-            // Android compatibility ke liye Content URI
-            localImageUri = await FileSystem.getContentUriAsync(result.uri);
+            localImageUri = result.uri;
           }
         } catch (error) {
           console.error("Download Error:", error);
         }
       }
 
+      // 2. Schedule Notification with SAFETY CHECKS
       try {
         const finalTitle = title || "Smart Stock Update";
-        const finalBody = body || "New notification received";
+        const finalBody = body || "You have a new update";
 
         await Notifications.scheduleNotificationAsync({
           content: {
@@ -176,65 +148,44 @@ export default function App() {
             body: finalBody,
             sound: false,
             priority: 'max',
-            // 🖼️ Force Style using String (To avoid 'undefined' error)
+            // Agar image hai tabhi BIG_PICTURE style lagao, warna default rakho
             ...(localImageUri && Platform.OS === 'android' ? {
               android: {
                 channelId: "default",
                 notificationStyle: {
-                  type: "bigpicture", // 👈 String use karo 'bigpicture'
+                  type: Notifications.AndroidNotificationStyle.BIG_PICTURE,
                   picture: localImageUri,
-                  title: finalTitle,
-                  summary: finalBody
+                  title: finalTitle, // Safety: Title must be string
+                  summary: finalBody  // Safety: Body must be string
                 },
               }
             } : {
-              android: { channelId: "default" }
+              android: {
+                channelId: "default",
+              }
             }),
             attachments: localImageUri ? [{ url: localImageUri }] : [],
-            data: { notificationId, localImage: localImageUri },
+            data: { notificationId, originalImage: imageUrl, localImage: localImageUri },
           },
           trigger: null,
         });
-      } catch (err) {
-        console.error("Notification Style Error:", err);
+      } catch (scheduleError) {
+        console.error("Scheduling Failed, sending fallback:", scheduleError);
+        // Fallback: Agar upar wala fail ho jaye toh bina style ke bhej do
+        await Notifications.scheduleNotificationAsync({
+          content: { title: title || "Update", body: body || "" },
+          trigger: null,
+        });
       }
 
+      // Sound and Mark-Delivered logic...
       if (soundUrl) setTimeout(() => playNotificationSound(soundUrl), 300);
     });
-    const openSub =
-      Notifications.addNotificationResponseReceivedListener(async (response) => {
-        try {
-          const data = response.notification.request.content.data;
-          console.log("🔔 Notification Tapped! Data ->", data);
 
-          const notificationId = data?.notificationId;
-
-          if (!notificationId) {
-            console.log("⚠️ notificationId missing");
-            return;
-          }
-
-          // 🔥 UPDATE opened_at IN DB
-          await fetch(`${apiUrl}/api/notification/mark-opened`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ notificationId }),
-          });
-
-          console.log("✅ opened_at updated for:", notificationId);
-
-          // 👉 OPTIONAL NAVIGATION
-          // if (data?.screen === "Dashboard") {
-          //   navigation.navigate("Dashboard");
-          // }
-
-        } catch (error) {
-          console.log("❌ Error marking notification opened:", error);
-        }
-      });
-
+    const openSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      console.log("Notification Tapped! Data ->", data);
+    });
 
     connectMarketWS();
     const wsUnsubscribe = onMarketMessage((msg) => {
@@ -258,7 +209,7 @@ export default function App() {
                 <RootStack.Screen name="Auth" component={AuthNavigator} />
                 <RootStack.Screen name="App" component={AppNavigator} />
                 <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
-                <RootStack.Screen name="AdvancedChart" component={AdvancedChartScreen} options={{ headerShown: false }} />
+                <RootStack.Screen name="AdvancedChart" component={AdvancedChartScreen} options={{ headerShown: true }} />
               </RootStack.Navigator>
             </NavigationContainer>
           </AuthProvider>

@@ -15,7 +15,9 @@ import {
 
 import { apiUrl } from "../utils/apiUrl";
 import { useAuth } from "../context/AuthContext";
+import axiosInstance from "../api/axios";
 import { getPushToken } from "../../src/utils/pushToken"; // ✅ EXPO PUSH
+import { ChartPrefetchService } from "../services/ChartPrefetchService";
 
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState("");
@@ -89,6 +91,7 @@ export default function LoginScreen({ navigation }) {
 
   /* 🔐 FINAL LOGIN */
   const handleFinalLogin = async () => {
+    // console.log("trying to login")
     if (!password.trim()) {
       Alert.alert("Missing", "Please enter your password");
       return;
@@ -96,17 +99,26 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/api/check-user/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, password }),
-      });
+      // const response = await fetch(`${apiUrl}/api/check-user/login`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ phone, password }),
+      // });
+      const fcmToken = await getPushToken();
+      const response = await axiosInstance.post(`/check-user/login`, { phone, password, fcmToken })
 
-      const result = await response.json();
+      const result = response.data;
       setLoading(false);
 
       if (result.status && result.data?.userId) {
-        await setAuthData({ userId: String(result.data.userId) });
+                ChartPrefetchService.prefetchWatchlist();
+        const { userId, name, email, phone, userimage } = result.data;
+
+        console.log("logged in success", result.data);
+        await setAuthData({ userId: String(result.data.userId), userData: { name, email, phone, userimage }, fcmToken });
+        await setAuthData({ token: result.data.token });
+        // await setAuthData({ permissions: result.data.permissions });
+        await fetchAndStorePermissions();
         navigation.navigate("Demat");
       } else {
         Alert.alert("Login Failed", result.message || "Invalid credentials");
@@ -115,6 +127,21 @@ export default function LoginScreen({ navigation }) {
       setLoading(false);
       console.error("Login error:", err);
       Alert.alert("Error", "Unable to connect to server.");
+    }
+  };
+
+  const fetchAndStorePermissions = async () => {
+    console.log("inside fetch")
+    try {
+      const res = await axiosInstance.get(`/me/permissions`);
+
+      console.log("res ", res.data)
+      // Save permissions in AuthContext
+      await setAuthData({
+        permissions: JSON.stringify(res.data),
+      });
+    } catch (err) {
+      console.error("Permission fetch failed", err);
     }
   };
 
