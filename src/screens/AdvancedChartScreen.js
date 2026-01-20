@@ -9,6 +9,7 @@ import {
   TouchableWithoutFeedback,
   SafeAreaView,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { ArrowLeft } from "lucide-react-native";
@@ -18,7 +19,10 @@ const SCREEN_HEIGHT = Dimensions.get("window").height;
 const COLLAPSED_HEIGHT = 40;
 const EXPANDED_HEIGHT = SCREEN_HEIGHT * 0.75; // Increased height for form
 
-import TradeOrderForm from "../components/TradeOrderForm";
+import TradeOrderFormNew from "../components/TradeOrderFormNew";
+import TradeOrderTabs from "../components/Trade/TradeOrderTabs";
+import OrdersList from "../components/OrdersList";
+import PositionsList from "../components/PositionsList";
 
 const AdvancedChartScreen = () => {
   const route = useRoute();
@@ -30,10 +34,86 @@ const AdvancedChartScreen = () => {
   const webViewRef = useRef(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const animation = useRef(new Animated.Value(COLLAPSED_HEIGHT)).current;
+  const [chartInterval, setChartInterval] = useState(null); // Wait for async storage
+  const [injectionScript, setInjectionScript] = useState("");
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    const prepareChart = async () => {
+      try {
+        // 1. Load Interval
+        let interval = "1";
+        const savedInterval = await AsyncStorage.getItem("@chart_interval");
+        if (savedInterval) interval = savedInterval;
+        setChartInterval(interval);
+
+        // 2. Load Cached Data for ANY instant render
+        // Fuzzy Lookup: Try strict match, then normalized match, then -EQ variations
+        const candidates = [
+          chartSymbol, // Exact match
+          chartSymbol.includes(":") ? chartSymbol : `NSE:${chartSymbol}`, // Ensure Prefix
+          chartSymbol.replace("-EQ", ""), // Remove EQ
+          `NSE:${chartSymbol.replace("NSE:", "").replace("-EQ", "")}`, // Prefix + No EQ
+          `${chartSymbol}-EQ`, // Add EQ
+          `NSE:${chartSymbol}-EQ`, // Prefix + Add EQ
+        ];
+
+        let cachedData = null;
+        let foundKey = "";
+
+        for (const candidate of candidates) {
+          const key = `@chart_cache_${candidate}_${interval}`;
+          const data = await AsyncStorage.getItem(key);
+          if (data) {
+            cachedData = data;
+            foundKey = key;
+            break;
+          }
+        }
+
+        if (cachedData) {
+          console.log(
+            "⚡ [AdvancedChart] Found cached data size:",
+            cachedData.length,
+            "for key:",
+            foundKey,
+          );
+          const script = `
+            window.INITIAL_CHART_DATA = ${cachedData};
+            true; // note: returns true to terminate
+          `;
+          setInjectionScript(script);
+        } else {
+          console.log("⚠️ [AdvancedChart] No cache found for:", cacheKey);
+        }
+      } catch (e) {
+        console.error("Error preparing chart:", e);
+        setChartInterval("1");
+      } finally {
+        setIsReady(true);
+      }
+    };
+    prepareChart();
+  }, [chartSymbol]);
+
+  // Tabs State
+  const [activeTab, setActiveTab] = useState(1);
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    // No navigation, just switch view
+  };
 
   const handleMessage = (event) => {
     const { data } = event.nativeEvent;
     try {
+      const parsed = JSON.parse(data);
+      if (parsed.type === "INTERVAL_CHANGED") {
+        AsyncStorage.setItem("@chart_interval", parsed.interval);
+        // Optional: Update state if you want to reflect it immediately,
+        // though the chart already has it.
+        setChartInterval(parsed.interval);
+      }
     } catch (e) {
       console.log("Raw message from Chart:", data);
     }
@@ -64,54 +144,81 @@ const AdvancedChartScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Custom Header */}
+      {/* Top Bar with Back Button & Tabs */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.backButton}
+          style={{
+            marginRight: 10,
+            backgroundColor: "#210F47",
+            padding: 8,
+            borderRadius: 20,
+          }}
         >
-          <ArrowLeft size={24} color="#000" />
+          <ArrowLeft size={20} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{symbol}</Text>
+
+        <View style={{ flex: 1 }}>
+          <TradeOrderTabs activeTab={activeTab} onTabChange={handleTabChange} />
+        </View>
       </View>
 
-      {/* Main Chart */}
-      <WebView
-        ref={webViewRef}
-        source={{
-          uri: `${apiUrl}/charting_library-master/mobile_white.html?symbol=${chartSymbol}`,
-        }}
-        style={styles.webview}
-        originWhitelist={["*"]}
-        // javaScriptEnabled={true}
-        // domStorageEnabled={true}
-        onMessage={handleMessage}
-        onLoadEnd={injectSymbol}
-      />
+      {/* Render Content Based on Tab */}
+      <View style={styles.contentContainer}>
+        {activeTab === 1 && (
+          <>
+            {/* Main Chart */}
+            {isReady && chartInterval && (
+              <WebView
+                ref={webViewRef}
+                source={{
+                  uri: `${apiUrl}/charting_library-master/mobile_white.html?symbol=${chartSymbol}&interval=${chartInterval}`,
+                }}
+                style={styles.webview}
+                originWhitelist={["*"]}
+                onMessage={handleMessage}
+                onLoadEnd={injectSymbol}
+                injectedJavaScriptBeforeContentLoaded={injectionScript}
+              />
+            )}
 
-      {/* Animated Bottom Sheet */}
-      <Animated.View style={[styles.bottomSheet, { height: animation }]}>
-        <TouchableWithoutFeedback onPress={toggleDrawer}>
-          <View style={styles.handleContainer}>
-            <View style={styles.handle} />
-            <Text style={styles.handleText}>
-              {isExpanded ? "Hide Trade" : "Trade Order"}
-            </Text>
+            {/* Animated Bottom Sheet */}
+            <Animated.View style={[styles.bottomSheet, { height: animation }]}>
+              <TouchableWithoutFeedback onPress={toggleDrawer}>
+                <View style={styles.handleContainer}>
+                  <View style={styles.handle} />
+                  <Text style={styles.handleText}>
+                    {isExpanded ? "Hide Trade" : "Trade Order"}
+                  </Text>
+                </View>
+              </TouchableWithoutFeedback>
+
+              <View style={styles.drawerContent}>
+                <TradeOrderFormNew
+                  symbol={chartSymbol.replace("NSE:", "").replace("BSE:", "")}
+                  exchange={chartSymbol.startsWith("BSE:") ? "BSE" : "NSE"}
+                  onOrderPlaced={() => {
+                    // Alert.alert("Success", "Order Placed"); // Form handles alert usually, or we can enable this
+                    toggleDrawer(); // Close after order
+                  }}
+                />
+              </View>
+            </Animated.View>
+          </>
+        )}
+
+        {activeTab === 2 && (
+          <View style={{ flex: 1 }}>
+            <OrdersList />
           </View>
-        </TouchableWithoutFeedback>
+        )}
 
-        <View style={styles.drawerContent}>
-          {/* Render Form when at least partially expanded or just always render (hidden by height) */}
-          <TradeOrderForm
-            symbol={chartSymbol.replace("NSE:", "").replace("BSE:", "")}
-            exchange={chartSymbol.startsWith("BSE:") ? "BSE" : "NSE"}
-            onOrderPlaced={() => {
-              Alert.alert("Success", "Order Placed");
-              toggleDrawer(); // Close after order
-            }}
-          />
-        </View>
-      </Animated.View>
+        {activeTab === 3 && (
+          <View style={{ flex: 1 }}>
+            <PositionsList />
+          </View>
+        )}
+      </View>
     </SafeAreaView>
   );
 };
@@ -124,18 +231,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
+    marginTop: 50,
+    paddingLeft: 20,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
     backgroundColor: "#fff",
+    zIndex: 10,
   },
-  backButton: {
-    padding: 5,
-    marginRight: 10,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+  contentContainer: {
+    flex: 1,
+    position: "relative",
   },
   webview: {
     flex: 1,

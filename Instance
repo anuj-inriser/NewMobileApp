@@ -1,0 +1,199 @@
+[33mcommit e1e81d069a430ac72caba408ca760ac940851560[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Sat Jan 17 14:48:26 2026 +0530
+
+    Upload android folder
+
+[33mcommit ba2a6384799bd83028a12b5cc4e488f978fca948[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Fri Jan 16 09:42:22 2026 +0530
+
+    Upload android folder
+
+[33mcommit 227430192bb2af8d381b03336ca480a1362efa6e[m
+Merge: d3c8a3d 972d459
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Thu Jan 15 17:38:51 2026 +0530
+
+    Merge branch 'main' of https://github.com/inriser/Victory_Mobile_AppNew
+
+[33mcommit d3c8a3d8a8836ee108b72f92f2d670193390b67a[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Thu Jan 15 17:38:36 2026 +0530
+
+    Working on Firebase fcm token
+
+[33mcommit 972d4591e9075c9ca558ffbd91b6247d87458106[m
+Author: anuj-inriser <anuj@inriser.com>
+Date:   Thu Jan 15 17:38:23 2026 +0530
+
+    advance chart live trading ploting
+
+[33mcommit 8d0f992edfd096d1e0e74360a873d6c080c14579[m
+Author: anuj-inriser <anuj@inriser.com>
+Date:   Thu Jan 15 12:21:43 2026 +0530
+
+    code conflict issue
+
+[33mcommit e10633bff526e1237db1973c5b765a9242ab7c44[m
+Author: anuj-inriser <anuj@inriser.com>
+Date:   Tue Jan 13 10:18:39 2026 +0530
+
+    Advanced Chart host dynamic
+
+[33mcommit e287e64c060cb5fb38b24cb77366ed04c5d43f22[m
+Author: anuj-inriser <anuj@inriser.com>
+Date:   Mon Jan 12 11:05:10 2026 +0530
+
+    Globally header and footer single ui modal and trade chart control
+
+[33mcommit c7f34d77a6deb3d23fd77c0c1cc83e980f6c9d77[m
+Merge: 69526da 2bad80c
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Sat Jan 3 17:26:37 2026 +0530
+
+    Merge branch 'main' of https://github.com/inriser/Victory_Mobile_App
+
+[33mcommit 69526dafa8ca015334cc69d1f697efb9009e7111[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Sat Jan 3 17:26:30 2026 +0530
+
+    Working on Equity Page
+
+[33mcommit 2bad80c250bcd3cddb4a40b252feb3c566598be1[m
+Author: anuj-inriser <anuj@inriser.com>
+Date:   Sat Jan 3 17:18:04 2026 +0530
+
+    03-01-2026
+
+[33mcommit 5a2506eb00b8135956b19e43e1c33f852cc8389e[m
+Merge: 0759127 f56cf34
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Thu Jan 1 17:12:00 2026 +0530
+
+    Merge branch 'main' of https://github.com/inriser/Victory_Mobile_App
+
+[33mcommit 0759127c31f8650e0a877dda5f9efdafdceb736f[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Thu Jan 1 17:11:54 2026 +0530
+
+    Working on Websocket related work
+
+[33mcommit f56cf3473bbb7d2429ba3bdf2310ccb418173d7f[m
+Author: anuj-inriser <anuj@inriser.com>
+Date:   Thu Jan 1 17:11:22 2026 +0530
+
+    01-01-2026
+
+[33mcommit 89cacbd545cc6529e0b4ff295c7d38646495fd4b[m
+Merge: d6b5f57 e9901e6
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Wed Dec 24 11:44:46 2025 +0530
+
+    Merge branch 'main' of https://github.com/inriser/Victory_Mobile_App
+
+[33mcommit d6b5f5730e8dd15c4607d898a5d0f964df51734e[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Wed Dec 24 11:44:40 2025 +0530
+
+    Working on Profile Page Attachment Issue
+
+[33mcommit e9901e6dee12cd1e0b126324d7b7f9042e204540[m
+Author: anuj-inriser <anuj@inriser.com>
+Date:   Wed Dec 24 11:44:03 2025 +0530
+
+    Sequence tab work in process
+
+[33mcommit 5dc3495070d4c69794dc2bad194f12c90fee531f[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Fri Dec 19 17:55:56 2025 +0530
+
+    Working on Report an isssue
+
+[33mcommit afc5bb4593ac38181dbb7bd583c17ca6a7e1c0d7[m
+Merge: 1ed536a 53370e7
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Thu Dec 18 11:54:56 2025 +0530
+
+    Merge branch 'main' of https://github.com/inriser/Victory_Mobile_App
+
+[33mcommit 53370e7e210110b5859a81a5ec59c054fed165a5[m
+Author: anuj-inriser <anuj@inriser.com>
+Date:   Thu Dec 18 11:54:31 2025 +0530
+
+    added usequery for cache or realtime ltp for changes and indices chart changes
+
+[33mcommit 1ed536aba06ca04dccade40896f1e1828353aa4b[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Thu Dec 18 11:53:26 2025 +0530
+
+    Working on About Us UI
+
+[33mcommit 000c9e0b512489fa33f528b28855bceee9a17278[m
+Merge: 7a28856 82844a3
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Mon Dec 15 11:46:56 2025 +0530
+
+    Merge branch 'main' of https://github.com/inriser/Victory_Mobile_App
+
+[33mcommit 82844a3534df6d497828119ba26123b6766d6990[m
+Author: anuj-inriser <anuj@inriser.com>
+Date:   Mon Dec 15 11:46:35 2025 +0530
+
+    Working on Server not connect
+
+[33mcommit 7a288561f74215e36f509b6b0cb435002da128d2[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Mon Dec 15 11:46:08 2025 +0530
+
+    Working on App Not connect
+
+[33mcommit 58f1dd8f3a46b2aef444aac03d79868b2edc78b4[m
+Merge: 7f94341 81c73dd
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Fri Dec 12 13:24:15 2025 +0530
+
+    Working on Profile page
+
+[33mcommit 7f94341221ccf814fd740bbb8206983cfe65e6b5[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Fri Dec 12 13:22:05 2025 +0530
+
+    Working on Profile page
+
+[33mcommit 81c73dda41b0b038d7fa23a140b25d4a3cee94b7[m
+Author: anuj-inriser <anuj@inriser.com>
+Date:   Fri Dec 12 13:10:46 2025 +0530
+
+    homescreen stock tab and their field added
+
+[33mcommit 42f763bbbb9b63367abd97da417fe895b9ad32a0[m
+Merge: e52a6e0 5fea3f2
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Tue Dec 9 12:17:55 2025 +0530
+
+    Merge branch 'main' of https://github.com/inriser/Victory_Mobile_App
+
+[33mcommit e52a6e073140c757eec4887d74b0b6eb356504be[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Tue Dec 9 12:07:40 2025 +0530
+
+    Working on App UI
+
+[33mcommit 5fea3f231d8cfb4a973bc822e7c10dfcade2d17f[m
+Author: Anuj <anuj@inriser.com>
+Date:   Tue Dec 9 12:06:24 2025 +0530
+
+    indices changes
+
+[33mcommit a472fc25bcf7177fe0f071e7b54df732887a264b[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Thu Dec 4 15:03:59 2025 +0530
+
+    First COmmit
+
+[33mcommit 8c66c45364684e22b1c2ffd2e753b9ab48884cd4[m
+Author: Anirudh <anirudh.agarwal@faspi.in>
+Date:   Thu Dec 4 14:37:48 2025 +0530
+
+    First COmmit

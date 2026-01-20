@@ -10,58 +10,84 @@ const STATUS_COLORS = {
     "Closed": "#666666",
 };
 
+const TradeCard = ({
+  script,
+  script_id,
+  status,
+  tradeRecommendation,
+  entryDate,
+  exitDate,
+  entry,
+  target,
+  stopLoss,
+  perspective,
+  token,
+  ltp,
+  change,
+  changePercent,
+}) => {
+  const navigation = useNavigation();
 
-const TradeCard =
-    ({ script,
-        script_id,
-        status,
-        tradeRecommendation,
-        entryDate,
-        exitDate,
-        entry,
-        target,
-        stopLoss,
-        perspective,
-        token
-    }) => {
+  const statusColor = STATUS_COLORS[status] || "#666666";
 
-        const navigation = useNavigation();
+  return (
+    <View style={styles.card}>
+      {/* Header */}
+      <View style={styles.headerRow}>
+        <View style={styles.scriptStatusContainer}>
+         
+            <Text style={styles.script}>{script}</Text>
+            <Text style={[styles.status, { color: statusColor }]}>
+              {status}
+            </Text>
+          
+          {/* LTP DISPLAY */}
+          {ltp && (
+            <View style={{ marginLeft: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#000" }}>
+                ₹{Number(ltp).toFixed(2)}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: "600",
+                  color: Number(change) >= 0 ? "#22C55E" : "#D32F2F",
+                }}
+              >
+                {Number(change).toFixed(2)} ({Number(changePercent).toFixed(2)}
+                %)
+              </Text>
+            </View>
+          )}
+        </View>
 
-        const statusColor = STATUS_COLORS[status] || "#666666";
-
-        return (
-            <View style={styles.card}>
-                {/* Header */}
-                <View style={styles.headerRow}>
-                    <View style={styles.scriptStatusContainer}>
-                        <Text style={styles.script}>{script}</Text>
-                        <Text style={[styles.status, { color: statusColor }]}>{status}</Text>
-                    </View>
-
-                    <TouchableOpacity
-                        onPress={
-                            tradeRecommendation === "Buy"
-                                ? () => {
-                                    navigation.navigate('TradeOrder', {
-                                        symbol: script_id,
-                                        token: token,
-                                        name: script,
-                                        price: entry,
-                                        quantity: 1,
-                                        stoploss: stopLoss,
-                                        target: target,
-                                        internaltype: 'Place'
-                                    });
-                                }
-                                : null
-                        }
-                        activeOpacity={0.7}
-                    >
-                        <View style={[tradeRecommendation === "Buy" ? styles.greenBadge : styles.redBadge]}>
-                            <Text style={styles.badgeText}>{tradeRecommendation}</Text>
-                        </View>
-                    </TouchableOpacity>
-                </View>
+        <TouchableOpacity
+          onPress={() => {
+            navigation.navigate("TradeOrder", {
+              symbol: script, // Use script name (e.g. RELIANCE) instead of ID
+              token: token,
+              name: script,
+              price: entry,
+              quantity: 1,
+              stoploss: stopLoss,
+              target: target,
+              internaltype: "Place",
+              type: tradeRecommendation, // Buy or Sell
+            });
+          }}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[
+              tradeRecommendation === "Buy" || tradeRecommendation === "buy"
+                ? styles.greenBadge
+                : styles.redBadge,
+            ]}
+          >
+            <Text style={styles.badgeText}>{tradeRecommendation}</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
 
                 {/* Dates */}
                 <View style={styles.datesRow}>

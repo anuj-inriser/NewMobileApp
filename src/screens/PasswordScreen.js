@@ -12,9 +12,11 @@ import {
 } from "react-native";
 import * as Device from "expo-device";
 import { apiUrl } from "../utils/apiUrl";
+import { useAuth } from "../context/AuthContext";
 
 export default function PasswordScreen({ navigation, route }) {
   const { name, email, phone, fcmToken } = route.params;
+  const { setAuthData } = useAuth();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -26,10 +28,7 @@ export default function PasswordScreen({ navigation, route }) {
     async function init() {
       try {
         setDeviceId(
-          Device.osBuildId ||
-            Device.modelId ||
-            Device.deviceName ||
-            "Unknown"
+          Device.osBuildId || Device.modelId || Device.deviceName || "Unknown",
         );
 
         const res = await fetch("https://api.ipify.org?format=json");
@@ -76,6 +75,13 @@ export default function PasswordScreen({ navigation, route }) {
 
       if (result?.status) {
         Alert.alert("Success", "Signup completed");
+
+        const { userid, name, email, phone, userimage } = result.data;
+        await setAuthData({
+          userId: String(userid),
+          userData: { name, email, phone, userimage },
+        });
+
         navigation.replace("Demat");
       } else {
         Alert.alert("Error", result.message || "Signup failed");
