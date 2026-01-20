@@ -73,7 +73,7 @@ export default function DematScreen({ navigation }) {
 
                 Alert.alert('Success', 'Angel One login successful!');
 
-                setShowAngelOneModal(false);
+                // setShowAngelOneModal(false);
                 navigation.navigate('App', { screen: 'Equity' });
             } catch (err) {
                 console.error('❌ Token save failed:', err);
@@ -87,7 +87,7 @@ export default function DematScreen({ navigation }) {
             (url.includes('/login') && url.includes('error='))
         ) {
             console.warn('Login cancelled or failed');
-            setShowAngelOneModal(false);
+            // setShowAngelOneModal(false);
         }
     };
 

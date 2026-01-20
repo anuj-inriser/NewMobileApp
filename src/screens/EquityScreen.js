@@ -271,14 +271,20 @@ export default function EquityScreen({ navigation }) {
         if (backPressCount === 0) {
           backPressCount = 1;
           ToastAndroid.show("Press back again to exit", ToastAndroid.SHORT);
+
           timeout = setTimeout(() => {
-            backPressCount = 0;
+            backPressCount = 0; // reset after 2 sec
           }, 2000);
-          return true; // prevent exit
+
+          return true; // first press prevents exit
         } else {
           clearTimeout(timeout);
-          BackHandler.exitApp(); // ✅ exits app
-          return false;
+
+          // ✅ exit app, home screen pe aajaye, logout logic fire nahi hoga
+          BackHandler.exitApp();
+
+          // ⚠️ Note: false return can trigger default handler, so return true
+          return true;
         }
       };
 
@@ -293,6 +299,38 @@ export default function EquityScreen({ navigation }) {
       };
     }, [])
   );
+
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     let backPressCount = 0;
+  //     let timeout;
+
+  //     const onBackPress = () => {
+  //       if (backPressCount === 0) {
+  //         backPressCount = 1;
+  //         ToastAndroid.show("Press back again to exit", ToastAndroid.SHORT);
+  //         timeout = setTimeout(() => {
+  //           backPressCount = 0;
+  //         }, 2000);
+  //         return true; // prevent exit
+  //       } else {
+  //         clearTimeout(timeout);
+  //         BackHandler.exitApp(); // ✅ exits app
+  //         return false;
+  //       }
+  //     };
+
+  //     const backHandler = BackHandler.addEventListener(
+  //       "hardwareBackPress",
+  //       onBackPress
+  //     );
+
+  //     return () => {
+  //       backHandler.remove();
+  //       clearTimeout(timeout);
+  //     };
+  //   }, [])
+  // );
   useFocusEffect(
     useCallback(() => {
       const page = "EquityScreen";

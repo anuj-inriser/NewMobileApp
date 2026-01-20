@@ -360,9 +360,9 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
         )}
 
         {/* Notification Button */}
-        <TouchableOpacity style={styles.circleButton}>
+        <TouchableOpacity style={styles.circleButton} onPress={() => navigation.navigate("App", { screen: "NotificationScreen" })}>
           <Ionicons name="notifications-outline" size={20} color="#fff" />
-          <View style={styles.badge} />
+          {/* <View style={styles.badge} /> */}
         </TouchableOpacity>
 
         {/* Menu Button */}
