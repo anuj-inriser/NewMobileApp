@@ -1,0 +1,388 @@
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  View,
+  Image,
+  Text,
+  TouchableOpacity,
+  Modal,
+  Alert,
+  AppState,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import OrderItemCard from "./OrderItemCard";
+import { apiUrl } from "../utils/apiUrl";
+import { useAuth } from "../context/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getDeviceId } from "../utils/deviceId";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+
+const filterOptions = ["All", "Executed", "Cancelled", "Rejected", "Pending"];
+const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
+
+const OrdersList = () => {
+  const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [originalOrders, setOriginalOrders] = useState([]);
+  const [sortOpen, setSortOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState("All");
+  const { authToken } = useAuth();
+
+  const normalizeStatus = (status = "") =>
+    status.toString().trim().toLowerCase();
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const userId = await AsyncStorage.getItem("userId");
+      const deviceId = await getDeviceId();
+
+      const response = await fetch(`${apiUrl}/api/order/get`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+          userid: userId,
+          device_mac: deviceId,
+        },
+      });
+
+      const text = await response.text();
+      const data = JSON.parse(text);
+
+      setOrders(data?.data || []);
+      setOriginalOrders(data?.data || []);
+    } catch (error) {
+      console.log("API Error OrdersList:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, []),
+  );
+
+  const sortOrders = (sortType) => {
+    let sorted = [...orders];
+
+    if (sortType === "A-Z") {
+      sorted.sort((a, b) =>
+        (a.trading_symbol || "").localeCompare(b.trading_symbol || ""),
+      );
+    } else if (sortType === "Z-A") {
+      sorted.sort((a, b) =>
+        (b.trading_symbol || "").localeCompare(a.trading_symbol || ""),
+      );
+    } else if (sortType === "High-Low") {
+      sorted.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+    } else if (sortType === "Low-High") {
+      sorted.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    }
+
+    setOrders(sorted);
+  };
+
+  const applyFilter = (option) => {
+    setSelectedFilter(option);
+    if (option === "All") {
+      setOrders(originalOrders);
+      return;
+    }
+
+    const filtered = originalOrders.filter((item) => {
+      const st = normalizeStatus(item.status);
+      if (option === "Executed") return st === "completed" || st === "complete";
+
+      if (option === "Cancelled")
+        return st === "cancelled" || st === "canceled";
+
+      if (option === "Rejected") return st === "rejected";
+
+      if (option === "Pending")
+        return (
+          st === "pending" ||
+          st === "open" ||
+          st === "trigger pending" ||
+          st === "triggerpending" ||
+          st === "openpending"
+        );
+      return true;
+    });
+
+    setOrders(filtered);
+  };
+
+  const cancelOrderApi = async (item) => {
+    const userId = await AsyncStorage.getItem("userId");
+    const deviceId = await getDeviceId();
+
+    const payload = {
+      variety: item.variety,
+      orderid: item.orderid,
+      symboltoken: item.symbol_token,
+      tradingsymbol: item.trading_symbol,
+      transactiontype: item.transaction_type,
+      exchange: item.exchange,
+      ordertype: item.order_type,
+      producttype: item.product_type,
+      duration: item.duration,
+      price: item.price,
+      squareoff: item.square_off ?? 0,
+      stoploss: item.stop_loss ?? 0,
+      quantity: item.quantity,
+      script: item.script,
+    };
+
+    const response = await fetch(`${apiUrl}/api/order/cancel/${item.orderid}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
+        userid: userId,
+        device_mac: deviceId,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    await fetchOrders();
+    return await response.json();
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Sort + Filter Bar */}
+      <View style={styles.orderTopBar}>
+        <Text style={styles.orderTitle}>Orders</Text>
+
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={styles.iconRow}
+            onPress={() => setSortOpen(true)}
+          >
+            <Image
+              source={require("../../assets/sorticon.png")}
+              style={{ width: 20, height: 20, resizeMode: "contain" }}
+            />
+            <Text style={styles.actionText}>Sort</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.iconRow}
+            onPress={() => setIsFilterOpen(true)}
+          >
+            <Ionicons
+              name={selectedFilter !== "All" ? "funnel" : "funnel-outline"}
+              size={16}
+              color="#000"
+            />
+            <Text style={[styles.actionText, { color: "#000" }]}>Filter</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Sort Modal */}
+      <Modal visible={sortOpen} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.overlay}
+          onPress={() => setSortOpen(false)}
+        >
+          <View style={styles.filterDropdown}>
+            {sortOptions.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setSortOpen(false);
+                  sortOrders(option);
+                }}
+              >
+                <Text style={styles.dropdownText}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={isFilterOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsFilterOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setIsFilterOpen(false)}
+        >
+          <View style={styles.filterDropdown}>
+            {filterOptions.map((option, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setIsFilterOpen(false);
+                  applyFilter(option);
+                }}
+              >
+                <Text style={styles.dropdownText}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {loading ? (
+        <View style={styles.loaderBox}>
+          <Text style={styles.loaderText}>Loading...</Text>
+        </View>
+      ) : orders.length === 0 ? (
+        <View style={{ marginTop: 60, alignItems: "center" }}>
+          <Text style={styles.noDataText}>No Data Found</Text>
+        </View>
+      ) : (
+        <ScrollView style={{ marginTop: 10 }}>
+          {orders.map((item, index) => (
+            <OrderItemCard
+              key={`${item.orderid}_${index}`}
+              name={item.trading_symbol}
+              type={item.transaction_type?.toUpperCase()}
+              shares={`${item.unfilledshares}/${Number(item.filledshares) + Number(item.unfilledshares)}`}
+              status={item.status}
+              price={`₹ ${Number(item.price).toFixed(2)}`}
+              broker={item.broker}
+              onModify={() => {
+                navigation.navigate("TradeOrder", {
+                  symbol: item.trading_symbol,
+                  token: item.symbol_token,
+                  name: item.script,
+                  price: item.price,
+                  quantity: item.quantity,
+                  stoploss: item.stop_loss,
+                  target: 0,
+                  producttype: item.product_type,
+                  internaltype: "Modify",
+                  orderid: item.orderid,
+                });
+              }}
+              onCancel={async () => {
+                Alert.alert(
+                  "Cancel Order",
+                  "Are you sure you want to cancel this order?",
+                  [
+                    { text: "No", style: "cancel" },
+                    {
+                      text: "Yes",
+                      onPress: async () => {
+                        const res = await cancelOrderApi(item);
+                        if (res.success) {
+                          Alert.alert(
+                            "Success",
+                            "Order cancelled successfully.",
+                          );
+                        } else {
+                          Alert.alert(
+                            "Error",
+                            res?.message || "Failed to cancel order.",
+                          );
+                        }
+                      },
+                    },
+                  ],
+                );
+              }}
+            />
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+};
+
+export default OrdersList;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  loaderBox: {
+    marginTop: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loaderText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#555",
+  },
+  noDataText: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#555",
+  },
+  orderTopBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginTop: 5,
+  },
+  orderTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#000",
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 18,
+  },
+  actionText: {
+    marginLeft: 4,
+    fontSize: 13,
+    color: "#000",
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+  },
+  filterDropdown: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    marginTop: 140,
+    marginRight: 20,
+    width: 120,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#eee",
+    elevation: 6,
+    shadowColor: "#210F47",
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: "#000",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#eee",
+  },
+});

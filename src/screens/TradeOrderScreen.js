@@ -1,18 +1,26 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Image, View, StyleSheet, ScrollView, Text, TouchableOpacity, Modal } from "react-native";
+import {
+  Image,
+  View,
+  StyleSheet,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  Modal,
+} from "react-native";
 import { WebView } from "react-native-webview";
 import { useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import SwipeButton from "rn-swipe-button";
-import { apiUrl } from '../utils/apiUrl';
+import { apiUrl } from "../utils/apiUrl";
 import TopOrderHeader from "../components/TopOrderHeader";
 import NseBseRadioBox from "../components/NseBseRadioBox";
 import OrderTopMenu from "../components/OrderTopMenu";
 import OrderInputBox from "../components/OrderInputBox";
 // import OrderDropdownBox from "../components/OrderDropdownBox";
 import { getDeviceId } from "../utils/deviceId";
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from "../context/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 export default function TradeOrderScreen({ navigation }) {
@@ -54,7 +62,7 @@ export default function TradeOrderScreen({ navigation }) {
 
       if (p < lower || p > upper) {
         errors.push(
-          `Limit price must be within 20% of LTP (${lower.toFixed(2)} - ${upper.toFixed(2)})`
+          `Limit price must be within 20% of LTP (${lower.toFixed(2)} - ${upper.toFixed(2)})`,
         );
       }
     }
@@ -64,11 +72,12 @@ export default function TradeOrderScreen({ navigation }) {
 
     const totalCost = p * q + br + ch + tx;
     if (totalCost > bal)
-      errors.push("Insufficient balance. Order value + charges exceed available funds.");
+      errors.push(
+        "Insufficient balance. Order value + charges exceed available funds.",
+      );
 
     // TARGET
-    if (tg > 0 && tg < ltp)
-      errors.push(`Target cannot be below LTP (${ltp}).`);
+    if (tg > 0 && tg < ltp) errors.push(`Target cannot be below LTP (${ltp}).`);
 
     // STOP LOSS
     if (sl > 0 && sl > ltp)
@@ -77,7 +86,6 @@ export default function TradeOrderScreen({ navigation }) {
     setValidationErrors(errors);
     return errors.length === 0;
   };
-
 
   const handleAngelOneNavigation = async (navState) => {
     const { url } = navState;
@@ -138,7 +146,18 @@ export default function TradeOrderScreen({ navigation }) {
   };
 
   const route = useRoute();
-  const { symbol: passedSymbol, token: passedToken, name: passedName, price: passedPrice, quantity: passedQuantity, stoploss: passedStopLoss, target: passedTarget, producttype: passedProductType, internaltype = internaltype, orderid: passedOrderId } = route.params || {};
+  const {
+    symbol: passedSymbol,
+    token: passedToken,
+    name: passedName,
+    price: passedPrice,
+    quantity: passedQuantity,
+    stoploss: passedStopLoss,
+    target: passedTarget,
+    producttype: passedProductType,
+    internaltype = internaltype,
+    orderid: passedOrderId,
+  } = route.params || {};
   const swipeRef = useRef(null);
   const [selectedMenu, setSelectedMenu] = useState("Intraday");
 
@@ -179,14 +198,15 @@ export default function TradeOrderScreen({ navigation }) {
       const symbolToken = passedToken || "";
 
       // ⭐ Get current LTP
-      let liveLtp = parseFloat(
-        selected === "NSE"
-          ? nseLtp.replace("₹", "")
-          : bseLtp.replace("₹", "")
-      ) || 0;
+      let liveLtp =
+        parseFloat(
+          selected === "NSE"
+            ? nseLtp.replace("₹", "")
+            : bseLtp.replace("₹", ""),
+        ) || 0;
 
       // ⭐ Price to send → If user price = 0 → use LTP
-      const P = (parseFloat(price) === 0 ? liveLtp : parseFloat(price));
+      const P = parseFloat(price) === 0 ? liveLtp : parseFloat(price);
 
       const url = `${apiUrl}/api/brokerage/calculate?price=${P}&quantity=${qty}&segment=${segment}&symbol=${symbol}&symboltoken=${symbolToken}&exchange=${selected}`;
 
@@ -208,7 +228,6 @@ export default function TradeOrderScreen({ navigation }) {
       console.log("Brokerage Error:", err.message);
     }
   };
-
 
   useEffect(() => {
     const p = parseFloat(price || 0);
@@ -236,9 +255,7 @@ export default function TradeOrderScreen({ navigation }) {
 
     // STOP LOSS (must be below LTP if > 0)
     setIsStopLossValid(sl === 0 || sl < ltp);
-
   }, [price, qty, target, stopLoss, nseLtp, bseLtp, selected]);
-
 
   // BROKERAGE AUTO UPDATE
   useEffect(() => {
@@ -246,7 +263,6 @@ export default function TradeOrderScreen({ navigation }) {
       fetchBrokerage();
     }
   }, [price, qty, segment, selected, nseLtp, bseLtp]);
-
 
   // -------------------------
   // 🔢 ORDER VALUE + Closing balance
@@ -256,11 +272,10 @@ export default function TradeOrderScreen({ navigation }) {
     const q = parseInt(qty) || 0;
 
     // ⭐ If price is 0 → use LTP (market order)
-    const ltp = parseFloat(
-      selected === "NSE"
-        ? nseLtp.replace("₹", "")
-        : bseLtp.replace("₹", "")
-    ) || 0;
+    const ltp =
+      parseFloat(
+        selected === "NSE" ? nseLtp.replace("₹", "") : bseLtp.replace("₹", ""),
+      ) || 0;
 
     if (p === 0) {
       p = ltp;
@@ -271,9 +286,7 @@ export default function TradeOrderScreen({ navigation }) {
 
     const cb = balance - (ov + brokerage + taxes + charges);
     setClosingBalance(cb);
-
   }, [price, qty, nseLtp, bseLtp, balance, brokerage, charges, taxes]);
-
 
   const modifyOrder = async () => {
     try {
@@ -298,7 +311,7 @@ export default function TradeOrderScreen({ navigation }) {
         stoploss: parseFloat(stopLoss || 0),
 
         price: p === 0 ? 0 : p,
-        quantity: String(qty)
+        quantity: String(qty),
       };
 
       const res = await fetch(`${apiUrl}/api/order/modify`, {
@@ -325,7 +338,6 @@ export default function TradeOrderScreen({ navigation }) {
       alert("ERROR: " + err.message);
     }
   };
-
 
   const placeOrder = async () => {
     try {
@@ -354,7 +366,7 @@ export default function TradeOrderScreen({ navigation }) {
         squareoff: "0",
         stoploss: parseFloat(stopLoss || 0),
         quantity: parseFloat(qty),
-        scripconsent: "yes"
+        scripconsent: "yes",
       };
 
       const res = await fetch(`${apiUrl}/api/order/place`, {
@@ -362,9 +374,9 @@ export default function TradeOrderScreen({ navigation }) {
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + authToken,
-          "userid": userId,
-          "device_mac": deviceId,
-          "internaltype": internaltype,
+          userid: userId,
+          device_mac: deviceId,
+          internaltype: internaltype,
         },
         body: JSON.stringify(payload),
       });
@@ -373,7 +385,7 @@ export default function TradeOrderScreen({ navigation }) {
 
       if (data.angelResponse?.message === "SUCCESS") {
         alert("Order Placed Successfully.");
-        navigation.navigate('OrdersScreen', { defaultTab: 2 });
+        navigation.navigate("OrdersScreen", { defaultTab: 2 });
       } else {
         alert(JSON.stringify(data));
       }
@@ -382,12 +394,11 @@ export default function TradeOrderScreen({ navigation }) {
     }
   };
 
-
   useEffect(() => {
     if (!isUserTypedPrice) return;
 
     const timer = setTimeout(() => {
-      setIsUserTypedPrice(false);  // Allow LTP auto update again
+      setIsUserTypedPrice(false); // Allow LTP auto update again
     }, 3000);
 
     return () => clearTimeout(timer);
@@ -414,15 +425,17 @@ export default function TradeOrderScreen({ navigation }) {
     setter(val);
   };
 
-
-
   // -------------------------
   // 🔄 FETCH LTP
   // -------------------------
   const fetchLtp = async () => {
     try {
       // If user typed recently (within 1 minute), don't overwrite price
-      if (isUserTypedPrice && userTypedTime && Date.now() - userTypedTime < 60000) {
+      if (
+        isUserTypedPrice &&
+        userTypedTime &&
+        Date.now() - userTypedTime < 60000
+      ) {
         return; // Do NOT update price from LTP
       }
 
@@ -433,19 +446,28 @@ export default function TradeOrderScreen({ navigation }) {
           headers: {
             Authorization: "Bearer " + authToken,
           },
-        }
+        },
       );
       const data = await res.json();
-      console.log("ex",data);
+      console.log("LTP API Response:", data);
+
       if (data.success) {
-        const ltp = parseFloat(data.ltp || 0).toFixed(2);
+        const rawLtp = data.ltp || data.price || data.value || 0;
+        const ltp = parseFloat(rawLtp).toFixed(2);
 
         if (ex === "NSE") setNseLtp(`₹${ltp}`);
         else setBseLtp(`₹${ltp}`);
-
+      } else {
+        // If API fails, show placeholder
+        console.warn("LTP API failed:", data.message);
+        if (ex === "NSE") setNseLtp("₹0.00");
+        else setBseLtp("₹0.00");
       }
     } catch (err) {
       console.log("LTP Error:", err.message);
+      // Set fallback on error
+      if (selected === "NSE") setNseLtp("₹0.00");
+      else setBseLtp("₹0.00");
     }
   };
 
@@ -472,7 +494,6 @@ export default function TradeOrderScreen({ navigation }) {
       else if (mappedSeg === "MARGIN") setSelectedMenu("Margin");
     }
 
-
     // Prevent LTP from overriding the initial price immediately
     if (passedPrice) {
       setIsUserTypedPrice(true);
@@ -489,7 +510,7 @@ export default function TradeOrderScreen({ navigation }) {
           headers: {
             Authorization: "Bearer " + authToken,
           },
-        }
+        },
       );
 
       const data = await res.json();
@@ -522,31 +543,35 @@ export default function TradeOrderScreen({ navigation }) {
     setSegment(map[name]);
   };
 
-
-  const combinedCharges =
-    parseFloat(charges || 0) + parseFloat(taxes || 0);
+  const combinedCharges = parseFloat(charges || 0) + parseFloat(taxes || 0);
 
   useEffect(() => {
     const ok = runValidations();
     setIsOrderValid(ok);
-  }, [price, qty, target, stopLoss, balance, brokerage, charges, taxes, nseLtp, bseLtp]);
+  }, [
+    price,
+    qty,
+    target,
+    stopLoss,
+    balance,
+    brokerage,
+    charges,
+    taxes,
+    nseLtp,
+    bseLtp,
+  ]);
 
   const isModifyMode = internaltype?.toLowerCase() === "modify";
   return (
-    <SafeAreaView edges={['left', 'top']} style={styles.container}>
-      <TopOrderHeader
-        title={symbol}
-        onBack={() => navigation.goBack()}
-      />
+    <SafeAreaView edges={["left", "top"]} style={styles.container}>
+      <TopOrderHeader title={symbol} onBack={() => navigation.goBack()} />
       <KeyboardAwareScrollView
         extraHeight={300}
         enableOnAndroid={true}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scroll}
       >
-
         <ScrollView contentContainerStyle={styles.scrollContent}>
-
           <View style={styles.radioContainer}>
             <NseBseRadioBox
               selected={selected}
@@ -564,13 +589,12 @@ export default function TradeOrderScreen({ navigation }) {
           /> */}
             <OrderTopMenu
               items={menuItems}
-              defaultSelected={selectedMenu}   // ⭐ now fully controlled
+              defaultSelected={selectedMenu} // ⭐ now fully controlled
               onSelect={(name) => {
-                setSelectedMenu(name);        // UI highlight
-                handleSegmentChange(name);    // backend / logic mapping
+                setSelectedMenu(name); // UI highlight
+                handleSegmentChange(name); // backend / logic mapping
               }}
             />
-
           </View>
 
           <View style={styles.inputsWrapper}>
@@ -581,7 +605,6 @@ export default function TradeOrderScreen({ navigation }) {
               isValid={isPriceValid}
               onWarningPress={() => setShowTooltip(true)}
             />
-
 
             <OrderInputBox
               label="Quantity"
@@ -621,12 +644,10 @@ export default function TradeOrderScreen({ navigation }) {
             zIndex={2000}
             zIndexInverse={1000}
           /> */}
-
           </View>
         </ScrollView>
       </KeyboardAwareScrollView>
       <View style={styles.bottomContainer}>
-
         <View style={styles.summaryContainer}>
           <View style={styles.row}>
             <Text style={styles.label}>Balance available</Text>
@@ -645,9 +666,7 @@ export default function TradeOrderScreen({ navigation }) {
 
           <View style={styles.row}>
             <Text style={styles.label}>Charges</Text>
-            <Text style={styles.value}>
-              ₹{format2(combinedCharges)}
-            </Text>
+            <Text style={styles.value}>₹{format2(combinedCharges)}</Text>
           </View>
 
           <View style={styles.row}>
@@ -687,7 +706,6 @@ export default function TradeOrderScreen({ navigation }) {
               width: "100%",
               backgroundColor: "#ffffff",
             }}
-
             thumbIconComponent={() => (
               <Text style={{ color: "#fff", fontWeight: "700" }}>Buy</Text>
             )}
@@ -736,7 +754,6 @@ export default function TradeOrderScreen({ navigation }) {
               }}
             />
           </TouchableOpacity>
-
         </View>
       </View>
 
@@ -746,24 +763,31 @@ export default function TradeOrderScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setShowTooltip(false)}
       >
-        <View style={{
-          flex: 1,
-          backgroundColor: "rgba(0,0,0,0.5)",
-          justifyContent: "center",
-          alignItems: "center"
-        }}>
-          <View style={{
-            width: "85%",
-            backgroundColor: "#fff",
-            borderRadius: 12,
-            padding: 20
-          }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <View
+            style={{
+              width: "85%",
+              backgroundColor: "#fff",
+              borderRadius: 12,
+              padding: 20,
+            }}
+          >
             <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 10 }}>
               ⚠ Order Issues
             </Text>
 
             {validationErrors.map((e, i) => (
-              <Text key={i} style={{ fontSize: 14, marginBottom: 6, color: "#222" }}>
+              <Text
+                key={i}
+                style={{ fontSize: 14, marginBottom: 6, color: "#222" }}
+              >
                 • {e}
               </Text>
             ))}
@@ -774,10 +798,12 @@ export default function TradeOrderScreen({ navigation }) {
                 marginTop: 15,
                 paddingVertical: 10,
                 backgroundColor: "#210F47",
-                borderRadius: 8
+                borderRadius: 8,
               }}
             >
-              <Text style={{ color: "#fff", textAlign: "center", fontSize: 16 }}>
+              <Text
+                style={{ color: "#fff", textAlign: "center", fontSize: 16 }}
+              >
                 OK
               </Text>
             </TouchableOpacity>
@@ -792,7 +818,6 @@ export default function TradeOrderScreen({ navigation }) {
         onRequestClose={() => setShowAngelOneModal(false)}
       >
         <View style={{ flex: 1, backgroundColor: "#fff" }}>
-
           <TouchableOpacity
             style={{
               position: "absolute",
@@ -813,8 +838,7 @@ export default function TradeOrderScreen({ navigation }) {
 
           <WebView
             source={{
-              uri:
-                "https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=tradeorder",
+              uri: "https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=tradeorder",
             }}
             javaScriptEnabled={true}
             domStorageEnabled={true}
@@ -828,7 +852,7 @@ export default function TradeOrderScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", },
+  container: { flex: 1, backgroundColor: "#fff" },
   scrollContent: { alignItems: "center", paddingBottom: 160 },
   radioContainer: { marginTop: 10 },
   menuContainer: { width: "100%", marginTop: 10 },

@@ -8,13 +8,17 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const OrderTopMenu = ({ items = [], defaultSelected = "Intraday", onSelect }) => {
+const OrderTopMenu = ({
+  items = [],
+  defaultSelected = "Intraday",
+  onSelect,
+}) => {
   const [selected, setSelected] = useState(defaultSelected);
   useEffect(() => {
     setSelected(defaultSelected);
   }, [defaultSelected]);
   return (
-    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+    <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
       <View style={styles.shadowWrapper}>
         <ScrollView
           horizontal
@@ -30,15 +34,9 @@ const OrderTopMenu = ({ items = [], defaultSelected = "Intraday", onSelect }) =>
                   setSelected(item.name);
                   if (onSelect) onSelect(item.name);
                 }}
-
                 activeOpacity={0.8}
               >
-                <View
-                  style={[
-                    styles.tabWhite,
-                    isActive && styles.activeTab,
-                  ]}
-                >
+                <View style={[styles.tabWhite, isActive && styles.activeTab]}>
                   <Text
                     style={[
                       styles.tabTextDark,
@@ -62,6 +60,7 @@ const OrderTopMenu = ({ items = [], defaultSelected = "Intraday", onSelect }) =>
 const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: "#fff",
+  
   },
 
   shadowWrapper: {
@@ -72,6 +71,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 5,
+    width: "100%",
     borderBottomWidth: 0,
   },
 
