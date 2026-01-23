@@ -15,14 +15,17 @@ import { Entypo, Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { apiUrl } from "../../utils/apiUrl";
+import { BottomTabs } from "react-native-screens";
+import BottomTabBar from "../BottomTabBar";
 
 const API = `${apiUrl}/api/wishlistcontrol`;
 
 const orderTabs = [
-    { id: 1, name: "Trade" },
+  { id: 1, name: "Place Order" },
   { id: 2, name: "Orders" },
   { id: 3, name: "Positions" },
-]
+  { id: 4, name: "Holdings" },
+];
 
 const TradeOrderTabs = ({ onTabChange, activeTab }) => {
   const [active, setActive] = useState(activeTab || 1);
@@ -66,6 +69,7 @@ const TradeOrderTabs = ({ onTabChange, activeTab }) => {
               </TouchableOpacity>
             ))}
           </View>
+     
         </ScrollView>
         <TouchableOpacity onPress={() => setShowPopup(true)}>
           <Entypo
@@ -76,6 +80,7 @@ const TradeOrderTabs = ({ onTabChange, activeTab }) => {
           />
         </TouchableOpacity>
       </View>
+
     </>
   );
 };

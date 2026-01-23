@@ -15,10 +15,10 @@ const getActiveRouteName = (state) => {
 };
 
 const BottomTabBar = () => {
-  const canViewPortfolio = usePermission("VIEW_PORTFOLIO");
   const canViewCommunity = usePermission("VIEW_COMMUNITY");
   const canViewTrade = usePermission("VIEW_TRADE");
   const canViewIdeas = usePermission("VIEW_IDEAS");
+  const canViewNews = usePermission("VIEW_NEWS");
   const navigation = useNavigation();
   const currentRouteName = useNavigationState((state) => getActiveRouteName(state));
   const insets = useSafeAreaInsets();
@@ -40,10 +40,10 @@ const BottomTabBar = () => {
 
   const tabs = [
     { name: "Home", component: "Equity", isPermission: true, icon: require("../../assets/homemenu.png") },
-    { name: "Portfolio", component: "Portfolio", isPermission: canViewPortfolio, icon: require("../../assets/portfoliomenu.png") },
-    { name: "Community", component: "StockTimelineScreen", isPermission: canViewCommunity, icon: require("../../assets/communitymenu.png") },
+    { name: "News", component: "NewsScreen", isPermission: canViewNews, icon: require("../../assets/portfoliomenu.png") },
+    { name: "Explore", component: "StockTimelineScreen", isPermission: canViewCommunity, icon: require("../../assets/communitymenu.png") },
     { name: "Ideas", component: "Trade", isPermission: canViewIdeas, icon: require("../../assets/ideasmenu.png") },
-    { name: "Trade", component: "OrdersScreen", isPermission: canViewTrade, icon: require("../../assets/trademenu.png") },
+    { name: "Trade", component: "AdvancedChart", isPermission: canViewTrade, icon: require("../../assets/trademenu.png"), isRootNav: true },
   ];
 
   return (
@@ -59,12 +59,19 @@ const BottomTabBar = () => {
               activeOpacity={0.7}
               onPress={() => {
                 if (!tab.isPermission) {
-                  setShowUpgradeModal(true)
+                  setShowUpgradeModal(true);
                   return;
                 }
-                navigation.navigate("App", {
-                  screen: tab.component,
-                })
+                // Navigate to root-level screen (AdvancedChart) or App stack screen
+                if (tab.isRootNav) {
+                  navigation.navigate(tab.component, {
+                    symbol: "NSE:RELIANCE-EQ",
+                  });
+                } else {
+                  navigation.navigate("App", {
+                    screen: tab.component,
+                  })
+                }
               }
               }
             >

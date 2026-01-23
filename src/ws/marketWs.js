@@ -16,6 +16,8 @@ const getWsProtocol = (host) => {
   return 'wss';
 };
 
+
+
 export const connectMarketWS = () => {
   if (ws && ws.readyState === WebSocket.OPEN) return ws;
 

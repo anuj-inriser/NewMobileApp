@@ -6,6 +6,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   FlatList,
+  Modal,
+  Image,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { AppState, BackHandler, ToastAndroid } from "react-native";
@@ -23,6 +25,8 @@ import {
   subscribeSymbols,
   unsubscribeDelayed,
 } from "../ws/marketSubscriptions";
+import { Ionicons } from "@expo/vector-icons";
+import axiosInstance from "../api/axios";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
 const LeftBuyAction = () => (
@@ -51,49 +55,57 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy }) => {
         ? Math.abs(item.changePercent).toFixed(2)
         : "0.00";
 
+    // Right swipe action - "View Chart"
+    const renderRightActions = () => (
+      <View style={styles.rightAction}>
+        <Ionicons name="bar-chart-outline" size={20} color="#fff" />
+        <Text style={styles.actionText}>Chart</Text>
+      </View>
+    );
+
     return (
-      // <Swipeable
-      //     renderLeftActions={() => (
-      //         <View style={styles.leftAction}>
-      //             <Text style={styles.buyText}>Buy ››</Text>
-      //         </View>
-      //     )}
-      //     onSwipeableLeftOpen={() => onBuy(item)}
-      //     overshootLeft={false}
-      // >
-      <TouchableOpacity
-        style={styles.marketCapItem}
-        onPress={() =>
-          navigation.navigate("Stocks", {
-            exchange,
-            from: "Market Cap",
-            filterIndex: item.name, // e.g., "Large Cap"
+      <Swipeable
+        renderRightActions={renderRightActions}
+        onSwipeableRightOpen={() =>
+          navigation.navigate("AdvancedChart", {
+            symbol: item.symbol,
           })
         }
+        overshootRight={false}
       >
-        <View>
-          <Text style={styles.marketCapName}>
-            {item.group_name || item.name}
-          </Text>
-          <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.marketCapItem}
+          onPress={() =>
+            navigation.navigate("Stocks", {
+              exchange,
+              from: "Market Cap",
+              filterIndex: item.name,
+            })
+          }
+        >
+          <View>
+            <Text style={styles.marketCapName}>
+              {item.group_name || item.name}
+            </Text>
+            <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
+          </View>
 
-        <View style={{ alignItems: "flex-end" }}>
-          <Text style={styles.price}>
-            ₹ {item.value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-          </Text>
+          <View style={{ alignItems: "flex-end" }}>
+            <Text style={styles.price}>
+              ₹ {item.value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            </Text>
 
-          <Text
-            style={[
-              styles.change,
-              isPositive ? styles.positive : styles.negative,
-            ]}
-          >
-            ₹{displayChange} ({displayPercent}%)
-          </Text>
-        </View>
-      </TouchableOpacity>
-      // </Swipeable>
+            <Text
+              style={[
+                styles.change,
+                isPositive ? styles.positive : styles.negative,
+              ]}
+            >
+              ₹{displayChange} ({displayPercent}%)
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -114,47 +126,67 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy }) => {
 const SectorsList = ({ data, exchange, category, navigation }) => {
   const renderItem = ({ item }) => {
     const isPositive = item.change >= 0;
-    const displayChange = isNaN(item.change)
-      ? "0.00"
-      : Math.abs(item.change).toFixed(2);
+    const displayChange =
+      typeof item.change === "number"
+        ? Math.abs(item.change).toFixed(2)
+        : "0.00";
 
-    const displayPercent = isNaN(item.changePercent)
-      ? "0.00"
-      : Math.abs(item.changePercent).toFixed(2);
+    const displayPercent =
+      typeof item.changePercent === "number"
+        ? Math.abs(item.changePercent).toFixed(2)
+        : "0.00";
+
+    // Right swipe action - "View Chart"
+    const renderRightActions = () => (
+      <View style={styles.rightAction}>
+        <Ionicons name="bar-chart-outline" size={24} color="#fff" />
+        <Text style={styles.actionText}>Chart</Text>
+      </View>
+    );
 
     return (
-      <TouchableOpacity
-        style={styles.marketCapItem}
-        onPress={() =>
-          navigation.navigate("Stocks", {
-            exchange,
-            from: "Sectors",
-            filterIndex: item.name, // e.g., "IT"
+      <Swipeable
+        renderRightActions={renderRightActions}
+        onSwipeableRightOpen={() =>
+          navigation.navigate("AdvancedChart", {
+            symbol: item.symbol,
           })
         }
+        overshootRight={false}
       >
-        <View>
-          <Text style={styles.marketCapName}>
-            {item.group_name || item.name}
-          </Text>
-          <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.marketCapItem}
+          onPress={() =>
+            navigation.navigate("Stocks", {
+              exchange,
+              from: "Sectors",
+              filterIndex: item.name, // e.g., "IT"
+            })
+          }
+        >
+          <View>
+            <Text style={styles.marketCapName}>
+              {item.group_name || item.name}
+            </Text>
+            <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
+          </View>
 
-        <View style={{ alignItems: "flex-end" }}>
-          <Text style={styles.price}>
-            ₹ {item.value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-          </Text>
+          <View style={{ alignItems: "flex-end" }}>
+            <Text style={styles.price}>
+              ₹ {item.value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            </Text>
 
-          <Text
-            style={[
-              styles.change,
-              isPositive ? styles.positive : styles.negative,
-            ]}
-          >
-            ₹{displayChange} ({displayPercent}%)
-          </Text>
-        </View>
-      </TouchableOpacity>
+            <Text
+              style={[
+                styles.change,
+                isPositive ? styles.positive : styles.negative,
+              ]}
+            >
+              ₹{displayChange} ({displayPercent}%)
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -229,6 +261,54 @@ export default function EquityScreen({ navigation }) {
   const [marketCapError, setMarketCapError] = useState(null);
   const [sectorsError, setSectorsError] = useState(null);
   const [themesError, setThemesError] = useState(null);
+
+  // ✅ Sort and Filter States
+  const [sortOpen, setSortOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedSort, setSelectedSort] = useState("Default");
+  const [originalMarketCapData, setOriginalMarketCapData] = useState([]);
+  const [originalSectorsData, setOriginalSectorsData] = useState([]);
+  const [allIndicesData, setAllIndicesData] = useState([]);
+  const [originalAllIndicesData, setOriginalAllIndicesData] = useState([]);
+
+  const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
+  
+  // Get filter options based on selected category
+  const getFilterOptions = () => {
+    if (selectedCategory === "Market Cap" || selectedCategory === "Indices" || selectedCategory === "Sectors") {
+      return ["All", "High Gainers", "High Losers"];
+    }
+    return ["All"];
+  };
+  
+  const filterOptions = getFilterOptions();
+
+  // ✅ Swipe Navigation Setup - Using touch tracking instead of PanResponder
+  const swipeCategories = ["Indices", "Market Cap", "Sectors"];
+  const touchStartX = useRef(0);
+  
+  const handleSwipeStart = (e) => {
+    touchStartX.current = e.nativeEvent.locationX;
+  };
+  
+  const handleSwipeEnd = (e) => {
+    const touchEndX = e.nativeEvent.locationX;
+    const distance = touchStartX.current - touchEndX;
+    const currentIndex = swipeCategories.indexOf(selectedCategory);
+    
+    // Swipe left (distance > 50): Move to next tab (right to left motion)
+    if (distance > 50 && currentIndex < swipeCategories.length - 1) {
+      console.log("Swiping left to:", swipeCategories[currentIndex + 1]);
+      setSelectedCategory(swipeCategories[currentIndex + 1]);
+      setShowPreview(false);
+    }
+    // Swipe right (distance < -50): Move to previous tab (left to right motion)
+    else if (distance < -50 && currentIndex > 0) {
+      console.log("Swiping right to:", swipeCategories[currentIndex - 1]);
+      setSelectedCategory(swipeCategories[currentIndex - 1]);
+      setShowPreview(false);
+    }
+  };
 
   const handleBuyFromHome = useCallback(
     (item) => {
@@ -396,12 +476,15 @@ export default function EquityScreen({ navigation }) {
     try {
       const url =
         exchange === "BSE"
-          ? `${apiUrl}/api/indicesNew/bsemarketcap`
-          : `${apiUrl}/api/indicesNew/nsemarketcap`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const result = await response.json();
-      setMarketCapData(result.data || []);
+          ? `/indicesNew/bsemarketcap`
+          : `/indicesNew/nsemarketcap`;
+      const response = await axiosInstance.get(url);
+     if (!response.status) throw new Error(`HTTP ${response.status}`);
+      const result = response.data;
+      const data = result.data || [];
+      setMarketCapData(data);
+      setOriginalMarketCapData(data);
+      setSelectedSort("Default");
     } catch (err) {
       setMarketCapError(err.message || "Failed to load market cap data");
     } finally {
@@ -414,14 +497,18 @@ export default function EquityScreen({ navigation }) {
     setIsSectorsLoading(true);
     setSectorsError(null);
     try {
-      const url =
+     const url =
         exchange === "BSE"
-          ? `${apiUrl}/api/indicesNew/bsesector`
-          : `${apiUrl}/api/indicesNew/nsesector`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const result = await response.json();
-      setSectorsData(result.data || []);
+          ? `/indicesNew/bsesector`
+          : `/indicesNew/nsesector`;
+      // const response = await fetch(url);
+      const response = await axiosInstance.get(url)
+      if (!response.status) throw new Error(`HTTP ${response.status}`);
+      const result = response.data;
+      const data = result.data || [];
+      setSectorsData(data);
+      setOriginalSectorsData(data);
+      setSelectedSort("Default");
     } catch (err) {
       setSectorsError(err.message || "Failed to load sectors data");
     } finally {
@@ -434,13 +521,14 @@ export default function EquityScreen({ navigation }) {
     setIsThemesLoading(true);
     setThemesError(null);
     try {
-      const url =
+     const url =
         exchange === "BSE"
-          ? `${apiUrl}/api/indicesNew/bsetheme`
-          : `${apiUrl}/api/indicesNew/nsetheme`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const result = await response.json();
+          ? `/indicesNew/bsetheme`
+          : `/indicesNew/nsetheme`;
+      // const response = await fetch(url);
+      const response = await axiosInstance.get(url)
+      if (!response.status) throw new Error(`HTTP ${response.status}`);
+      const result = response.data;
       setThemesData(result.data || []);
     } catch (err) {
       setThemesError(err.message || "Failed to load themes data");
@@ -448,6 +536,14 @@ export default function EquityScreen({ navigation }) {
       setIsThemesLoading(false);
     }
   }, []);
+
+  // ✅ Initialize Original Indices Data when allData loads
+  useEffect(() => {
+    if (allData && allData.length > 0) {
+      setOriginalAllIndicesData(allData);
+      setAllIndicesData(allData);
+    }
+  }, [allData]);
 
   // ✅ Refetch Market Cap, Sectors, and Themes when exchange changes & tab is active
   useEffect(() => {
@@ -469,14 +565,15 @@ export default function EquityScreen({ navigation }) {
   // ✅ Indices Fetch (unchanged)
   const fetchIndices = async ({ queryKey }) => {
     const [, exchange] = queryKey;
-    const url =
+   const url =
       exchange === "BSE"
-        ? `${apiUrl}/api/indicesNew/bse`
-        : `${apiUrl}/api/indicesNew/nse`;
+        ? `/indicesNew/bse`
+        : `/indicesNew/nse`;
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`API failed: ${response.status}`);
-    const result = await response.json();
+    // const response = await fetch(url);
+    const response = await axiosInstance.get(url)
+    if (!response.status) throw new Error(`API failed: ${response.status}`);
+    const result = response.data;
     return result.data; // must be array
   };
 
@@ -513,9 +610,216 @@ export default function EquityScreen({ navigation }) {
     ) {
       fetchMarketCap(selectedExchange);
     }
+
+    if (
+      category === "Sectors" &&
+      sectorsData.length === 0 &&
+      !isSectorsLoading
+    ) {
+      fetchSectors(selectedExchange);
+    }
+
+    if (
+      category === "Themes" &&
+      themesData.length === 0 &&
+      !isThemesLoading
+    ) {
+      fetchThemes(selectedExchange);
+    }
   };
 
   const handleExchangeChange = (exchange) => setSelectedExchange(exchange);
+
+  // ✅ Sort Logic
+  const applySortToData = (sortType, data) => {
+    let sorted = [...data];
+    
+    if (sortType === "A-Z") {
+      sorted.sort((a, b) => {
+        const nameA = (a.group_name || a.name || "").toUpperCase();
+        const nameB = (b.group_name || b.name || "").toUpperCase();
+        return nameA.localeCompare(nameB);
+      });
+    } else if (sortType === "Z-A") {
+      sorted.sort((a, b) => {
+        const nameA = (a.group_name || a.name || "").toUpperCase();
+        const nameB = (b.group_name || b.name || "").toUpperCase();
+        return nameB.localeCompare(nameA);
+      });
+    } else if (sortType === "High-Low") {
+      sorted.sort((a, b) => Number(b.ltp || 0) - Number(a.ltp || 0));
+    } else if (sortType === "Low-High") {
+      sorted.sort((a, b) => Number(a.ltp || 0) - Number(b.ltp || 0));
+    }
+    
+    return sorted;
+  };
+
+  const handleSort = (sortType) => {
+    setSelectedSort(sortType);
+    setSortOpen(false);
+    
+    if (selectedCategory === "Market Cap") {
+      setMarketCapData(applySortToData(sortType, originalMarketCapData));
+    } else if (selectedCategory === "Sectors") {
+      setSectorsData(applySortToData(sortType, originalSectorsData));
+    } else if (selectedCategory === "Indices") {
+      setAllIndicesData(applySortToData(sortType, originalAllIndicesData));
+    }
+  };
+
+  const handleFilterByType = (filterType) => {
+    setIsFilterOpen(false);
+    
+    if (selectedCategory === "Market Cap") {
+      let filtered = [...originalMarketCapData];
+      
+      if (filterType === "High Gainers") {
+        // Filter market caps with positive change (high gainers)
+        filtered = filtered.filter((item) => {
+          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+          const change = ((ltp - oi) / oi) * 100;
+          return change > 0;
+        });
+        // Sort by change descending
+        filtered.sort((a, b) => {
+          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+          const changeA = ((ltpA - oiA) / oiA) * 100;
+          
+          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+          const changeB = ((ltpB - oiB) / oiB) * 100;
+          
+          return changeB - changeA;
+        });
+      } else if (filterType === "High Losers") {
+        // Filter market caps with negative change (high losers)
+        filtered = filtered.filter((item) => {
+          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+          const change = ((ltp - oi) / oi) * 100;
+          return change < 0;
+        });
+        // Sort by change ascending (most negative first)
+        filtered.sort((a, b) => {
+          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+          const changeA = ((ltpA - oiA) / oiA) * 100;
+          
+          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+          const changeB = ((ltpB - oiB) / oiB) * 100;
+          
+          return changeA - changeB;
+        });
+      } else {
+        // "All" - reset to original
+        filtered = originalMarketCapData;
+      }
+      
+      setMarketCapData(filtered);
+    } else if (selectedCategory === "Indices") {
+      let filtered = [...originalAllIndicesData];
+      
+      if (filterType === "High Gainers") {
+        // Filter indices with positive change (high gainers)
+        filtered = filtered.filter((item) => {
+          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+          const change = ((ltp - oi) / oi) * 100;
+          return change > 0;
+        });
+        // Sort by change descending
+        filtered.sort((a, b) => {
+          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+          const changeA = ((ltpA - oiA) / oiA) * 100;
+          
+          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+          const changeB = ((ltpB - oiB) / oiB) * 100;
+          
+          return changeB - changeA;
+        });
+      } else if (filterType === "High Losers") {
+        // Filter indices with negative change (high losers)
+        filtered = filtered.filter((item) => {
+          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+          const change = ((ltp - oi) / oi) * 100;
+          return change < 0;
+        });
+        // Sort by change ascending (most negative first)
+        filtered.sort((a, b) => {
+          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+          const changeA = ((ltpA - oiA) / oiA) * 100;
+          
+          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+          const changeB = ((ltpB - oiB) / oiB) * 100;
+          
+          return changeA - changeB;
+        });
+      } else {
+        // "All" - reset to original
+        filtered = originalAllIndicesData;
+      }
+      
+      setAllIndicesData(filtered);
+    } else if (selectedCategory === "Sectors") {
+      let filtered = [...originalSectorsData];
+      
+      if (filterType === "High Gainers") {
+        // Filter sectors with positive change (high gainers)
+        filtered = filtered.filter((item) => {
+          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+          const change = ((ltp - oi) / oi) * 100;
+          return change > 0;
+        });
+        // Sort by change descending
+        filtered.sort((a, b) => {
+          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+          const changeA = ((ltpA - oiA) / oiA) * 100;
+          
+          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+          const changeB = ((ltpB - oiB) / oiB) * 100;
+          
+          return changeB - changeA;
+        });
+      } else if (filterType === "High Losers") {
+        // Filter sectors with negative change (high losers)
+        filtered = filtered.filter((item) => {
+          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+          const change = ((ltp - oi) / oi) * 100;
+          return change < 0;
+        });
+        // Sort by change ascending (most negative first)
+        filtered.sort((a, b) => {
+          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+          const changeA = ((ltpA - oiA) / oiA) * 100;
+          
+          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+          const changeB = ((ltpB - oiB) / oiB) * 100;
+          
+          return changeA - changeB;
+        });
+      } else {
+        // "All" - reset to original
+        filtered = originalSectorsData;
+      }
+      
+      setSectorsData(filtered);
+    }
+  };
 
   const handleViewAllIndices = () => {
     setSelectedCategory("Indices");
@@ -525,14 +829,20 @@ export default function EquityScreen({ navigation }) {
   const handleIndexPress = (index) => {
     navigation.navigate("Stocks", {
       exchange: selectedExchange,
-      // ✅ NEW: track source context
       from: "Indices",
-      filterIndex: index.name, // e.g., "Nifty 50"
+      filterIndex: index.name,
+    });
+  };
+
+  // ✅ Swipe right → View chart directly
+  const handleSwipeToChart = (index) => {
+    navigation.navigate("AdvancedChart", {
+      symbol: index.symbol,
     });
   };
 
   const getDataForCategory = () => {
-    if (selectedCategory === "Indices") return allData;
+    if (selectedCategory === "Indices") return allIndicesData;
     return [];
   };
 
@@ -732,6 +1042,7 @@ export default function EquityScreen({ navigation }) {
           viewMode={showPreview ? "horizontal" : "vertical"}
           onViewAllPress={handleViewAllIndices}
           onIndexPress={handleIndexPress}
+          onSwipeToChart={handleSwipeToChart}
           externalData={data}
           maxItems={showPreview ? 5 : undefined}
         />
@@ -763,7 +1074,95 @@ export default function EquityScreen({ navigation }) {
           activeTab={selectedCategory}
           additionalTabs={["Sectors", "Themes"]} // Adding "Sectors" and "Themes" to the tabs
         />
-        <View style={styles.content}>{renderContent()}</View>
+        
+        {/* Sort & Filter Bar for Market Cap, Sectors, and Indices */}
+        {(selectedCategory === "Market Cap" || selectedCategory === "Sectors" || selectedCategory === "Indices") && (
+          <View style={styles.sortFilterBar}>
+            {/* Back Button for Market Cap and Sectors - LEFT */}
+            {selectedCategory !== "Indices" && (
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => {
+                  setSelectedCategory("Indices");
+                  setShowPreview(false);
+                }}
+              >
+                <Ionicons name="arrow-back" size={22} color="#210F47" />
+                <Text style={styles.backButtonText}>Back</Text>
+              </TouchableOpacity>
+            )}
+            
+            {/* Sort & Filter - RIGHT (Always visible) */}
+            <View style={styles.sortFilterButtonsContainer}>
+              <TouchableOpacity style={styles.sortButton} onPress={() => setSortOpen(true)}>
+                <Image
+                  source={require("../../assets/sorticon.png")}
+                  style={{ width: 18, height: 18, resizeMode: "contain" }}
+                />
+                <Text style={styles.sortFilterText}>Sort</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterOpen(true)}>
+                <Ionicons name="funnel-outline" size={16} color="#000" />
+                <Text style={styles.sortFilterText}>Filter</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+        
+        <View 
+          style={styles.swipeWrapper}
+          onTouchStart={handleSwipeStart}
+          onTouchEnd={handleSwipeEnd}
+        >
+          <View style={styles.content}>{renderContent()}</View>
+        </View>
+        
+        {/* Sort Modal */}
+        <Modal visible={sortOpen} transparent animationType="fade">
+          <TouchableOpacity
+            style={styles.overlay}
+            onPress={() => setSortOpen(false)}
+          >
+            <View style={styles.filterDropdown}>
+              {sortOptions.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.dropdownItem}
+                  onPress={() => handleSort(option)}
+                >
+                  <Text style={styles.dropdownText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* Filter Modal */}
+        <Modal
+          visible={isFilterOpen}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsFilterOpen(false)}
+        >
+          <TouchableOpacity
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={() => setIsFilterOpen(false)}
+          >
+            <View style={styles.filterDropdown}>
+              {filterOptions.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.dropdownItem}
+                  onPress={() => handleFilterByType(option)}
+                >
+                  <Text style={styles.dropdownText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </SafeAreaView>
       {/* <BottomTabBar /> */}
     </>
@@ -791,7 +1190,8 @@ const mergeWithRealtime = (list, realtimePrices) => {
 
 // ✅ Styles
 const styles = StyleSheet.create({
-  content: { flex: 1, backgroundColor: "#F5F5F7" },
+  swipeWrapper: { flex: 1 },
+  content: { flex: 1, backgroundColor: "#fff", },
   placeholderContainer: {
     flex: 1,
     justifyContent: "center",
@@ -826,7 +1226,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 8,
   },
-  retryButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  
+  // Swipe Actions
+  rightAction: {
+    backgroundColor: "#210F47",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: 10,
+  },
+  actionText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
+  },
 
   // Market Cap List
   marketCapList: {
@@ -879,5 +1300,83 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#210F47",
+  },
+
+  // Sort & Filter Bar
+  sortFilterBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  backButtonText: {
+    marginLeft: 6,
+    fontSize: 13,
+    color: "#210F47",
+    fontWeight: "600",
+  },
+  sortFilterButtonsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  sortButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  sortFilterText: {
+    marginLeft: 6,
+    fontSize: 13,
+    color: "#000",
+    fontWeight: "600",
+  },
+
+  // Overlay and Dropdown
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+  },
+  filterDropdown: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    marginTop: 140,
+    marginRight: 20,
+    width: 120,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#eee",
+    elevation: 6,
+    shadowColor: "#210F47",
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  dropdownText: {
+    fontSize: 13,
+    color: "#000",
+    fontWeight: "500",
   },
 });

@@ -81,7 +81,7 @@ const Learning = () => {
             <SafeAreaView edges={["bottom"]} style={styles.container}>
                 {/* <TopHeader /> */}
                 <View >
-                    <TopMenuSlider />
+                    {/* <TopMenuSlider /> */}
                     <TopFundamentalSlider
                         learningCategory={categories}
                         selectedCategory={selectedCategory}

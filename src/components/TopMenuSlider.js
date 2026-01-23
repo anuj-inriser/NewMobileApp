@@ -12,6 +12,7 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
     const canViewNews = usePermission("VIEW_NEWS");
     const canViewLearning = usePermission("VIEW_LEARNING");
     const canViewWatchlist = usePermission("VIEW_WATCHLIST")
+    const canViewEquity = usePermission("VIEW_EQUITY")
 
     const navigation = useNavigation();
     const route = useRoute();
@@ -63,6 +64,10 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
 
         switch (tabName) {
             case 'Equity':
+              if (!canViewEquity) {
+                    setShowUpgradeModal(true)
+                    return;
+                }
                 navigation.navigate('Equity');
                 break;
             case 'Watchlists':
@@ -172,36 +177,6 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
                         size={15}
                         color={isActiveTab('Watchlists') ? "#fff" : "#210F47"}
                     /> */}
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[
-                            styles.tabWhite,
-                            isActiveTab('Learning') && styles.activeTab
-                        ]}
-                        onPress={() => handleTabPress('Learning')}
-                    >
-                        <Text style={[
-                            styles.tabTextDark,
-                            isActiveTab('Learning') && styles.activeTabText
-                        ]}>
-                            Learning
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[
-                            styles.tabWhite,
-                            isActiveTab('NewsScreen') && styles.activeTab
-                        ]}
-                        onPress={() => handleTabPress('NewsScreen')}
-                    >
-                        <Text style={[
-                            styles.tabTextDark,
-                            isActiveTab('NewsScreen') && styles.activeTabText
-                        ]}>
-                            News
-                        </Text>
                     </TouchableOpacity>
                 </ScrollView>
             </SafeAreaView>

@@ -16,6 +16,8 @@ import {
 } from "../ws/marketSubscriptions";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
+import PortfolioHoldingsCard from "../components/PortfolioHoldingsCard";
+import BottomTabBar from "../components/BottomTabBar";
 
 const filterOptions = [
     "All",
@@ -58,6 +60,28 @@ const PorfolioScreen = () => {
 
         setOrders(filtered);
     };
+    
+    // Calculate Portfolio Totals
+    const portfolioTotals = orders.reduce((acc, item) => {
+        const realisedQty = Number(item.realisedquantity) || 0;
+        const ltp = realtimePrices[item.tradingsymbol]?.price || Number(item.ltp) || 0;
+        const avg = Number(item.averageprice) || 0;
+        const invested = avg * realisedQty;
+        const currentValue = ltp * realisedQty;
+        const profit = currentValue - invested;
+        
+        acc.totalCurrent += currentValue;
+        acc.totalInvested += invested;
+        acc.totalProfit += profit;
+        
+        return acc;
+    }, { totalCurrent: 0, totalInvested: 0, totalProfit: 0 });
+    
+    const profitPercent = portfolioTotals.totalInvested > 0 
+        ? ((portfolioTotals.totalProfit / portfolioTotals.totalInvested) * 100) 
+        : 0;
+    
+
     useFocusEffect(
         useCallback(() => {
             const page = "PortfolioScreen";
@@ -94,36 +118,27 @@ const PorfolioScreen = () => {
         const fetchOrders = async () => {
             try {
                 setLoading(true);
-                let url = "";
-                if (selectedTab === 1) url = `${apiUrl}/api/portfolio/get`;
-                // if (selectedTab === 2) url = `${apiUrl}/api/order/get`;
-                // if (selectedTab === 3) url = `${apiUrl}/api/position/get`;
-
-                const userId = await AsyncStorage.getItem("userId");
-                const deviceId = await getDeviceId();
-
-                const response = await fetch(url, {
-                    method: "GET",
-                    headers: {
-                        "Authorization": `Bearer ${authToken}`,
-                        "Content-Type": "application/json",
-                        "userid": userId,
-                        "device_mac": deviceId
-                    }
-                });
-                const text = await response.text();
-                const data = JSON.parse(text);
-                setOrders(data?.data || []);
-                setOriginalOrders(data?.data || []);
+                
+                // Use getPortfolioBalance endpoint for portfolio data (same as EquityScreen)
+                const response = await fetch(`${apiUrl}/api/portfolio/getPortfolioBalance`);
+                
+                const json = await response.json();
+                
+                setOrders(json?.data || []);
+                setOriginalOrders(json?.data || []);
                 setSortOrder(null);
 
             } catch (error) {
-                console.log("API Error:", error);
+                console.log("❌ API Error:", error.message);
+                console.error("Full Error:", error);
             } finally {
-                setLoading(false); // ⬅️ STOP LOADING
+                setLoading(false);
             }
         };
-        fetchOrders();
+        
+        if (selectedTab === 1) {
+            fetchOrders();
+        }
     }, [selectedTab]);
 
     useEffect(() => {
@@ -248,6 +263,16 @@ const PorfolioScreen = () => {
 
                     </View>
                 </View>
+                
+                {/* Portfolio Holdings Summary */}
+                <PortfolioHoldingsCard
+                    totalCurrent={portfolioTotals.totalCurrent}
+                    totalInvested={portfolioTotals.totalInvested}
+                    profit={portfolioTotals.totalProfit}
+                    profitPercent={profitPercent}
+                    compactMode={true}
+                />
+
                 {/* SORT MODAL */}
                 <Modal visible={sortOpen} transparent animationType="fade">
                     <TouchableOpacity
@@ -375,7 +400,7 @@ const PorfolioScreen = () => {
                     </ScrollView>
                 )}
             </SafeAreaView>
-            {/* <BottomTabBar /> */}
+            <BottomTabBar />
         </>
     );
 };

@@ -28,6 +28,7 @@ import {
 } from "../ws/marketSubscriptions";
 import OrdersList from "../components/OrdersList";
 import PositionsList from "../components/PositionsList";
+import BottomTabBar from "../components/BottomTabBar";
 
 const filterOptions = ["All", "Equity", "F&O"];
 const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
@@ -227,17 +228,21 @@ const OrdersScreen = () => {
   };
 
   return (
-    <SafeAreaView edges={["bottom"]} style={styles.container}>
-      {/* Tabs */}
-      <View style={styles.topSliders}>
-        <TradeOrderTabs
-          activeTab={selectedTab}
-          onTabChange={(tab) => setSelectedTab(tab)}
-        />
-      </View>
+    <>
+      <SafeAreaView edges={["bottom"]} style={[styles.container, { paddingBottom: selectedTab === 1 ? 0 : 70 }]}>
+        {/* Tabs */}
+        <View style={styles.topSliders}>
+          <TradeOrderTabs
+            activeTab={selectedTab}
+            onTabChange={(tab) => setSelectedTab(tab)}
+          />
+        </View>
 
-      {renderContent()}
-    </SafeAreaView>
+        {renderContent()}
+      </SafeAreaView>
+      {/* Show BottomTabBar only when NOT on Place Order tab */}
+      {selectedTab !== 1 && <BottomTabBar />}
+    </>
   );
 };
 

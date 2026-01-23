@@ -7,7 +7,6 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import axios from "axios";
 import axiosInstance from "../api/axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -23,6 +22,7 @@ import {
   subscribeSymbols,
   unsubscribeDelayed,
 } from "../ws/marketSubscriptions";
+import { useWatchlistRefresh } from "../context/WatchlistContext";
 
 const mergeWithRealtime = (list, realtimePrices) => {
   return list.map(item => {
@@ -64,6 +64,7 @@ export default function TradeOrderListScreen({ navigation }) {
   const [removingScriptId, setRemovingScriptId] = useState(null);
 
   const { prices: realtimePrices } = useRealtimePrices();
+  const { refreshTrigger } = useWatchlistRefresh();
   const symbolsRef = useRef([]);
   const fetchedPrevCloseRef = useRef(false);
 
@@ -79,7 +80,7 @@ export default function TradeOrderListScreen({ navigation }) {
     setLoading(true);
     try {
       const res = await axiosInstance.get(
-        `${apiUrl}/api/wishlistcontrol/stocks`,
+        `/wishlistcontrol/stocks`,
         { params: { wishlist_id: wishlistId } }
       );
       const data = res.data?.data || [];
@@ -117,7 +118,8 @@ export default function TradeOrderListScreen({ navigation }) {
 
   useEffect(() => {
     fetchWatchlistStocks(currentWatchlistId);
-  }, [currentWatchlistId, fetchWatchlistStocks]);
+  }, [currentWatchlistId, refreshTrigger, fetchWatchlistStocks]);
+
 
   // ---------------- WEBSOCKET SUBSCRIPTION ----------------
   useEffect(() => {
@@ -161,7 +163,7 @@ export default function TradeOrderListScreen({ navigation }) {
         return;
       }
 
-      const response = await axiosInstance.post(`${apiUrl}/api/wishlistcontrol/remove`, {
+      const response = await axiosInstance.post(`/wishlistcontrol/remove`, {
         user_id: parseInt(userIdStr, 10),
         wishlist_id: parseInt(currentWatchlistId, 10),
         script_id: script_id,

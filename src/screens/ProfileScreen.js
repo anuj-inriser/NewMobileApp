@@ -723,74 +723,6 @@ const ProfileScreen = () => {
                         </View> */}
           </View>
 
-          <View style={styles.portfolioMainCard}>
-            <View>
-              <Text style={styles.cardTitle}>Portfolio Value</Text>
-
-              <Text style={styles.bigAmount}>
-                ₹ {formatAmount(totalCurrent)}
-                <Text
-                  style={{
-                    color: profitColor,
-                    fontWeight: "700",
-                    fontSize: 10,
-                  }}
-                >
-                  {" "}
-                  ({profitDisplay})
-                </Text>
-                <Text
-                  style={{
-                    color: percentColor,
-                    fontWeight: "700",
-                    fontSize: 10,
-                  }}
-                >
-                  {" "}
-                  ({percentDisplay})
-                </Text>
-              </Text>
-
-              <View style={{ marginTop: 12 }}>
-                <View style={styles.listRow}>
-                  <View style={[styles.dot, { backgroundColor: "#210F47" }]} />
-                  <Text style={styles.listText}>Equity</Text>
-                  <Text style={styles.listAmount}>
-                    ₹{formatAmount(totalInvested)}
-                  </Text>
-                </View>
-
-                {/* <View style={styles.listRow}>
-                                    <View style={[styles.dot, { backgroundColor: "#22C55E" }]} />
-                                    <Text style={styles.listText}>Mutual Funds</Text>
-                                    <Text style={styles.listAmount}>₹45,000</Text>
-                                </View>
-
-                                <View style={styles.listRow}>
-                                    <View style={[styles.dot, { backgroundColor: "#D32F2F" }]} />
-                                    <Text style={styles.listText}>Deposits</Text>
-                                    <Text style={styles.listAmount}>₹15,000</Text>
-                                </View>
-
-                                <View style={styles.listRow}>
-                                    <View style={[styles.dot, { backgroundColor: "#FF9F3F" }]} />
-                                    <Text style={styles.listText}>ETF</Text>
-                                    <Text style={styles.listAmount}>₹10,000</Text>
-                                </View> */}
-              </View>
-            </View>
-
-            <View style={{ alignItems: "center", width: 140 }}>
-              <Text style={styles.cardTitleRight}>Invested Value</Text>
-              <Text style={styles.investedAmount}>
-                ₹ {formatAmount(totalInvested)}
-              </Text>
-              {/* <View style={{ alignItems: "center", width: 140 }}>
-                                <DonutChart />
-                            </View> */}
-            </View>
-          </View>
-
           {/* <View style={styles.statsRow}>
                         <View style={styles.statsCard}>
                             <Image source={Troffy} style={styles.statsIcon} />
@@ -1205,7 +1137,7 @@ const ProfileScreen = () => {
                 source={AboutUs}
                 style={{ width: 30, height: 30, marginRight: 8 }}
               />
-              <Text style={styles.kycTitle}>About Us</Text>
+              <Text style={styles.kycTitle}>More</Text>
             </View>
             <Image
               source={aboutUsOpen ? ArrowUp : ArrowDown}
@@ -2257,75 +2189,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#210F47",
     fontWeight: "600",
-  },
-
-  /* PORTFOLIO CARD */
-  portfolioMainCard: {
-    marginTop: 15,
-    marginHorizontal: 16,
-    backgroundColor: "#EFE9F6",
-    borderRadius: 18,
-    padding: 18,
-    elevation: 3,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  cardTitle: {
-    fontSize: 13,
-    color: "#555",
-    fontWeight: "600",
-  },
-
-  cardTitleRight: {
-    fontSize: 13,
-    color: "#555",
-    fontWeight: "600",
-    textAlign: "center",
-  },
-
-  bigAmount: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1CA95A",
-    marginTop: 4,
-  },
-
-  greenGain: {
-    fontSize: 12,
-    color: "#1CA95A",
-  },
-
-  investedAmount: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#210F47",
-    marginTop: 6,
-  },
-
-  listRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 3,
-  },
-
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-    marginRight: 8,
-  },
-
-  listText: {
-    fontSize: 12,
-    color: "#444",
-    flex: 1,
-  },
-
-  listAmount: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#000",
   },
 
   /* 3 STATS CARDS */

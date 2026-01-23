@@ -1,6 +1,5 @@
 import React from "react";
 import { View } from "react-native";
-import TopHeader from "../components/TopHeader";
 import FundamentalTopHeader from "../components/FundamentalTopHeader";
 import BottomTabBar from "../components/BottomTabBar";
 
