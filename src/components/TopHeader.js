@@ -21,7 +21,7 @@ import axiosInstance from "../api/axios";
 import { apiUrl } from '../utils/apiUrl';
 import { useAuth } from '../context/AuthContext';
 import rupeeIcon from "../../assets/dropdownrupees.png";
-import watchlistIcon from "../../assets/dropdownwatchlist.png";
+// import watchlistIcon from "../../assets/dropdownwatchlist.png";
 import Profile from "../../assets/Profile.png";
 
 const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
@@ -331,11 +331,11 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
 
                   {/* RIGHT: TWO ICONS */}
                   <View style={styles.rightIcons}>
-                    <Image
+                    {/* <Image
                       source={watchlistIcon}
                       style={styles.iconImage}
                       resizeMode="contain"
-                    />
+                    /> */}
 
                     <Image
                       source={rupeeIcon}

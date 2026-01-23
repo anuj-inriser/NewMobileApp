@@ -7,6 +7,8 @@ import {
   FlatList,
   AppState,
   TouchableOpacity,
+  Modal,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -26,6 +28,8 @@ import {
   subscribeSymbols,
   unsubscribeDelayed,
 } from "../ws/marketSubscriptions";
+import axiosInstance from "../api/axios";
+import { Ionicons } from "@expo/vector-icons";
 
 const StocksScreen = () => {
   const navigation = useNavigation();
@@ -40,6 +44,16 @@ const StocksScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState(from || "Indices");
   const { prices: realtimePrices } = useRealtimePrices();
   const subscribedRef = useRef(false);
+
+  // ✅ Sort and Filter States
+  const [sortOpen, setSortOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedSort, setSelectedSort] = useState("Default");
+  const [displayStocks, setDisplayStocks] = useState([]);
+  const [originalStocks, setOriginalStocks] = useState([]);
+
+  const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
+  const filterOptions = ["All", "Gainers", "Losers"];
 
   // 🔁 Dynamic fetch based on category + filter
   const fetchStocks = useCallback(async () => {
@@ -61,14 +75,14 @@ const StocksScreen = () => {
         : `${apiUrl}/api/indicesNew/nseStocks/${filterIndex}`;
 
     try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        const text = await response.text();
+      const response = await axiosInstance.get(url);
+      if (!response.status) {
+        const text = response.data.data;
         console.error(`❌ HTTP ${response.status} from ${url}`, text);
         throw new Error(`API ${response.status}: ${response.statusText}`);
       }
-      const result = await response.json();
-      return result?.data || [];
+      const result = response.data.data;
+      return result || [];
     } catch (err) {
       console.error("Fetch error:", err);
       throw err;
@@ -146,10 +160,79 @@ const StocksScreen = () => {
     });
   };
 
+  // ✅ Sort Logic
+  const applySortToData = (sortType, data) => {
+    let sorted = [...data];
+    
+    if (sortType === "A-Z") {
+      sorted.sort((a, b) => {
+        const nameA = (a.symbol || "").toUpperCase();
+        const nameB = (b.symbol || "").toUpperCase();
+        return nameA.localeCompare(nameB);
+      });
+    } else if (sortType === "Z-A") {
+      sorted.sort((a, b) => {
+        const nameA = (a.symbol || "").toUpperCase();
+        const nameB = (b.symbol || "").toUpperCase();
+        return nameB.localeCompare(nameA);
+      });
+    } else if (sortType === "High-Low") {
+      sorted.sort((a, b) => {
+        const priceA = Number(realtimePrices[a.symbol]?.price || a.ltp || 0);
+        const priceB = Number(realtimePrices[b.symbol]?.price || b.ltp || 0);
+        return priceB - priceA;
+      });
+    } else if (sortType === "Low-High") {
+      sorted.sort((a, b) => {
+        const priceA = Number(realtimePrices[a.symbol]?.price || a.ltp || 0);
+        const priceB = Number(realtimePrices[b.symbol]?.price || b.ltp || 0);
+        return priceA - priceB;
+      });
+    }
+    
+    return sorted;
+  };
+
+  const handleSort = (sortType) => {
+    setSelectedSort(sortType);
+    setSortOpen(false);
+    setDisplayStocks(applySortToData(sortType, originalStocks));
+  };
+
+  const applyFilterToData = (filterType, data) => {
+    if (filterType === "All") {
+      return data;
+    }
+    
+    return data.filter((stock) => {
+      const price = Number(realtimePrices[stock.symbol]?.price || stock.ltp || 0);
+      const prevClose = Number(realtimePrices[stock.symbol]?.prevClose || stock.prev_close || price);
+      const change = price - prevClose;
+      
+      if (filterType === "Gainers") return change > 0;
+      if (filterType === "Losers") return change < 0;
+      
+      return true;
+    });
+  };
+
+  const handleFilter = (filterType) => {
+    setIsFilterOpen(false);
+    const filtered = applyFilterToData(filterType, originalStocks);
+    setDisplayStocks(applySortToData(selectedSort, filtered));
+  };
+
   // 🔁 Refetch on tab/exchange change
   useEffect(() => {
     refetch();
   }, [selectedExchange, selectedCategory, filterIndex, refetch]);
+
+  // Update display stocks when stocksData changes
+  useEffect(() => {
+    setOriginalStocks(stocksData);
+    setDisplayStocks(stocksData);
+    setSelectedSort("Default");
+  }, [stocksData]);
 
   // 🖼️ Loading / Error UI
   if (isLoading && stocksData.length === 0) {
@@ -213,24 +296,56 @@ const StocksScreen = () => {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           >
-            {/* <Text style={styles.backIcon}>←</Text> */}
-            <Text style={styles.backText}>Stocks in ({getBackLabel()})</Text>
+            <Ionicons name="arrow-back" size={22} color="#210F47" />
+            <Text style={styles.backText}>({getBackLabel()})</Text>
+          </TouchableOpacity>
+
+          {/* Sort & Filter Bar - RIGHT SIDE */}
+          <View style={styles.sortFilterButtonsContainer}>
+            <TouchableOpacity style={styles.sortButton} onPress={() => setSortOpen(true)}>
+              <Image
+                source={require("../../assets/sorticon.png")}
+                style={{ width: 18, height: 18, resizeMode: "contain" }}
+              />
+              <Text style={styles.sortFilterText}>Sort</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterOpen(true)}>
+              <Ionicons name="funnel-outline" size={16} color="#000" />
+              <Text style={styles.sortFilterText}>Filter</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Sort & Filter Bar - Only when no back button */}
+      {!from && (
+        <View style={styles.sortFilterBar}>
+          <TouchableOpacity style={styles.sortButton} onPress={() => setSortOpen(true)}>
+            <Image
+              source={require("../../assets/sorticon.png")}
+              style={{ width: 18, height: 18, resizeMode: "contain" }}
+            />
+            <Text style={styles.sortFilterText}>Sort</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterOpen(true)}>
+            <Ionicons name="funnel-outline" size={16} color="#000" />
+            <Text style={styles.sortFilterText}>Filter</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {/* 📊 Stock List */}
       <FlatList
-        data={stocksData}
+        data={displayStocks}
         renderItem={({ item }) => (
           <StockListCard
             stock={item}
             realtime={realtimePrices[item.symbol]}
             onPress={() =>
-              navigation.navigate("Trade", {
+              navigation.navigate("AdvancedChart", {
                 symbol: item.symbol,
-                exchange: selectedExchange,
-                side: "BUY",
               })
             }
           />
@@ -253,6 +368,53 @@ const StocksScreen = () => {
           </View>
         }
       />
+
+      {/* Sort Modal */}
+      <Modal visible={sortOpen} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.overlay}
+          onPress={() => setSortOpen(false)}
+        >
+          <View style={styles.filterDropdown}>
+            {sortOptions.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.dropdownItem}
+                onPress={() => handleSort(option)}
+              >
+                <Text style={styles.dropdownText}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={isFilterOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsFilterOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setIsFilterOpen(false)}
+        >
+          <View style={styles.filterDropdown}>
+            {filterOptions.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.dropdownItem}
+                onPress={() => handleFilter(option)}
+              >
+                <Text style={styles.dropdownText}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      
       {/* <BottomTabBar /> */}
     </SafeAreaView>
   );
@@ -267,7 +429,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F5F7",
+    backgroundColor: "#fff",
   },
   loadingText: {
     fontSize: 16,
@@ -318,11 +480,12 @@ const styles = StyleSheet.create({
 
   // 🔙 Back Header
   headerWithBack: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 5,
+    paddingVertical: 10,
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
   },
   backButton: {
     flexDirection: "row",
@@ -339,6 +502,71 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#1a1a1a",
     marginLeft: 7,
+  },
+  sortFilterButtonsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  // Sort & Filter Bar
+  sortFilterBar: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  sortButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  sortFilterText: {
+    marginLeft: 6,
+    fontSize: 13,
+    color: "#000",
+    fontWeight: "600",
+  },
+
+  // Overlay and Dropdown
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+  },
+  filterDropdown: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    marginTop: 140,
+    marginRight: 20,
+    width: 120,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#eee",
+    elevation: 6,
+    shadowColor: "#210F47",
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  dropdownText: {
+    fontSize: 13,
+    color: "#000",
+    fontWeight: "500",
   },
 });
 

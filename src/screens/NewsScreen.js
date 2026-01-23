@@ -37,9 +37,9 @@ const NewsScreen = () => {
         <>
             <SafeAreaView edges={["bottom"]} style={styles.container}>
                 {/* <TopHeader /> */}
-                <View>
+                {/* <View>
                     <TopMenuSlider />
-                </View>
+                </View> */}
 
                 {loading ? (
                     <View style={styles.loader}>
@@ -85,7 +85,8 @@ export default NewsScreen;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F7'
+        backgroundColor: '#F5F5F7',
+        marginBottom: 50
     },
     topSliders: {
         backgroundColor: "#fff",

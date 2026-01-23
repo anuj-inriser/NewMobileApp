@@ -23,6 +23,7 @@ import TradeOrderFormNew from "../components/TradeOrderFormNew";
 import TradeOrderTabs from "../components/Trade/TradeOrderTabs";
 import OrdersList from "../components/OrdersList";
 import PositionsList from "../components/PositionsList";
+import PortfolioScreen from "./PortfolioScreen";
 
 const AdvancedChartScreen = () => {
   const route = useRoute();
@@ -84,7 +85,7 @@ const AdvancedChartScreen = () => {
           `;
           setInjectionScript(script);
         } else {
-          console.log("⚠️ [AdvancedChart] No cache found for:", cacheKey);
+          console.log("⚠️ [AdvancedChart] No cache found for:", chartSymbol);
         }
       } catch (e) {
         console.error("Error preparing chart:", e);
@@ -95,6 +96,35 @@ const AdvancedChartScreen = () => {
     };
     prepareChart();
   }, [chartSymbol]);
+
+  // Cleanup when user navigates away from this screen
+  useEffect(() => {
+    const unsubscribeFocus = navigation.addListener('focus', () => {
+      // Screen is focused - chart will load normally
+      console.log('📊 AdvancedChart focused');
+    });
+
+    const unsubscribeBlur = navigation.addListener('blur', () => {
+      // Screen lost focus - cleanup WebView
+      console.log('🔴 AdvancedChart blur - cleaning up');
+      if (webViewRef.current) {
+        // Stop any ongoing chart operations
+        webViewRef.current.injectJavaScript(`
+          if (window.tvWidget) {
+            try {
+              window.tvWidget.remove();
+            } catch(e) {}
+          }
+          true;
+        `);
+      }
+    });
+
+    return () => {
+      unsubscribeFocus();
+      unsubscribeBlur();
+    };
+  }, [navigation]);
 
   // Tabs State
   const [activeTab, setActiveTab] = useState(1);
@@ -218,6 +248,12 @@ const AdvancedChartScreen = () => {
             <PositionsList />
           </View>
         )}
+
+        {activeTab === 4 && (
+          <View style={{ flex: 1 }}>
+            <PortfolioScreen />
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -291,6 +327,7 @@ const styles = StyleSheet.create({
   },
   drawerContent: {
     flex: 1,
+    padding: 20,
     backgroundColor: "#fff",
   },
 });

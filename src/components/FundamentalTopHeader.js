@@ -20,14 +20,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axiosInstance from "../api/axios";
 import { apiUrl } from "../utils/apiUrl";
 import { useAuth } from "../context/AuthContext";
+import { useWatchlistRefresh } from "../context/WatchlistContext";
 import rupeeIcon from "../../assets/dropdownrupees.png";
-import watchlistIcon from "../../assets/dropdownwatchlist.png";
+// import watchlistIcon from "../../assets/dropdownwatchlist.png";
 import Profile from "../../assets/Profile.png";
 
 const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const insets = useSafeAreaInsets();
   const { authToken, clientId, clearAuth } = useAuth();
+  const { triggerRefresh } = useWatchlistRefresh();
   const [menuVisible, setMenuVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const navigation = useNavigation();
@@ -237,6 +239,8 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
       ) {
         const msg = response.data.message || "Added to watchlist";
         if (msg === "Added to watchlist") {
+          // ✅ Trigger context refresh for real-time update
+          triggerRefresh(parseInt(wishlist.id, 10));
           onWatchlistAdded?.(parseInt(wishlist.id, 10));
           alert(`✅ ${msg}`);
         } else {
@@ -253,12 +257,13 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
       setAddingToWishlist((prev) => ({ ...prev, [wishlist.id]: false }));
     }
   };
+
   // Fetch watchlists when popup opens
   useEffect(() => {
     if (watchlistModalVisible) {
       fetchWatchlists();
     }
-  }, [watchlistModalVisible, userId]);
+  }, [watchlistModalVisible, userId,addingToWishlist]);
 
   return (
     <View style={styles.container}>
@@ -341,17 +346,29 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
 
                   {/* RIGHT: TWO ICONS */}
                   <View style={styles.rightIcons}>
-                    <Image
+                    {/* <Image
                       source={watchlistIcon}
                       style={styles.iconImage}
                       resizeMode="contain"
-                    />
+                    /> */}
 
-                    <Image
-                      source={rupeeIcon}
-                      style={[styles.iconImage, { marginLeft: 18 }]}
-                      resizeMode="contain"
-                    />
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        setFiltered([]);
+                        navigation.navigate("TradeOrder", {
+                          stockSymbol: item.script_id,
+                          stockName: item.script_name,
+                          token: item.token,
+                        });
+                      }}
+                    >
+                      <Image
+                        source={rupeeIcon}
+                        style={[styles.iconImage, { marginLeft: 18 }]}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -603,7 +620,7 @@ const styles = StyleSheet.create({
   },
   dropdownWrapper: {
     position: "absolute",
-    top: 52,
+    top: 90,
     left: 0,
     right: 0,
     backgroundColor: "#fff",

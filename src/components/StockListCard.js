@@ -4,14 +4,15 @@ import {
     Dimensions,
     StyleSheet,
     Text,
-    View
+    View,
+    TouchableOpacity
 } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { useIntervalData } from '../hooks/useIntervalData';
 
 const { width } = Dimensions.get('window');
 
-const StockListCard = ({ stock, realtime }) => {
+const StockListCard = ({ stock, realtime, onPress }) => {
     const apiInterval = '1m';
     const { data: intervalData, loading } = useIntervalData(stock.symbol, apiInterval);
 
@@ -138,15 +139,16 @@ const StockListCard = ({ stock, realtime }) => {
 
 
     return (
-        <View style={styles.card}>
-            {/* Left: Info */}
-            <View style={styles.leftContainer}>
-                <Text style={styles.symbol}>{stock.name}</Text>
-                <Text style={styles.time}>{stock.symbol}</Text>
-                {/* <Text style={styles.time}>{lastTime}</Text> */}
-            </View>
+        <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+            <View style={styles.card}>
+                {/* Left: Info */}
+                <View style={styles.leftContainer}>
+                    <Text style={styles.symbol}>{stock.name}</Text>
+                    <Text style={styles.time}>{stock.symbol}</Text>
+                    {/* <Text style={styles.time}>{lastTime}</Text> */}
+                </View>
 
-            {/* <View style={styles.chartContainer}>
+                {/* <View style={styles.chartContainer}>
                 {loading && displayData.length === 0 ? (
                     <ActivityIndicator size="small" color={color} />
                 ) : (
@@ -183,19 +185,20 @@ const StockListCard = ({ stock, realtime }) => {
                 )}
             </View> */}
 
-            {/* Right: Price */}
-            <View style={styles.rightContainer}>
-                <Text style={styles.price}>
-                    {loading && currentPrice === 0 ? '--' : `₹${currentPrice.toFixed(2)}`}
-                </Text>
-                <Text style={[styles.change, { color }]}>
-                    ₹{displayChange} ({displayPercent}%)
-                </Text>
-                {/* <Text style={[styles.change, { color }]}>
+                {/* Right: Price */}
+                <View style={styles.rightContainer}>
+                    <Text style={styles.price}>
+                        {loading && currentPrice === 0 ? '--' : `₹${currentPrice.toFixed(2)}`}
+                    </Text>
+                    <Text style={[styles.change, { color }]}>
+                        ₹{displayChange} ({displayPercent}%)
+                    </Text>
+                    {/* <Text style={[styles.change, { color }]}>
                     {loading && currentPrice === 0 ? '--' : `${isPositive ? '+' : ''}${currentChange.toFixed(2)} (${currentChangePercent.toFixed(2)}%)`}
                 </Text> */}
+                </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 };
 

@@ -11,9 +11,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
 import { useQuery } from "@tanstack/react-query";
 import { apiUrl } from "../utils/apiUrl";
+import Swipeable from "react-native-gesture-handler/Swipeable";
 
-// ✅ Vertical Card Only
-const IndexVerticalCard = ({ index, onPress }) => {
+// ✅ Vertical Card with Swipe Gesture
+const IndexVerticalCard = ({ index, onPress, onSwipeRight }) => {
   const isPositive = index.change >= 0;
   const color = isPositive ? "#22c55e" : "#ef4444";
 
@@ -27,38 +28,50 @@ const IndexVerticalCard = ({ index, onPress }) => {
       ? Math.abs(index.changePercent).toFixed(2)
       : "0.00";
 
-  // console.log('index', index)
+  // Right swipe action - "View Chart"
+  const renderRightActions = () => (
+    <View style={styles.rightAction}>
+      <Ionicons name="bar-chart-outline" size={24} color="#fff" />
+      <Text style={styles.actionText}>Chart</Text>
+    </View>
+  );
 
   return (
-    <TouchableOpacity
-      style={styles.verticalCard}
-      onPress={() => onPress && onPress(index)}
+    <Swipeable
+      renderRightActions={renderRightActions}
+      onSwipeableRightOpen={() => onSwipeRight && onSwipeRight(index)}
+      overshootRight={false}
     >
-      <View style={styles.verticalCardLeft}>
-        <Text style={styles.verticalSymbol}>{index.name}</Text>
-        <Text
-          style={[styles.verticalSymbol, { color: "#888", fontSize: 12 }]}
-        >{`${index.symbol}`}</Text>
-      </View>
+      <TouchableOpacity
+        style={styles.verticalCard}
+        onPress={() => onPress && onPress(index)}
+      >
+        <View style={styles.verticalCardLeft}>
+          <Text style={styles.verticalSymbol}>{index.name}</Text>
+          <Text
+            style={[styles.verticalSymbol, { color: "#888", fontSize: 12 }]}
+          >{`${index.symbol}`}</Text>
+        </View>
 
-      <View style={styles.verticalCardRight}>
-        <Text style={styles.verticalPrice}>
-          ₹
-          {index.value.toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </Text>
-        <Text style={[styles.verticalChange, { color }]}>
-          ₹{displayChange} ({displayPercent}%)
-        </Text>
-      </View>
-    </TouchableOpacity>
+        <View style={styles.verticalCardRight}>
+          <Text style={styles.verticalPrice}>
+            ₹
+            {index.value.toLocaleString("en-IN", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </Text>
+          <Text style={[styles.verticalChange, { color }]}>
+            ₹{displayChange} ({displayPercent}%)
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </Swipeable>
   );
 };
 
 // ✅ Main Component — Vertical Only
-const Indices = ({ exchange = "NSE", externalData, onIndexPress }) => {
+const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart }) => {
   const { prices: realtimePrices } = useRealtimePrices();
 
   // ✅ Fetch from API (if no externalData)
@@ -194,6 +207,7 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress }) => {
             key={`${exchange}-${index.symbol}-${i}`}
             index={index}
             onPress={onIndexPress}
+            onSwipeRight={onSwipeToChart}
           />
         ))}
       </View>
@@ -205,7 +219,7 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F7",
+    backgroundColor: "#fff",
   },
   verticalList: {
     paddingHorizontal: 16,
@@ -250,13 +264,30 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 4,
   },
+  
+  // Swipe Actions
+  rightAction: {
+    backgroundColor: "#210F47",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: 10,
+  },
+  actionText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
+  },
 
   // States
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F5F7",
+    backgroundColor: "transparent",
     padding: 20,
   },
   loadingText: {
@@ -268,7 +299,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F5F7",
+    backgroundColor: "transparent",
     padding: 20,
   },
   errorText: {
@@ -292,7 +323,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F5F7",
+    backgroundColor: "transparent",
   },
   emptyText: {
     marginTop: 12,

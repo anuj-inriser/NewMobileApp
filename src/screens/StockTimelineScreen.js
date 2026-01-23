@@ -18,7 +18,7 @@ import GainerLoserCard from "../components/GainerLoserCard";
 import CommunitySecondMenuSlider from "../components/CommunitySecondMenuSlider";
 import TopFundamentalSlider from "../components/TopFundamentalSlider";
 import StockCard from "../components/StockCard";
-import SequenceCard from "../components/SequenceCard";
+// import SequenceCard from "../components/SequenceCard";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   subscribeSymbols,
@@ -26,11 +26,13 @@ import {
 } from "../ws/marketSubscriptions";
 import { useAllStocks } from "../hooks/useAllStocks";
 import { useMarketMovers } from "../hooks/useMarketMovers";
-import { useCommunitySequences } from "../hooks/useCommunitySequences";
+// import { useCommunitySequences } from "../hooks/useCommunitySequences";
 import { useCommunityPosts } from "../hooks/useCommunityPosts";
 import { useUserLikes } from "../hooks/useUserLikes";
 import { useAuth } from "../context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
+import Learning from "./Learning";
+import ScannerTab from "../components/ScannerTab";
 
 const StockTimelineScreen = () => {
   // 🔥 TOP MENU (Timeline / Posts / Messages)
@@ -46,6 +48,7 @@ const StockTimelineScreen = () => {
     loadMore,
   } = useAllStocks(5);
   const { data: moversData, loading: moversLoading } = useMarketMovers();
+  /* 
   const {
     sequences,
     loading: sequencesLoading,
@@ -53,16 +56,18 @@ const StockTimelineScreen = () => {
     loadMore: loadMoreSequences,
     hasMore: sequencesHasMore,
   } = useCommunitySequences(5);
+  */
 
   // 🔥 SEQUENCE NAVIGATION STATE
   const [selectedSequenceId, setSelectedSequenceId] = useState(null);
+  const [sequenceName, setSequenceName] = useState("");
   const [currentPostIndex, setCurrentPostIndex] = useState(0);
   const {
     posts: sequencePosts,
     loading: postsLoading,
     error: postsError,
     refetch: refetchPosts,
-  } = useCommunityPosts(selectedSequenceId);
+  } = useCommunityPosts(selectedSequenceId); 
 
   // 🔥 LIKE SYSTEM
   const { userId } = useAuth();
@@ -80,11 +85,12 @@ const StockTimelineScreen = () => {
     }
   }, [userId]);
 
-  const handlePlaySequence = (sequence) => {
+  /* const handlePlaySequence = (sequence) => {
     setSelectedSequenceId(sequence.id);
+    setSequenceName(sequence.sequence_name || sequence.title || "Viewing Sequence");
     setCurrentPostIndex(0);
     setTopTab("Timeline"); // Move to Timeline tab to show posts
-  };
+  }; */
 
   // Helper function to get symbol from script_id
   const getSymbolFromScriptId = (scriptId) => {
@@ -173,6 +179,9 @@ const StockTimelineScreen = () => {
   // 🔥 Refetch Data on Focus
   useFocusEffect(
     useCallback(() => {
+      if (userId) {
+        fetchUserLikes(userId);
+      }
       if (userId) {
         fetchUserLikes(userId);
       }
@@ -311,91 +320,7 @@ const StockTimelineScreen = () => {
         {/* 🔥 MAIN CONTENT AREA */}
         <View style={{ flex: 1, paddingBottom: 10 }}>
           {topTab === "Sequence" ? (
-            sequencesLoading ? (
-              <ActivityIndicator
-                size="large"
-                color="#210F47"
-                style={{ marginTop: headerHeight + 20 }}
-              />
-            ) : sequenceError ? (
-              <View
-                style={{
-                  padding: 20,
-                  alignItems: "center",
-                  marginTop: headerHeight,
-                }}
-              >
-                <Text style={{ color: "red" }}>Error: {sequenceError}</Text>
-              </View>
-            ) : (
-              <Animated.FlatList
-                data={sequences || []}
-                renderItem={({ item }) => (
-                  <SequenceCard
-                    item={{
-                      ...item,
-                      title: item.sequence_name,
-                      description: item.sequence_description,
-                      rating: item.rating || 4,
-                      ratingCount: item.ratingCount || 45,
-                    }}
-                    onPlay={handlePlaySequence}
-                  />
-                )}
-                keyExtractor={(item) => item.id.toString()}
-                contentContainerStyle={{
-                  paddingBottom: 16,
-                  paddingHorizontal: 16,
-                }}
-                onScroll={handleScroll}
-                onEndReached={() => {
-                  if (sequencesHasMore && !sequencesLoading) {
-                    loadMoreSequences();
-                  }
-                }}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={
-                  sequencesLoading && sequences?.length > 0 ? (
-                    <ActivityIndicator size="small" color="#210F47" />
-                  ) : null
-                }
-              />
-            )
-          ) : topTab === "News" ? (
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-                paddingTop: headerHeight,
-              }}
-            >
-              <Text style={{ color: "#888" }}>News feed coming soon...</Text>
-            </View>
-          ) : stockTab === "Gainers" || stockTab === "Losers" ? (
-            moversLoading ? (
-              <ActivityIndicator
-                size="large"
-                color="#210F47"
-                style={{ marginTop: headerHeight + 20 }}
-              />
-            ) : (
-              <Animated.FlatList
-                data={stockData}
-                renderItem={renderGainerLoserItem}
-                keyExtractor={(item) => item.id || item.symbol}
-                contentContainerStyle={{
-                  paddingHorizontal: 16,
-                  paddingBottom: 20,
-                  marginTop: 10,
-                }}
-                showsVerticalScrollIndicator={true}
-                onScroll={handleScroll}
-              />
-            )
-          ) : (
-            <View style={{ flex: 1 }}>
-              {selectedSequenceId ? (
+             selectedSequenceId ? (
                 postsLoading ? (
                   <ActivityIndicator
                     size="large"
@@ -419,7 +344,10 @@ const StockTimelineScreen = () => {
                         elevation: 5,
                         opacity: 0.8,
                       }}
-                      onPress={() => setSelectedSequenceId(null)}
+                      onPress={() => {
+                        setSelectedSequenceId(null);
+                        setSequenceName("");
+                      }}
                     >
                       <View
                         style={{ flexDirection: "row", alignItems: "center" }}
@@ -432,10 +360,10 @@ const StockTimelineScreen = () => {
                             color: "#210F47",
                           }}
                         >
-                          Viewing Sequence
+                          {sequenceName}
                         </Text>
                       </View>
-                      <Ionicons name="close-circle" size={24} color="#210F47" />
+                      {/* <Ionicons name="close-circle" size={24} color="#210F47" /> */}
                     </TouchableOpacity>
                     <Animated.FlatList
                       key="sequence-posts-list"
@@ -519,7 +447,51 @@ const StockTimelineScreen = () => {
                     />
                   </>
                 )
-              ) : (
+             ) : (
+              <ScannerTab 
+                onScannerSelect={(scanner) => {
+                  setSelectedSequenceId(scanner.id);
+                  setSequenceName(scanner.sequence_name || scanner.name || "Viewing Sequence");
+                }}
+              />
+            )
+          ) : topTab === "Learning" ? (
+            <Learning />
+          ) : topTab === "News" ? (
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                paddingTop: headerHeight,
+              }}
+            >
+              <Text style={{ color: "#888" }}>News feed coming soon...</Text>
+            </View>
+          ) : stockTab === "Gainers" || stockTab === "Losers" ? (
+            moversLoading ? (
+              <ActivityIndicator
+                size="large"
+                color="#210F47"
+                style={{ marginTop: headerHeight + 20 }}
+              />
+            ) : (
+              <Animated.FlatList
+                data={stockData}
+                renderItem={renderGainerLoserItem}
+                keyExtractor={(item) => item.id || item.symbol}
+                contentContainerStyle={{
+                  paddingHorizontal: 16,
+                  paddingBottom: 20,
+                  marginTop: 10,
+                }}
+                showsVerticalScrollIndicator={true}
+                onScroll={handleScroll}
+              />
+            )
+          ) : (
+            <View style={{ flex: 1 }}>
+
                 <Animated.FlatList
                   key="stock-timeline-list"
                   data={stockData}
@@ -549,7 +521,7 @@ const StockTimelineScreen = () => {
                     ) : null
                   }
                 />
-              )}
+
             </View>
           )}
         </View>

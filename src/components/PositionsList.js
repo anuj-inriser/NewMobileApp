@@ -52,6 +52,13 @@ const PositionsList = () => {
       const text = await response.text();
       const data = JSON.parse(text);
 
+      console.log("📦 PositionsList API Response:", {
+        status: response.status,
+        dataCount: data?.data?.length || 0,
+        success: data?.success,
+        firstItem: data?.data?.[0]
+      });
+
       setPositions(data?.data || []);
       setOriginalPositions(data?.data || []);
     } catch (error) {
@@ -243,7 +250,7 @@ const PositionsList = () => {
           <Text style={styles.noDataText}>No Data Found</Text>
         </View>
       ) : (
-        <ScrollView style={{ marginTop: 10 }}>
+        <ScrollView style={{ marginTop: 10 }} contentContainerStyle={{ paddingBottom: 80 }}>
           {positions.map((item, index) => (
             <PositionCard
               key={`${item.tradingsymbol}_${index}`}
@@ -271,7 +278,6 @@ export default PositionsList;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: "#fff",
   },
   loaderBox: {

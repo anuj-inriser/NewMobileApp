@@ -5,7 +5,8 @@ const CommunitySecondMenuSlider = ({ activeFilter, onTabChange }) => {
 
     const tabs = [
         { id: "Timeline", name: "Timeline" },
-        { id: "Sequence", name: "Sequence" },
+        { id: "Sequence", name: "Scanner" },
+        { id: "Learning", name: "Learning" },
         { id: "Watchlist", name: "Watchlist" },
     ];
 
