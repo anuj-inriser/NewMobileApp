@@ -111,13 +111,10 @@ export default function LoginScreen({ navigation }) {
       setLoading(false);
 
       if (result.status && result.data?.userId) {
-                ChartPrefetchService.prefetchWatchlist();
+        ChartPrefetchService.prefetchWatchlist();
         const { userId, name, email, phone, userimage } = result.data;
 
-        console.log("logged in success", result.data);
-        await setAuthData({ userId: String(result.data.userId), userData: { name, email, phone, userimage }, fcmToken });
-        await setAuthData({ token: result.data.token });
-        // await setAuthData({ permissions: result.data.permissions });
+        await setAuthData({ userId: String(result.data.userId), userData: { name, email, phone, userimage }, fcmToken, token: result.data.token });
         await fetchAndStorePermissions();
         navigation.navigate("Demat");
       } else {
@@ -135,7 +132,6 @@ export default function LoginScreen({ navigation }) {
     try {
       const res = await axiosInstance.get(`/me/permissions`);
 
-      console.log("res ", res.data)
       // Save permissions in AuthContext
       await setAuthData({
         permissions: JSON.stringify(res.data),

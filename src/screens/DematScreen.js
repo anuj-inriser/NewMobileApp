@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -10,10 +10,13 @@ import {
     Modal,
     Platform,
     Alert,
+    Animated,
+    Pressable
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';   // ⭐ ADD
+import { usePermission } from '../hooks/usePermission';
 
 // Keys for AsyncStorage
 const TOKENS = {
@@ -25,8 +28,24 @@ const TOKENS = {
 
 export default function DematScreen({ navigation }) {
     const [showAngelOneModal, setShowAngelOneModal] = useState(false);
-
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const { setAuthData } = useAuth();   // ⭐ MAIN FIX
+
+    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+    useEffect(() => {
+        if (showUpgradeModal) {
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                useNativeDriver: true,
+                friction: 6,     // lower = more bounce
+                tension: 80,
+            }).start();
+        } else {
+            scaleAnim.setValue(0.8);
+        }
+    }, [showUpgradeModal]);
+
+    const canViewEquity = usePermission("VIEW_EQUITY")
 
     const angelOneUrl =
         'https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=statevariable';
@@ -136,7 +155,13 @@ export default function DematScreen({ navigation }) {
                 <View style={styles.buttonRow}>
                     <TouchableOpacity
                         style={styles.nextBtn}
-                        onPress={() => navigation.navigate('App', { screen: 'Equity' })}
+                        onPress={() => {
+                            if (!canViewEquity) {
+                                setShowUpgradeModal(true)
+                                return;
+                            }
+                            navigation.navigate('App', { screen: 'Equity' })
+                        }}
                     >
                         <Text style={styles.nextText}>Let's Drive in</Text>
                     </TouchableOpacity>
@@ -170,6 +195,40 @@ export default function DematScreen({ navigation }) {
                             Alert.alert('Error', 'Failed to load Angel One login.');
                         }}
                     />
+                </View>
+            </Modal>
+
+            <Modal
+                transparent
+                animationType="fade"
+                visible={showUpgradeModal}
+                onRequestClose={() => setShowUpgradeModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <Animated.View
+                        style={[
+                            styles.modalBox,
+                            { transform: [{ scale: scaleAnim }] }
+                        ]}
+                    >
+                        <View style={styles.successIcon}>
+                            <Image
+                                source={require("../../assets/redalert.png")}
+                                style={styles.alertIconImg}
+                            />
+                        </View>
+                        <Text style={styles.modalTitle}>Upgrade Your Plan</Text>
+                        <Text style={styles.modalMessage}>
+                            Unlock this feature by upgrading your plan.
+                        </Text>
+
+                        <Pressable
+                            style={styles.modalButton}
+                            onPress={() => setShowUpgradeModal(false)}
+                        >
+                            <Text style={styles.modalButtonText}>OK</Text>
+                        </Pressable>
+                    </Animated.View>
                 </View>
             </Modal>
         </SafeAreaView >
@@ -234,5 +293,62 @@ const styles = StyleSheet.create({
     webview: {
         flex: 1,
         marginTop: Platform.OS === 'ios' ? 60 : 40,
+    },
+
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    modalBox: {
+        width: "80%",
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        padding: 20,
+        alignItems: "center",
+    },
+
+    modalTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#210F47",
+        marginBottom: 8,
+    },
+
+    modalMessage: {
+        fontSize: 13,
+        color: "#555",
+        textAlign: "center",
+        marginBottom: 20,
+    },
+
+    modalButton: {
+        backgroundColor: "#210F47",
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+        borderRadius: 20,
+    },
+
+    modalButtonText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "500",
+    },
+
+    successIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+
+    alertIconImg: {
+        width: 50,
+        height: 50,
+        resizeMode: "contain",
     },
 });
