@@ -29,7 +29,8 @@
         android:allowBackup="true"
         android:theme="@style/AppTheme"
         android:supportsRtl="true"
-        android:enableOnBackInvokedCallback="false">
+        android:enableOnBackInvokedCallback="false"
+        android:usesCleartextTraffic="true">
 
         <!-- 🔥 FIX: Firebase notification color conflict -->
         <meta-data

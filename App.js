@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { playNotificationSound } from "./src/utils/soundPlayer";
 import { AuthProvider } from "./src/context/AuthContext";
+import { WatchlistProvider } from "./src/context/WatchlistContext";
 import { AppQueryProvider } from "./src/context/QueryClientProvider";
 import { connectMarketWS, onMarketMessage } from "./src/ws/marketWs";
 import { applyPriceMessage } from "./src/store/marketPrices";
@@ -67,9 +68,17 @@ function AppNavigator() {
   return (
     <MainLayout>
       <AppStack.Navigator screenOptions={{ headerShown: false }}>
-        <AppStack.Screen name="Equity" component={EquityScreen} />
+        <AppStack.Screen
+          name="Equity"
+          // component={EquityScreen}
+          children={() => (
+            <PermissionGuard permission="VIEW_EQUITY">
+              <EquityScreen />
+            </PermissionGuard>
+          )}
+        />
         <AppStack.Screen name="Trade" component={TradeScreen} />
-      <AppStack.Screen name="NewsScreen"
+        <AppStack.Screen name="NewsScreen"
           children={() => (
             <PermissionGuard permission="VIEW_NEWS">
               <NewsScreen />
@@ -85,7 +94,7 @@ function AppNavigator() {
           )}
         />
         <AppStack.Screen name="Profile" component={Profile} options={{ presentation: "modal", animation: "slide_from_left" }} />
-       <AppStack.Screen
+        <AppStack.Screen
           name="TradeOrderList"
           // component={TradeOrderListScreen}
           children={() => (
@@ -99,7 +108,7 @@ function AppNavigator() {
         <AppStack.Screen name="Stocks" component={StocksScreen} />
         <AppStack.Screen name="IndicesList" component={IndicesListScreen} />
         <AppStack.Screen name="IndicesDetail" component={IndicesDetailScreen} />
-       <AppStack.Screen name="Learning"
+        <AppStack.Screen name="Learning"
           children={() => (
             <PermissionGuard permission="VIEW_LEARNING">
               <Learning />
@@ -136,7 +145,7 @@ export default function App() {
           vibrationPattern: [0, 250, 250, 250],
           enableVibrate: true,
           showBadge: true,
-           lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         });
       }
     };
@@ -205,9 +214,8 @@ export default function App() {
       Notifications.addNotificationResponseReceivedListener(async (response) => {
         try {
           const data = response.notification.request.content.data;
-          console.log("🔔 Notification Tapped! Data ->", data);
 
-          const notificationId = data?.notificationId;
+          const notificationId = data?.notificationId; // ✅ push_notifications.id here
 
           if (!notificationId) {
             console.log("⚠️ notificationId missing");
@@ -217,19 +225,11 @@ export default function App() {
           // 🔥 UPDATE opened_at IN DB
           await fetch(`${apiUrl}/api/notification/mark-opened`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ notificationId }),
           });
 
           console.log("✅ opened_at updated for:", notificationId);
-
-          // 👉 OPTIONAL NAVIGATION
-          // if (data?.screen === "Dashboard") {
-          //   navigation.navigate("Dashboard");
-          // }
-
         } catch (error) {
           console.log("❌ Error marking notification opened:", error);
         }
@@ -253,15 +253,18 @@ export default function App() {
       <SafeAreaProvider>
         <AppQueryProvider>
           <AuthProvider>
-            <NavigationContainer>
-              <RootStack.Navigator screenOptions={{ headerShown: false }}>
-                <RootStack.Screen name="Auth" component={AuthNavigator} />
-                <RootStack.Screen name="App" component={AppNavigator} />
-                <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
-                <RootStack.Screen name="AdvancedChart" component={AdvancedChartScreen} options={{ headerShown: false }} />
-              </RootStack.Navigator>
-            </NavigationContainer>
+            <WatchlistProvider>
+              <NavigationContainer>
+                <RootStack.Navigator screenOptions={{ headerShown: false }}>
+                  <RootStack.Screen name="Auth" component={AuthNavigator} />
+                  <RootStack.Screen name="App" component={AppNavigator} />
+                  <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
+                  <RootStack.Screen name="AdvancedChart" component={AdvancedChartScreen} options={{ headerShown: false }} />
+                </RootStack.Navigator>
+              </NavigationContainer>
+            </WatchlistProvider>
           </AuthProvider>
+
         </AppQueryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
