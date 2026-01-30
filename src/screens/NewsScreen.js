@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import NewsCardLarge from '../components/News/NewsCardLarge';
 import NewsCardSmall from '../components/News/NewsCardSmall';
 import axiosInstance from "../api/axios";
+import TopHeader from '../components/TopHeader';
 
 const NewsScreen = () => {
 
@@ -36,10 +37,6 @@ const NewsScreen = () => {
     return (
         <>
             <SafeAreaView edges={["bottom"]} style={styles.container}>
-                {/* <TopHeader /> */}
-                {/* <View>
-                    <TopMenuSlider />
-                </View> */}
 
                 {loading ? (
                     <View style={styles.loader}>

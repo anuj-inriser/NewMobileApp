@@ -7,6 +7,10 @@ export const TOKENS = {
   REFRESH_TOKEN: "@angelone_refresh_token",
   CLIENT_ID: "@angelone_client_id",
 };
+export const STORAGE_KEYS = {
+  token: 'token',
+};
+
 const SHOW_KEY = "watchlist_show_names";
 const AuthContext = createContext();
 
@@ -18,7 +22,7 @@ export const AuthProvider = ({ children }) => {
   const [userId, setUserId] = useState(null);
   const [userData, setUserData] = useState(null);
   const [permissions, setPermissions] = useState([]);
-
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const loadTokens = async () => {
@@ -30,6 +34,10 @@ export const AuthProvider = ({ children }) => {
       const u = await AsyncStorage.getItem("userId");
       const d = await AsyncStorage.getItem("userData");
       const p = await AsyncStorage.getItem("permissions");
+      const storedToken = await AsyncStorage.getItem(STORAGE_KEYS.token);
+      if (storedToken) {
+        setToken(storedToken);
+      }
 
       setAuthToken(a);
       setFeedToken(f);
@@ -79,7 +87,8 @@ export const AuthProvider = ({ children }) => {
       setPermissions(permissions);
     }
     if (token) {
-      await AsyncStorage.setItem("token", token)
+      await AsyncStorage.setItem(STORAGE_KEYS.token, token);
+      setToken(token);
     }
   };
 
@@ -92,6 +101,7 @@ export const AuthProvider = ({ children }) => {
     await AsyncStorage.removeItem("userId");
     await AsyncStorage.removeItem("userData");
     await AsyncStorage.removeItem("permissions")
+    await AsyncStorage.removeItem("token");
 
     setAuthToken(null);
     setFeedToken(null);
@@ -99,7 +109,8 @@ export const AuthProvider = ({ children }) => {
     setClientId(null);
     setUserId(null);
     setUserData(null);
-    setPermissions([])
+    setPermissions([]);
+    setToken(null);
   };
 
   return (
@@ -114,7 +125,8 @@ export const AuthProvider = ({ children }) => {
         loading,
         setAuthData,
         clearAuth,
-        permissions
+        permissions,
+        token,
       }}
     >
       {children}
