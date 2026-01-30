@@ -9,6 +9,7 @@ import {
 } from "react-native";
 
 function GlobalAlert({ visible, type, title, message, onClose }) {
+  console.log("type", type);
   const icon =
     type === "success"
       ? require("../../assets/confirmalert.png")
@@ -49,7 +50,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   card: {
-     width: "85%",
+    width: "85%",
     backgroundColor: "#fff",
     borderRadius: 20,
     paddingVertical: 30,
@@ -57,22 +58,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   icon: {
-   width: 70,
+    width: 70,
     height: 70,
-    borderRadius: 35,
-    backgroundColor: "#22C55E",
+    // borderRadius: 35,
+    // backgroundColor: "#22C55E",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
   },
   title: {
-     fontSize: 20,
+    fontSize: 20,
     fontWeight: "700",
     color: "#1F2937",
     marginBottom: 10,
   },
   text: {
-     fontSize: 15,
+    fontSize: 15,
     color: "#4B5563",
     textAlign: "left",
     lineHeight: 20,

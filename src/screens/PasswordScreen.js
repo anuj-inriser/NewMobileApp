@@ -86,13 +86,26 @@ export default function PasswordScreen({ navigation, route }) {
         payload.email = email.trim();
       }
 
+      // const res = await fetch(`${apiUrl}/api/signup`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify(payload),
+      // });
+
+      // const result = await res.json();
       const res = await fetch(`${apiUrl}/api/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const result = await res.json();
+      let result;
+      try {
+        result = await res.json();
+      } catch (e) {
+        throw new Error("Server returned invalid JSON");
+      }
+
       setLoading(false);
 
       if (result?.status) {
@@ -103,19 +116,20 @@ export default function PasswordScreen({ navigation, route }) {
           userData: { name, email, phone, userimage },
         });
 
-        const res = await axiosInstance.get(`/me/permissions`);
-        await setAuthData({ permissions: JSON.stringify(res.data) });
+        // const res = await axiosInstance.get(`/me/permissions`);
+        // await setAuthData({ permissions: JSON.stringify(res.data) });
 
-        navigation.navigate("App", { screen: "Equity" });
+        navigation.navigate("Login", { screen: "LoginScreen" });
       } else {
         setErrors({
           general: result.message || "Signup failed",
         });
       }
-    } catch {
+    } catch (err) {
+      console.log("Signup Error:", err);
       setLoading(false);
       setErrors({
-        general: "Server not reachable",
+        general: err.message || "Server not reachable",
       });
     }
   };

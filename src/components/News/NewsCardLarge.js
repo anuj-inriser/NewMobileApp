@@ -20,6 +20,7 @@ import axios from 'axios'; // Added import
 import { apiUrl } from "../../utils/apiUrl";
 import { formatPublishedTime } from "../../utils/dateFormat"
 import { useAuth } from "../../context/AuthContext"; // Added import
+import DefaultNewsImage from "../../../assets/Newspaper.jpg";
 
 const NewsCardLarge = ({ item, onPress }) => {
     const { showSuccess, showError } = useAlert();
@@ -139,11 +140,18 @@ const NewsCardLarge = ({ item, onPress }) => {
                     setCardLayout({ x, y });
                 }}
             >
-                <Image
+                {/* <Image
                     source={{ uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }}
                     style={styles.image}
+                /> */}
+                <Image
+                    source={
+                        item.image_url
+                            ? { uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }
+                            : DefaultNewsImage
+                    }
+                    style={styles.image}
                 />
-
                 <View style={styles.content}>
                     <Text style={styles.title} numberOfLines={1}>
                         {item.title}

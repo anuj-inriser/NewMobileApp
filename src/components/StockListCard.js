@@ -66,7 +66,7 @@ const StockListCard = ({ stock, realtime, onPress }) => {
             ? Math.abs(currentChangePercent).toFixed(2)
             : "0.00";
 
-    const color = isPositive ? '#22c55e' : '#ef4444';
+    const color = isPositive ? '#2E7D32' : '#C62828';
 
     // Prepare Chart Data
     // We strictly want the last 30 points for a clean sparkline (100 is too crowded for 80px)
@@ -139,12 +139,13 @@ const StockListCard = ({ stock, realtime, onPress }) => {
 
 
     return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-            <View style={styles.card}>
+        <View style={styles.cardWrapper}>
+            <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+                {/* <View> */}
                 {/* Left: Info */}
-                <View style={styles.leftContainer}>
-                    <Text style={styles.symbol}>{stock.name}</Text>
-                    <Text style={styles.time}>{stock.symbol}</Text>
+                <View style={styles.infoContainer}>
+                    <Text style={styles.companyName}>{stock.name}</Text>
+                    <Text style={styles.symbol}>{stock.symbol}</Text>
                     {/* <Text style={styles.time}>{lastTime}</Text> */}
                 </View>
 
@@ -186,41 +187,42 @@ const StockListCard = ({ stock, realtime, onPress }) => {
             </View> */}
 
                 {/* Right: Price */}
-                <View style={styles.rightContainer}>
-                    <Text style={styles.price}>
+                <View style={styles.verticalCardRight}>
+                    <Text style={[styles.verticalPrice, { color }]}>
                         {loading && currentPrice === 0 ? '--' : `₹${currentPrice.toFixed(2)}`}
                     </Text>
-                    <Text style={[styles.change, { color }]}>
+                    <Text style={[styles.verticalChange, { color }]}>
                         ₹{displayChange} ({displayPercent}%)
                     </Text>
                     {/* <Text style={[styles.change, { color }]}>
                     {loading && currentPrice === 0 ? '--' : `${isPositive ? '+' : ''}${currentChange.toFixed(2)} (${currentChangePercent.toFixed(2)}%)`}
                 </Text> */}
+                    {/* </View> */}
                 </View>
-            </View>
-        </TouchableOpacity>
+            </TouchableOpacity>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        marginBottom: 10,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderWidth: 1,
-        borderColor: '#eee',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        // Minimal shadow
-        shadowColor: '#000',
-        shadowOpacity: 0.02,
-        shadowRadius: 5,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 1,
-    },
+    // card: {
+    //     backgroundColor: '#fff',
+    //     borderRadius: 20,
+    //     marginBottom: 10,
+    //     paddingVertical: 12,
+    //     paddingHorizontal: 16,
+    //     borderWidth: 1,
+    //     borderColor: '#eee',
+    //     flexDirection: 'row',
+    //     alignItems: 'center',
+    //     justifyContent: 'space-between',
+    //     // Minimal shadow
+    //     shadowColor: '#000',
+    //     shadowOpacity: 0.02,
+    //     shadowRadius: 5,
+    //     shadowOffset: { width: 0, height: 2 },
+    //     elevation: 1,
+    // },
     leftContainer: {
         flex: 1.2,
         justifyContent: 'center'
@@ -236,13 +238,38 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
         justifyContent: 'center'
     },
-    symbol: { fontSize: 15, fontWeight: '700', color: '#333' },
+    // symbol: { fontSize: 15, fontWeight: '700', color: '#333' },
     time: { fontSize: 11, color: '#999', marginTop: 4 },
 
     price: { fontSize: 15, fontWeight: '600', color: '#333' },
     change: { fontSize: 12, fontWeight: '600', marginTop: 4 },
 
-    noData: { color: '#ccc', fontSize: 12 }
+    noData: { color: '#ccc', fontSize: 12 },
+    cardWrapper: { marginVertical: 6, marginHorizontal: 4 },
+    card: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#fff",
+        padding: 12,
+        borderRadius: 14,
+        elevation: 2,
+    },
+    infoContainer: { flex: 1 },
+    companyName: { fontSize: 14, fontWeight: "600" },
+    symbol: { fontSize: 11, color: "#666" },
+    verticalCardRight: {
+        alignItems: "flex-end",
+    },
+    verticalPrice: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#333",
+    },
+    verticalChange: {
+        fontSize: 11,
+        fontWeight: "600",
+        marginTop: 2,
+    },
 });
 
 export default StockListCard;

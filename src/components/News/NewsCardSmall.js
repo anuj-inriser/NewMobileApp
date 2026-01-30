@@ -3,14 +3,22 @@ import { TouchableOpacity, StyleSheet, View, Text, Image } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { apiUrl } from "../../utils/apiUrl";
 import { formatPublishedTime } from "../../utils/dateFormat";
+import DefaultNewsImage from "../../../assets/Newspaper.jpg";
 
 const NewsCardSmall = ({ item, onPress }) => {
     return (
         <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
 
             <View style={styles.top}>
-                <Image source={{ uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }} style={styles.image} />
-
+                {/* <Image source={{ uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }} style={styles.image} /> */}
+                <Image
+                    source={
+                        item.image_url
+                            ? { uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }
+                            : DefaultNewsImage
+                    }
+                    style={styles.image}
+                />
                 <View style={{ flex: 1 }}>
                     <Text style={styles.title} numberOfLines={3}>
                         {item.title}

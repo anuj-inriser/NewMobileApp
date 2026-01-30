@@ -10,6 +10,7 @@ import { formatPublishedDate } from "../utils/dateFormat"
 import RenderHTML from "react-native-render-html";
 import { useWindowDimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import DefaultNewsImage from "../../assets/Newspaper.jpg";
 
 const NewsReadingScreen = ({ route }) => {
     const { width } = useWindowDimensions();
@@ -57,7 +58,16 @@ const NewsReadingScreen = ({ route }) => {
 
                         {/* Image Container */}
                         <View style={styles.imageCard}>
-                            <Image source={{ uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }} style={styles.image} />
+                            {console.log("item.image_url",item.image_url)}
+                            {/* <Image source={{ uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }} style={styles.image} /> */}
+                              <Image
+                                source={
+                                    item.image_url
+                                        ? { uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }
+                                        : DefaultNewsImage
+                                }
+                                style={styles.image}
+                            />
                         </View>
 
                         {/* Metadata Row */}
