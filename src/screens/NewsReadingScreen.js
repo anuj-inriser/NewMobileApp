@@ -1,18 +1,20 @@
 import React from "react";
-import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import TopMenuSlider from "../components/TopMenuSlider";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 // import BottomTabBar from "../components/BottomTabBar";
 // import FundamentalTopHeader from "../components/FundamentalTopHeader";
 import { apiUrl } from "../utils/apiUrl";
 import { formatPublishedDate } from "../utils/dateFormat"
 import RenderHTML from "react-native-render-html";
 import { useWindowDimensions } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 
 const NewsReadingScreen = ({ route }) => {
     const { width } = useWindowDimensions();
     const { item } = route.params;
+    const navigate = useNavigation();
 
     const titleWords = item.title?.trim().split(/\s+/).length || 0;
     const descriptionWords = item.brief_description?.trim().split(/\s+/).length || 0;
@@ -25,9 +27,17 @@ const NewsReadingScreen = ({ route }) => {
     return (
         <>
             <SafeAreaView style={styles.container} edges={["bottom"]}>
-                {/* <FundamentalTopHeader /> */}
-                {/* <TopMenuSlider /> */}
-
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => {
+                        if (navigate.canGoBack()) {
+                            navigate.goBack();
+                        }
+                    }}
+                >
+                    <Ionicons name="arrow-back" size={22} color="#210F47" />
+                    <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
                 <ScrollView
                     style={{ flex: 1 }}
                     contentContainerStyle={styles.scrollContent}
@@ -119,7 +129,8 @@ const styles = StyleSheet.create({
         backgroundColor: "#fff",
     },
     scrollContent: {
-        padding: 18,
+        paddingVertical: 5,
+        paddingHorizontal: 18,
         paddingBottom: 40,
     },
 
@@ -195,6 +206,18 @@ const styles = StyleSheet.create({
         width: 327,
         // height: 774,
         marginTop: 12,
+    },
+    backButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    backButtonText: {
+        marginLeft: 6,
+        fontSize: 13,
+        color: "#210F47",
+        fontWeight: "600",
     },
 });
 

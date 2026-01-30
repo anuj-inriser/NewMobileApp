@@ -2,6 +2,8 @@ import "react-native-gesture-handler";
 import React, { useEffect } from "react";
 import { Platform } from "react-native";
 import { apiUrl } from "./src/utils/apiUrl";
+import { AlertProvider } from "./src/context/AlertContext";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // SDK 54 fix: Use legacy for downloadAsync compatibility
 import * as FileSystem from "expo-file-system/legacy";
@@ -18,6 +20,7 @@ import { WatchlistProvider } from "./src/context/WatchlistContext";
 import { AppQueryProvider } from "./src/context/QueryClientProvider";
 import { connectMarketWS, onMarketMessage } from "./src/ws/marketWs";
 import { applyPriceMessage } from "./src/store/marketPrices";
+import { useAuth } from "./src/context/AuthContext";
 
 import MainLayout from "./src/Layout/MainLayout";
 
@@ -133,7 +136,31 @@ Notifications.setNotificationHandler({
   }),
 });
 
+function RootNavigator() {
+  const { token, loading } = useAuth();
+
+  if (loading) {
+    return null; // or SplashScreen
+  }
+
+  return (
+    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      {token ? (
+        <>
+          <RootStack.Screen name="App" component={AppNavigator} />
+          <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
+          <RootStack.Screen name="AdvancedChart" component={AdvancedChartScreen} />
+        </>
+      ) : (
+        <RootStack.Screen name="Auth" component={AuthNavigator} />
+      )}
+    </RootStack.Navigator>
+  );
+}
+
 export default function App() {
+
+
   useEffect(() => {
     const setupNotifications = async () => {
       const { status } = await Notifications.requestPermissionsAsync();
@@ -254,14 +281,11 @@ export default function App() {
         <AppQueryProvider>
           <AuthProvider>
             <WatchlistProvider>
-              <NavigationContainer>
-                <RootStack.Navigator screenOptions={{ headerShown: false }}>
-                  <RootStack.Screen name="Auth" component={AuthNavigator} />
-                  <RootStack.Screen name="App" component={AppNavigator} />
-                  <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
-                  <RootStack.Screen name="AdvancedChart" component={AdvancedChartScreen} options={{ headerShown: false }} />
-                </RootStack.Navigator>
-              </NavigationContainer>
+              <AlertProvider>
+                <NavigationContainer>
+                  <RootNavigator />
+                </NavigationContainer>
+              </AlertProvider>
             </WatchlistProvider>
           </AuthProvider>
 
