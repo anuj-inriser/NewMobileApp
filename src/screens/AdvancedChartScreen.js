@@ -228,7 +228,6 @@ const AdvancedChartScreen = () => {
                   symbol={chartSymbol.replace("NSE:", "").replace("BSE:", "")}
                   exchange={chartSymbol.startsWith("BSE:") ? "BSE" : "NSE"}
                   onOrderPlaced={() => {
-                    // Alert.alert("Success", "Order Placed"); // Form handles alert usually, or we can enable this
                     toggleDrawer(); // Close after order
                   }}
                 />

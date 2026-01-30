@@ -6,6 +6,8 @@ import {
   AppState,
   Alert,
 } from "react-native";
+import { useAlert } from "../context/AlertContext";
+import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import axiosInstance from "../api/axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -56,7 +58,9 @@ const mergeWithRealtime = (list, realtimePrices) => {
   });
 };
 
-export default function TradeOrderListScreen({ navigation }) {
+export default function TradeOrderListScreen() {
+  const { showSuccess, showError } = useAlert();
+  const navigation = useNavigation();
   const [currentWatchlistId, setCurrentWatchlistId] = useState(null);
   const [stocks, setStocks] = useState([]); // ✅ raw DB data
   const [enrichedStocks, setEnrichedStocks] = useState([]);
@@ -107,7 +111,10 @@ export default function TradeOrderListScreen({ navigation }) {
 
     } catch (err) {
       console.error("❌ Failed to fetch watchlist stocks:", err.message);
-      Alert.alert("Error", "Failed to load watchlist.");
+      showError(
+        "Error",
+        "Failed to load watchlist."
+      );
       setStocks([]);
       setEnrichedStocks([]);
       symbolsRef.current = [];
@@ -149,7 +156,10 @@ export default function TradeOrderListScreen({ navigation }) {
     if (!currentWatchlistId) return;
     const { script_id, script_name } = item;
     if (!script_id) {
-      Alert.alert('❌ Error', 'Invalid stock.');
+      showError(
+        "Error",
+        "Invalid stock."
+      );
       return;
     }
 
@@ -158,7 +168,10 @@ export default function TradeOrderListScreen({ navigation }) {
     try {
       const userIdStr = await AsyncStorage.getItem('userId');
       if (!userIdStr) {
-        Alert.alert('❌ Auth Error', 'User ID not found. Please log in again.');
+        showError(
+          "Error",
+          "User ID not found. Please log in again."
+        );
         setRemovingScriptId(null);
         return;
       }
@@ -178,7 +191,10 @@ export default function TradeOrderListScreen({ navigation }) {
       }
     } catch (err) {
       console.error("❌ Remove stock failed:", err.response?.data || err.message);
-      Alert.alert('❌ Failed', `Could not remove "${script_name}".`);
+      showError(
+        "Failed",
+        "Could not remove " + script_name
+      );
     } finally {
       setRemovingScriptId(null);
     }

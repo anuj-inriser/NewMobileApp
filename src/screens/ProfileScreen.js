@@ -8,10 +8,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  TextInput,
   Alert,
   Platform,
 } from "react-native";
+import { useAlert } from "../context/AlertContext";
+import TextInput from "../components/TextInput";
 import axiosInstance from "../api/axios";
 import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -47,8 +48,10 @@ import LinkedAccount from "../../assets/linkedaccount.png";
 import AccountPrivacy from "../../assets/accountprivacy.png";
 import ArrowDown from "../../assets/arrow_down.png";
 import ArrowUp from "../../assets/arrow_up.png";
+import { Ionicons } from "@expo/vector-icons";
 
 const ProfileScreen = () => {
+  const { showSuccess, showError } = useAlert();
   const [kycOpen, setKycOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [setting, setSetting] = useState(false);
@@ -108,6 +111,11 @@ const ProfileScreen = () => {
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successIssueModalOpen, setSuccessIssueModalOpen] = useState(false);
   const [attachment, setAttachment] = useState(null);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState({});
+  const [editErrors, setEditErrors] = useState({});
+  const [appInfoModalOpen, setAppInfoModalOpen] = useState(false);
 
   const pickAttachment = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -155,7 +163,10 @@ const ProfileScreen = () => {
   const pickDocument = async (type) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Permission required", "Please allow media access");
+      showError(
+        "Permission required",
+        "Please allow media access."
+      );
       return;
     }
 
@@ -222,28 +233,30 @@ const ProfileScreen = () => {
     return { uri: `data:image/jpeg;base64,${img}` };
   };
   const handleSaveProfile = async () => {
+    const e = {};
+
+    const isValidEmail = (email) =>
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    const isValidMobile = (mobile) =>
+      /^\d{10}$/.test(mobile);
+
+    if (!editName.trim()) e.name = "Name required";
+
+    if (!isValidMobile(editMobile?.trim()))
+      e.mobile = "Enter valid 10 digit mobile number";
+
+    if (editEmail && !isValidEmail(editEmail))
+      e.email = "Invalid email address";
+
+    if (Object.keys(e).length > 0) {
+      setEditErrors(e);
+      return;
+    }
+
+    setEditErrors({});
+
     try {
-      const isValidEmail = (email) => {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-      };
-
-      const isValidMobile = (mobile) => {
-        return /^[6-9]\d{9}$/.test(mobile);
-      };
-
-      if (!isValidEmail(editEmail)) {
-        Alert.alert("Invalid Email", "Please enter a valid email address.");
-        return;
-      }
-
-      if (!isValidMobile(editMobile)) {
-        Alert.alert(
-          "Invalid Mobile Number",
-          "Please enter a valid 10-digit mobile number.",
-        );
-        return;
-      }
-
       let imageBase64 = null;
 
       if (editImage && editImage !== profileImage) {
@@ -253,19 +266,102 @@ const ProfileScreen = () => {
       const payload = {
         name: editName,
         username: editUsername,
-        phone: editMobile,
-        email: editEmail,
+        phone: editMobile?.trim(),
+        email: editEmail || null,
         image: imageBase64,
       };
 
       const userId = await AsyncStorage.getItem("userId");
-      await axiosInstance.put(`${apiUrl}/api/users/users/${userId}`, payload);
+      await axiosInstance.put(
+        `${apiUrl}/api/users/users/${userId}`,
+        payload
+      );
+
       setEditOpen(false);
       getUserById();
     } catch (err) {
-      console.log("Save profile error =>", err);
+      if (
+        err?.response?.status === 409 &&
+        err?.response?.data?.message
+      ) {
+        const msg = err.response.data.message.toLowerCase();
+
+        const errors = {};
+
+        if (msg.includes("mobile")) {
+          errors.mobile = "Mobile number already exists";
+        }
+
+        if (msg.includes("email")) {
+          errors.email = "Email already exists";
+        }
+
+        if (Object.keys(errors).length > 0) {
+          setEditErrors(errors);
+          return;
+        }
+      }
+
+      setEditErrors({
+        general: "Failed to update profile",
+      });
     }
   };
+
+  // const handleSaveProfile = async () => {
+  //   const e = {};
+
+  //   const isValidEmail = (email) =>
+  //     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  //   const isValidMobile = (mobile) =>
+  //     /^[6-9]\d{9}$/.test(mobile);
+
+  //   if (!editName.trim()) e.name = "Name required";
+
+  //   if (!isValidMobile(editMobile))
+  //     e.mobile = "Enter valid 10 digit mobile number";
+
+  //   if (editEmail && !isValidEmail(editEmail))
+  //     e.email = "Invalid email address";
+
+  //   if (Object.keys(e).length > 0) {
+  //     setEditErrors(e);
+  //     return;
+  //   }
+
+  //   setEditErrors({});
+
+  //   try {
+  //     let imageBase64 = null;
+
+  //     if (editImage && editImage !== profileImage) {
+  //       imageBase64 = await uriToBase64(editImage);
+  //     }
+
+  //     const payload = {
+  //       name: editName,
+  //       username: editUsername,
+  //       phone: editMobile,
+  //       email: editEmail || null,
+  //       image: imageBase64,
+  //     };
+
+  //     const userId = await AsyncStorage.getItem("userId");
+  //     await axiosInstance.put(
+  //       `${apiUrl}/api/users/users/${userId}`,
+  //       payload
+  //     );
+
+  //     setEditOpen(false);
+  //     getUserById();
+  //   } catch (err) {
+  //     setEditErrors({
+  //       general: "Failed to update profile",
+  //     });
+  //   }
+  // };
+
 
   const formatAmount = (num) => {
     if (!num) return "0";
@@ -358,7 +454,10 @@ const ProfileScreen = () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert("Permission required");
+      showError(
+        "Alert",
+        "Permission required."
+      );
       return;
     }
 
@@ -381,33 +480,54 @@ const ProfileScreen = () => {
   }, []);
 
   const handleChangePassword = async () => {
+    const e = {};
+
+    if (!newPassword) {
+      e.newPassword = "New password required";
+    } else {
+      if (newPassword.length < 6) {
+        e.newPassword = "Password must be at least 6 characters";
+      } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+        e.newPassword = "Password must contain 1 special character";
+      }
+    }
+
+    if (!confirmPassword) {
+      e.confirmPassword = "Confirm password required";
+    } else if (newPassword !== confirmPassword) {
+      e.confirmPassword = "Passwords do not match";
+    }
+
+    if (Object.keys(e).length > 0) {
+      setPasswordErrors(e);
+      return;
+    }
+
+    setPasswordErrors({});
+
     try {
-      if (!newPassword || !confirmPassword) {
-        Alert.alert("Error", "Both fields are required");
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        Alert.alert("Error", "Passwords do not match");
-        return;
-      }
-
       const userId = await AsyncStorage.getItem("userId");
 
-      await axiosInstance.put(`${apiUrl}/api/users/change-password/${userId}`, {
-        password: newPassword,
-        confirmPassword: confirmPassword,
-      });
-
-      Alert.alert("Success", "Password changed successfully");
+      await axiosInstance.put(
+        `${apiUrl}/api/users/change-password/${userId}`,
+        {
+          password: newPassword,
+          confirmPassword,
+        }
+      );
 
       setNewPassword("");
       setConfirmPassword("");
+      setPasswordErrors({
+        success: "Password changed successfully",
+      });
     } catch (err) {
-      console.log("Change Password Error =>", err);
-      Alert.alert("Error", "Failed to change password");
+      setPasswordErrors({
+        general: "Failed to change password",
+      });
     }
   };
+
   const handleLogout = async () => {
     try {
       const userIdStored = await AsyncStorage.getItem("userId");
@@ -425,10 +545,10 @@ const ProfileScreen = () => {
         }
         await clearAuth();
         // Reset to Auth stack
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "Auth", state: { routes: [{ name: "Login" }] } }],
-        });
+        // navigation.reset({
+        //   index: 0,
+        //   routes: [{ name: "Auth", state: { routes: [{ name: "Login" }] } }],
+        // });
         return;
       }
 
@@ -447,17 +567,17 @@ const ProfileScreen = () => {
       if (data.status) {
         await clearAuth();
         // Reset to Auth stack
-        navigation.reset({
-          index: 0,
-          routes: [
-            {
-              name: "Auth",
-              state: {
-                routes: [{ name: "Login" }],
-              },
-            },
-          ],
-        });
+        // navigation.reset({
+        //   index: 0,
+        //   routes: [
+        //     {
+        //       name: "Auth",
+        //       state: {
+        //         routes: [{ name: "Login" }],
+        //       },
+        //     },
+        //   ],
+        // });
       }
     } catch (err) {
       console.log("Logout Failed:", err);
@@ -479,9 +599,9 @@ const ProfileScreen = () => {
       };
 
       if (!isValidPan(pan)) {
-        Alert.alert(
+        showError(
           "Invalid PAN Number",
-          "Please enter a valid PAN number (e.g. ANDPS2321P).",
+          "Please enter a valid PAN number (e.g. ANDPS2321P)."
         );
         return;
       }
@@ -491,9 +611,9 @@ const ProfileScreen = () => {
       };
 
       if (!isValidAadhar(aadhar)) {
-        Alert.alert(
+        showError(
           "Invalid Aadhaar Number",
-          "Please enter a valid 12-digit Aadhaar number.",
+          "Please enter a valid 12-digit Aadhaar number."
         );
         return;
       }
@@ -530,13 +650,16 @@ const ProfileScreen = () => {
         aadhar_doc: aadharBase64 || null,
       };
 
-      await axiosInstance.post(`${apiUrl}/api/userkyc/submit`, payload);
+      await axiosInstance.post(`/userkyc/submit`, payload);
       setPanFiles([]);
       setAadharFiles([]);
 
       await loadKycData();
       fetchKycPercent();
-      Alert.alert("Success", "KYC submitted successfully");
+      showSuccess(
+        "Success",
+        "KYC submitted successfully."
+      );
       setKycOpen(false);
       getUserById();
     } catch (error) {
@@ -544,7 +667,10 @@ const ProfileScreen = () => {
         "❌ KYC SUBMIT ERROR =>",
         error?.response?.data || error.message,
       );
-      Alert.alert("Error", "Failed to submit KYC");
+      showError(
+        "Error",
+        "Failed to submit KYC."
+      );
     }
   };
 
@@ -587,7 +713,10 @@ const ProfileScreen = () => {
   const submitReportIssue = async () => {
     try {
       if (!issueCategory || !issueDescription) {
-        Alert.alert("Error", "Please select category and description");
+        showError(
+          "Error",
+          "Please select category and description"
+        );
         return;
       }
 
@@ -628,7 +757,10 @@ const ProfileScreen = () => {
       setAttachment(null);
     } catch (err) {
       console.log("❌ REPORT ERROR:", err?.response?.data || err.message);
-      Alert.alert("Error", "Failed to submit issue");
+      showError(
+        "Error",
+        "Failed to submit issue"
+      );
     }
   };
 
@@ -1019,7 +1151,7 @@ const ProfileScreen = () => {
                 style={[styles.submitBtn, isKycCompleted]}
                 onPress={() => {
                   if (isKycCompleted) {
-                    Alert.alert(
+                    showError(
                       "Information",
                       "Your KYC is already completed. If you need any changes, please contact support.",
                     );
@@ -1099,32 +1231,71 @@ const ProfileScreen = () => {
               <View style={styles.divider} />
 
               <Text style={styles.label}>Change Password</Text>
-              <View style={styles.inputField}>
+              <View style={[styles.inputField, { flexDirection: "row", alignItems: "center" }]}>
                 <TextInput
-                  style={styles.inputText}
+                  style={[styles.inputText, { flex: 1 }]}
                   placeholder="Enter your new password"
-                  secureTextEntry
+                  secureTextEntry={!showNewPassword}
                   value={newPassword}
                   onChangeText={setNewPassword}
                 />
+                <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
+                  <Ionicons
+                    name={showNewPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#777"
+                  />
+                </TouchableOpacity>
               </View>
+              {!!passwordErrors.newPassword && (
+                <Text style={{ color: "red", fontSize: 12, marginBottom: 6 }}>
+                  {passwordErrors.newPassword}
+                </Text>
+              )}
 
               <Text style={styles.label}>Confirm Password</Text>
-              <View style={styles.inputField}>
+              <View style={[styles.inputField, { flexDirection: "row", alignItems: "center" }]}>
                 <TextInput
-                  style={styles.inputText}
+                  style={[styles.inputText, { flex: 1 }]}
                   placeholder="Re-enter your password"
-                  secureTextEntry
+                  secureTextEntry={!showConfirmPassword}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                 />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#777"
+                  />
+                </TouchableOpacity>
               </View>
+              {!!passwordErrors.confirmPassword && (
+                <Text style={{ color: "red", fontSize: 12, marginBottom: 6 }}>
+                  {passwordErrors.confirmPassword}
+                </Text>
+              )}
+
               <TouchableOpacity
                 style={styles.saveBtn}
                 onPress={handleChangePassword}
               >
                 <Text style={styles.saveBtnText}>Save Changes</Text>
               </TouchableOpacity>
+              {!!passwordErrors.general && (
+                <Text style={{ color: "red", fontSize: 12, marginBottom: 6 }}>
+                  {passwordErrors.general}
+                </Text>
+              )}
+
+              {!!passwordErrors.success && (
+                <Text style={{ color: "green", fontSize: 12, marginBottom: 6 }}>
+                  {passwordErrors.success}
+                </Text>
+              )}
+
             </View>
           )}
 
@@ -1150,7 +1321,7 @@ const ProfileScreen = () => {
               {[
                 "Send Feedback",
                 "Report an Issue",
-                "Register as Research & Analyst",
+                // "Register as Research & Analyst",
                 "Terms & Conditions",
                 "App Information",
               ].map((item, index) => (
@@ -1166,6 +1337,9 @@ const ProfileScreen = () => {
                     }
                     if (item === "Terms & Conditions") {
                       setTermsModalOpen(true);
+                    }
+                    if (item === "App Information") {
+                      setAppInfoModalOpen(true);
                     }
                   }}
                 >
@@ -1617,8 +1791,42 @@ const ProfileScreen = () => {
                   implies acceptance of updated terms.
                 </Text>
                 <TouchableOpacity onPress={() => setDeleteModalVisible(true)}>
-                  <Text style={styles.termsText}>Delete Account</Text>
+                  <Text style={styles.deleteAccountText}>Delete Account</Text>
                 </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+        <Modal
+          visible={appInfoModalOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setAppInfoModalOpen(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.termsCard}>
+              {/* Header */}
+              <View style={styles.termsHeader}>
+                <Text style={styles.termsTitle}>App Information</Text>
+                <TouchableOpacity onPress={() => setAppInfoModalOpen(false)}>
+                  <Text style={{ fontSize: 20 }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Content */}
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.appInfoLabel}>Version</Text>
+                <Text style={styles.appInfoValue}>1.0.0</Text>
+
+                <Text style={styles.appInfoLabel}>Developed By</Text>
+                <Text style={styles.appInfoValue}>
+                  Inriser Consulting Private Limited
+                </Text>
+
+                <Text style={styles.appInfoLabel}>CIN</Text>
+                <Text style={styles.appInfoValue}>
+                  U74999UP2021PTC154107
+                </Text>
               </ScrollView>
             </View>
           </View>
@@ -1641,6 +1849,11 @@ const ProfileScreen = () => {
                 onChangeText={setEditName}
                 placeholder="Name"
               />
+              {!!editErrors.name && (
+                <Text style={{ color: "red", fontSize: 12, marginBottom: 6 }}>
+                  {editErrors.name}
+                </Text>
+              )}
               <TextInput
                 style={styles.modalInput}
                 value={editUsername}
@@ -1655,15 +1868,26 @@ const ProfileScreen = () => {
                 keyboardType="phone-pad"
                 maxLength={10}
               />
+              {!!editErrors.mobile && (
+                <Text style={{ color: "red", fontSize: 12, marginBottom: 6 }}>
+                  {editErrors.mobile}
+                </Text>
+              )}
+
               <TextInput
                 style={styles.modalInput}
                 value={editEmail}
                 onChangeText={handleEmailChange}
-                placeholder="Email ID"
+                placeholder="Email Id (Optional)"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
               />
+              {!!editErrors.email && (
+                <Text style={{ color: "red", fontSize: 12, marginBottom: 6 }}>
+                  {editErrors.email}
+                </Text>
+              )}
               <View style={styles.modalBtnRow}>
                 <TouchableOpacity
                   style={styles.cancelBtn}
@@ -1671,6 +1895,11 @@ const ProfileScreen = () => {
                 >
                   <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
+                {!!editErrors.general && (
+                  <Text style={{ color: "red", fontSize: 12, marginBottom: 8 }}>
+                    {editErrors.general}
+                  </Text>
+                )}
                 <TouchableOpacity
                   style={styles.saveBtnModal}
                   onPress={handleSaveProfile}
@@ -2772,6 +3001,14 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
+  deleteAccountText: {
+    fontSize: 13,
+    color: "#555",
+    marginTop: 25,
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -2905,5 +3142,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#777",
+  },
+  appInfoLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#210F47",
+    marginTop: 12,
+  },
+  appInfoValue: {
+    fontSize: 14,
+    color: "#555",
+    marginTop: 4,
   },
 });

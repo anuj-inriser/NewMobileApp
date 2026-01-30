@@ -3,10 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   Dimensions,
 } from "react-native";
+import TextInput from "../components/TextInput";
 import { Ionicons } from "@expo/vector-icons";
 
 // Get screen width to help with responsiveness logic if needed,

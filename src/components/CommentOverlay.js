@@ -6,7 +6,6 @@ import {
     Modal,
     TouchableOpacity,
     FlatList,
-    TextInput,
     Image,
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -15,6 +14,8 @@ import {
     Animated,
     Alert
 } from 'react-native';
+import { useAlert } from "../context/AlertContext";
+import TextInput from "../components/TextInput";
 import { X, Send, MoreVertical, Trash2, Edit2, Check } from 'lucide-react-native'; // Added icons
 import axios from 'axios';
 import { apiUrl } from '../utils/apiUrl';
@@ -23,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 const { height } = Dimensions.get('window');
 
 const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onCommentAdded, onCommentDeleted }) => {
+    const { showSuccess, showError } = useAlert();
     const { userId, user } = useAuth();
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -103,7 +105,10 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
             fetchComments(false); // Silent refresh
         } catch (error) {
             console.error("Failed to send comment", error);
-            alert("Failed to send comment");
+            showError(
+                "Error",
+                "Failed to send comment"
+            );
         } finally {
             setSending(false);
         }
@@ -129,7 +134,10 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
             fetchComments(false); // Silent refresh
         } catch (error) {
             console.error("Failed to update comment", error);
-            alert("Failed to update comment");
+            showError(
+                "Error",
+                "Failed to update comment"
+            );
             setComments(originalComments);
         } finally {
             setSending(false);
@@ -154,7 +162,10 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
                             fetchComments(false); // Silent refresh
                         } catch (error) {
                             console.error("Failed to delete comment", error);
-                            alert("Failed to delete comment");
+                            showError(
+                                "Error",
+                                "Failed to delete comment."
+                            );
                             setComments(originalComments);
                         }
                     }

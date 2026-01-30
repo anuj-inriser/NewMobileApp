@@ -1,68 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const EXCHANGE_KEY = 'MARKET_SELECTED_EXCHANGE';
+const MarketTabs = ({ Pointer, onExchangeChange, onCategoryChange, tabs = ['Indices', 'Market Cap', 'Sectors'], selectedExchange, activeTab: controlledActiveTab, initialActiveTab = null }) => {
+    const [exchange, setExchange] = useState(selectedExchange || 'NSE');
 
-const MarketTabs = ({
-    Pointer,
-    onExchangeChange,
-    onCategoryChange,
-    tabs = ['Indices', 'Market Cap', 'Sectors'],
-    selectedExchange,
-    activeTab: controlledActiveTab,
-    initialActiveTab = null,
-}) => {
-
-    const [exchange, setExchange] = useState(null);
-    const [internalActiveTab, setInternalActiveTab] = useState(initialActiveTab);
-    const [isReady, setIsReady] = useState(false);
-
-    // 🔥 Restore exchange BEFORE rendering (no flicker)
-    useEffect(() => {
-        const restoreExchange = async () => {
-            try {
-                const savedExchange = await AsyncStorage.getItem(EXCHANGE_KEY);
-
-                if (savedExchange) {
-                    setExchange(savedExchange);
-                    onExchangeChange && onExchangeChange(savedExchange);
-                } else {
-                    const fallback = selectedExchange || 'NSE';
-                    setExchange(fallback);
-                    onExchangeChange && onExchangeChange(fallback);
-                }
-            } catch {
-                const fallback = selectedExchange || 'NSE';
-                setExchange(fallback);
-                onExchangeChange && onExchangeChange(fallback);
-            } finally {
-                setIsReady(true);
-            }
-        };
-
-        restoreExchange();
-    }, []);
-
-    // 🔄 Sync if parent updates selectedExchange
-    useEffect(() => {
-        if (selectedExchange && selectedExchange !== exchange) {
-            setExchange(selectedExchange);
-        }
+    // Sync if selectedExchange prop changes
+    React.useEffect(() => {
+        if (selectedExchange) setExchange(selectedExchange);
     }, [selectedExchange]);
 
-    const activeTab =
-        controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
+    const [internalActiveTab, setInternalActiveTab] = useState(initialActiveTab); // No tab selected by default
 
-    // 🔥 Toggle Exchange + persist
-    const handleExchangeToggle = async (exch) => {
+    // Use controlled activeTab if provided, otherwise use internal state
+    const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
+
+    const handleExchangeToggle = (exch) => {
         setExchange(exch);
         onExchangeChange && onExchangeChange(exch);
-        try {
-            await AsyncStorage.setItem(EXCHANGE_KEY, exch);
-        } catch {}
     };
-
     const handleTabPress = (tab) => {
         if (controlledActiveTab === undefined) {
             setInternalActiveTab(tab);
@@ -70,33 +25,27 @@ const MarketTabs = ({
         onCategoryChange && onCategoryChange(tab);
     };
 
-    // ⛔ Prevent render until exchange is resolved
-    if (!isReady || !exchange) return null;
+    // const tabs = ['Indices', 'Sectors', 'Industries', 'Themes'];
 
     return (
         <View style={styles.container}>
-            {/* Exchange Toggle */}
+            {/* Exchange Toggle (NSE | BSE) */}
             <View style={styles.toggleContainer}>
                 <TouchableOpacity
                     style={[styles.toggleButton, exchange === 'NSE' && styles.activeToggle]}
                     onPress={() => handleExchangeToggle('NSE')}
                 >
-                    <Text style={[styles.toggleText, exchange === 'NSE' && styles.activeToggleText]}>
-                        NSE
-                    </Text>
+                    <Text style={[styles.toggleText, exchange === 'NSE' && styles.activeToggleText]}>NSE</Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
                     style={[styles.toggleButton, exchange === 'BSE' && styles.activeToggle]}
                     onPress={() => handleExchangeToggle('BSE')}
                 >
-                    <Text style={[styles.toggleText, exchange === 'BSE' && styles.activeToggleText]}>
-                        BSE
-                    </Text>
+                    <Text style={[styles.toggleText, exchange === 'BSE' && styles.activeToggleText]}>BSE</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Tabs */}
+            {/* Tabs ScrollView */}
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -164,6 +113,8 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     activeTabItem: {
+        // borderBottomWidth: 2,
+        // borderBottomColor: '#2F0079',
         backgroundColor: '#E6E0E9',
         borderRadius: 20,
         paddingVertical: 4,

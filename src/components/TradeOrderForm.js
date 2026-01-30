@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import SwipeButton from "rn-swipe-button";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
-
+import { useAlert } from "../context/AlertContext";
 import { apiUrl } from "../utils/apiUrl";
 import { getDeviceId } from "../utils/deviceId";
 import { useAuth } from "../context/AuthContext";
@@ -30,7 +30,7 @@ export default function TradeOrderForm({
 }) {
   const navigation = useNavigation();
   const { authToken, setAuthData } = useAuth();
-
+  const { showSuccess, showError } = useAlert();
   // -- State from TradeOrderScreen --
 
   const [selected, setSelected] = useState(exchange); // NSE/BSE
@@ -284,7 +284,10 @@ export default function TradeOrderForm({
   const placeOrder = async (transactionType = "BUY") => {
     try {
       if (!authToken) {
-        Alert.alert("Login Required", "Please login to place orders.");
+        showError(
+          "Alert",
+          "Please login to place orders."
+        );
         return;
       }
       if (!isOrderValid) {
@@ -327,15 +330,24 @@ export default function TradeOrderForm({
 
       const data = await res.json();
       if (data.angelResponse?.message === "SUCCESS") {
-        Alert.alert("Success", "Order Placed Successfully.");
+        showSuccess(
+          "Success",
+          "Order Placed Successfully."
+        );
         if (onOrderPlaced) onOrderPlaced();
         // Reset or Navigate?
       } else {
-        Alert.alert("Failed", JSON.stringify(data));
+        showError(
+          "Alert",
+          JSON.stringify(data)
+        );
       }
       setSwipeKey(Date.now());
     } catch (err) {
-      Alert.alert("Error", err.message);
+      showError(
+        "Error",
+        err.message
+      );
       setSwipeKey(Date.now());
     }
   };

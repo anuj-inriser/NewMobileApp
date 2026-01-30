@@ -21,7 +21,7 @@ import BottomTabBar from "../BottomTabBar";
 const API = `${apiUrl}/api/wishlistcontrol`;
 
 const orderTabs = [
-  { id: 1, name: "Place Order" },
+  { id: 1, name: "Chart" },
   { id: 2, name: "Orders" },
   { id: 3, name: "Positions" },
   { id: 4, name: "Holdings" },
@@ -71,14 +71,14 @@ const TradeOrderTabs = ({ onTabChange, activeTab }) => {
           </View>
      
         </ScrollView>
-        <TouchableOpacity onPress={() => setShowPopup(true)}>
+        {/* <TouchableOpacity onPress={() => setShowPopup(true)}>
           <Entypo
             name="dots-three-vertical"
             size={14}
             color="#555"
             style={{ paddingHorizontal: 10, marginHorizontal: 15 }}
           />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
     </>

@@ -252,14 +252,14 @@ const PorfolioScreen = () => {
                         </TouchableOpacity>
 
                         {/* FILTER BUTTON */}
-                        <TouchableOpacity style={styles.iconRow} onPress={() => setIsFilterOpen(true)}>
+                        {/* <TouchableOpacity style={styles.iconRow} onPress={() => setIsFilterOpen(true)}>
                             <Ionicons
                                 name={selectedBroker ? "funnel" : "funnel-outline"}
                                 size={16}
                                 color="#000"
                             />
                             <Text style={styles.actionText}>Filter</Text>
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
 
                     </View>
                 </View>

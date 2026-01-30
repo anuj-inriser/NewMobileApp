@@ -13,6 +13,7 @@ import {
     Animated,
     Pressable
 } from 'react-native';
+import { useAlert } from "../context/AlertContext";
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';   // ⭐ ADD
@@ -30,7 +31,7 @@ export default function DematScreen({ navigation }) {
     const [showAngelOneModal, setShowAngelOneModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const { setAuthData } = useAuth();   // ⭐ MAIN FIX
-
+    const { showSuccess, showError } = useAlert();
     const scaleAnim = useRef(new Animated.Value(0.8)).current;
     useEffect(() => {
         if (showUpgradeModal) {
@@ -89,14 +90,19 @@ export default function DematScreen({ navigation }) {
                     refreshToken: refresh_token,
                     clientId: clientId,
                 });
-
-                Alert.alert('Success', 'Angel One login successful!');
+                showSuccess(
+                    "Success",
+                    "Angel One login successfully."
+                );
 
                 // setShowAngelOneModal(false);
                 navigation.navigate('App', { screen: 'Equity' });
             } catch (err) {
                 console.error('❌ Token save failed:', err);
-                Alert.alert('Error', 'Login succeeded but token save failed.');
+                showError(
+                    "Error",
+                    "Login succeeded but token save failed."
+                );
             }
         }
 
@@ -192,7 +198,10 @@ export default function DematScreen({ navigation }) {
                         onNavigationStateChange={handleWebViewNavigation}
                         onError={(e) => {
                             console.error('WebView error:', e.nativeEvent);
-                            Alert.alert('Error', 'Failed to load Angel One login.');
+                            showError(
+                                "Error",
+                                "Failed to load Angel One login."
+                            );
                         }}
                     />
                 </View>

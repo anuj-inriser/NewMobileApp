@@ -280,7 +280,7 @@ export default function EquityScreen() {
   const [originalSectorsData, setOriginalSectorsData] = useState([]);
   const [allIndicesData, setAllIndicesData] = useState([]);
   const [originalAllIndicesData, setOriginalAllIndicesData] = useState([]);
-
+  const [filteredIndices, setFilteredIndices] = useState(null);
 
   const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
 
@@ -664,12 +664,11 @@ export default function EquityScreen() {
   });
   const allData = indicesQuery.data || [];
   const loading = indicesQuery.isLoading;
-  useEffect(() => {
-    if (allData && allData.length > 0) {
-      setAllIndicesData(allData);
-      setOriginalAllIndicesData(allData);
-    }
-  }, [allData, selectedExchange]);
+  useFocusEffect(
+    useCallback(() => {
+      indicesQuery.refetch();
+    }, [selectedExchange])
+  );
 
 
   // ✅ Handlers
@@ -794,56 +793,80 @@ export default function EquityScreen() {
       }
 
       setMarketCapData(filtered);
-    } else if (selectedCategory === "Indices") {
-      let filtered = [...originalAllIndicesData];
+    }
+    // else if (selectedCategory === "Indices") {
+    //   let filtered = [...originalAllIndicesData];
+
+    //   if (filterType === "High Gainers") {
+    //     // Filter indices with positive change (high gainers)
+    //     filtered = filtered.filter((item) => {
+    //       const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+    //       const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+    //       const change = ((ltp - oi) / oi) * 100;
+    //       return change > 0;
+    //     });
+    //     // Sort by change descending
+    //     filtered.sort((a, b) => {
+    //       const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+    //       const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+    //       const changeA = ((ltpA - oiA) / oiA) * 100;
+
+    //       const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+    //       const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+    //       const changeB = ((ltpB - oiB) / oiB) * 100;
+
+    //       return changeB - changeA;
+    //     });
+    //   } else if (filterType === "High Losers") {
+    //     // Filter indices with negative change (high losers)
+    //     filtered = filtered.filter((item) => {
+    //       const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+    //       const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+    //       const change = ((ltp - oi) / oi) * 100;
+    //       return change < 0;
+    //     });
+    //     // Sort by change ascending (most negative first)
+    //     filtered.sort((a, b) => {
+    //       const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+    //       const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+    //       const changeA = ((ltpA - oiA) / oiA) * 100;
+
+    //       const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+    //       const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+    //       const changeB = ((ltpB - oiB) / oiB) * 100;
+
+    //       return changeA - changeB;
+    //     });
+    //   } else {
+    //     // "All" - reset to original
+    //     filtered = originalAllIndicesData;
+    //   }
+
+    //   setAllIndicesData(filtered);
+    // }
+    else if (selectedCategory === "Indices") {
+      let filtered = [...allData];
 
       if (filterType === "High Gainers") {
-        // Filter indices with positive change (high gainers)
         filtered = filtered.filter((item) => {
           const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
           const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-          const change = ((ltp - oi) / oi) * 100;
-          return change > 0;
+          return oi > 0 && ((ltp - oi) / oi) * 100 > 0;
         });
-        // Sort by change descending
-        filtered.sort((a, b) => {
-          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-          const changeA = ((ltpA - oiA) / oiA) * 100;
-
-          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-          const changeB = ((ltpB - oiB) / oiB) * 100;
-
-          return changeB - changeA;
-        });
-      } else if (filterType === "High Losers") {
-        // Filter indices with negative change (high losers)
+      }
+      else if (filterType === "High Losers") {
         filtered = filtered.filter((item) => {
           const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
           const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-          const change = ((ltp - oi) / oi) * 100;
-          return change < 0;
+          return oi > 0 && ((ltp - oi) / oi) * 100 < 0;
         });
-        // Sort by change ascending (most negative first)
-        filtered.sort((a, b) => {
-          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-          const changeA = ((ltpA - oiA) / oiA) * 100;
-
-          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-          const changeB = ((ltpB - oiB) / oiB) * 100;
-
-          return changeA - changeB;
-        });
-      } else {
-        // "All" - reset to original
-        filtered = originalAllIndicesData;
       }
 
-      setAllIndicesData(filtered);
-    } else if (selectedCategory === "Sectors") {
+      // 🔥 Just store filtered result in a temp state
+      setFilteredIndices(filtered);
+    }
+
+    else if (selectedCategory === "Sectors") {
       let filtered = [...originalSectorsData];
 
       if (filterType === "High Gainers") {
@@ -1131,11 +1154,12 @@ export default function EquityScreen() {
           onViewAllPress={handleViewAllIndices}
           onIndexPress={handleIndexPress}
           onSwipeToChart={handleSwipeToChart}
-          externalData={allIndicesData}
+          externalData={filteredIndices ?? allData}
           maxItems={showPreview ? 5 : undefined}
         />
       );
     }
+
 
 
     // Other Tabs (Sectors, Themes, etc.)

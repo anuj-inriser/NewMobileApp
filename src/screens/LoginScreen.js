@@ -1,66 +1,71 @@
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useRef, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
+import * as Device from "expo-device";
 import {
   View,
   Text,
-  TextInput,
   Image,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  Alert,
 } from "react-native";
-
+import TextInput from "../components/TextInput";
 import { apiUrl } from "../utils/apiUrl";
 import { useAuth } from "../context/AuthContext";
 import axiosInstance from "../api/axios";
-import { getPushToken } from "../../src/utils/pushToken"; // ✅ EXPO PUSH
+import { getPushToken } from "../../src/utils/pushToken";
 import { ChartPrefetchService } from "../services/ChartPrefetchService";
 
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState(["", "", "", ""]);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [screenState, setScreenState] = useState("phone");
-
+  const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTnc, setAcceptedTnc] = useState(false);
+  const [tncError, setTncError] = useState("");
+  const getIpAddress = async () => {
+    try {
+      const res = await fetch("https://api.ipify.org?format=json");
+      const data = await res.json();
+      return data.ip;
+    } catch {
+      return null;
+    }
+  };
   const { setAuthData } = useAuth();
-  const inputRefs = useRef([]);
 
-  /* 🔥 INIT PUSH TOKEN (NO UI IMPACT) */
   useEffect(() => {
     (async () => {
-      const token = await getPushToken();
-      console.log("🔥 Login Push Token:", token);
-      // 👉 Agar chaaho to yahin AsyncStorage me bhi save kar sakte ho
+      await getPushToken();
     })();
   }, []);
 
-  const handleOtpChange = (text, index) => {
-    if (/^[0-9]?$/.test(text)) {
-      const newOtp = [...otp];
-      newOtp[index] = text;
-      setOtp(newOtp);
-
-      if (text && index < otp.length - 1) {
-        inputRefs.current[index + 1]?.focus();
-      }
-      if (text === "" && index > 0) {
-        inputRefs.current[index - 1]?.focus();
-      }
-    }
+  const validatePhone = () => {
+    if (!phone.trim()) return "Phone number required";
+    if (!/^\d{10}$/.test(phone)) return "Enter valid 10 digit phone number";
+    return "";
   };
 
-  /* 🔍 CHECK USER */
+  const validatePassword = () => {
+    if (!password.trim()) return "Password required";
+    return "";
+  };
+
   const handleCheckUser = async () => {
-    if (!/^\d{10}$/.test(phone)) {
-      Alert.alert("Invalid Input", "Please enter a valid 10-digit phone number");
+    const phoneError = validatePhone();
+    if (phoneError) {
+      setErrors({ phone: phoneError });
       return;
     }
 
+    setErrors({});
     setLoading(true);
+
     try {
       const response = await fetch(`${apiUrl}/api/check-user`, {
         method: "POST",
@@ -73,75 +78,81 @@ export default function LoginScreen({ navigation }) {
 
       if (result.status) {
         if (result.data?.exists) {
-          // Existing user → ask password
           setScreenState("password");
         } else {
-          // New user → signup
           navigation.navigate("Signup", { phone });
         }
       } else {
-        Alert.alert("Error", result.message || "Failed to check user");
+        setErrors({ general: result.message || "Something went wrong" });
       }
-    } catch (err) {
+    } catch (e) {
       setLoading(false);
-      console.error("Check user error:", err);
-      Alert.alert("Error", "Unable to connect to server.");
+      setErrors({ general: "Server not reachable" });
     }
   };
 
-  /* 🔐 FINAL LOGIN */
   const handleFinalLogin = async () => {
-    // console.log("trying to login")
-    if (!password.trim()) {
-      Alert.alert("Missing", "Please enter your password");
+    if (!acceptedTnc) {
+      setTncError("Please accept Terms & Conditions");
       return;
     }
 
+    setTncError("");
+    const passwordError = validatePassword();
+    if (passwordError) {
+      setErrors({ password: passwordError });
+      return;
+    }
+
+    setErrors({});
     setLoading(true);
+
     try {
-      // const response = await fetch(`${apiUrl}/api/check-user/login`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ phone, password }),
-      // });
       const fcmToken = await getPushToken();
-      const response = await axiosInstance.post(`/check-user/login`, { phone, password, fcmToken })
+      const deviceId = Device.osBuildId ||
+        Device.modelId ||
+        Device.deviceName ||
+        "Unknown"
+      const ipAddress = await getIpAddress();
+      const response = await axiosInstance.post(`/check-user/login`, {
+        phone,
+        password,
+        fcmToken,
+        device_id: deviceId,
+        ip_address: ipAddress,
+      });
 
       const result = response.data;
       setLoading(false);
 
       if (result.status && result.data?.userId) {
         ChartPrefetchService.prefetchWatchlist();
-        const { userId, name, email, phone, userimage } = result.data;
+        const { userId, name, email, phone, userimage, token } = result.data;
 
-        await setAuthData({ userId: String(result.data.userId), userData: { name, email, phone, userimage }, fcmToken, token: result.data.token });
-        await fetchAndStorePermissions();
-        navigation.navigate("Demat");
+        await setAuthData({
+          userId: String(userId),
+          userData: { name, email, phone, userimage },
+          token,
+          fcmToken,
+        });
+
+        const res = await axiosInstance.get(`/me/permissions`);
+        await setAuthData({ permissions: JSON.stringify(res.data) });
+
+        navigation.navigate("App", { screen: "Equity" });
       } else {
-        Alert.alert("Login Failed", result.message || "Invalid credentials");
+        setErrors({ password: result.message || "Invalid password" });
       }
-    } catch (err) {
+    } catch (e) {
       setLoading(false);
-      console.error("Login error:", err);
-      Alert.alert("Error", "Unable to connect to server.");
-    }
-  };
-
-  const fetchAndStorePermissions = async () => {
-    console.log("inside fetch")
-    try {
-      const res = await axiosInstance.get(`/me/permissions`);
-
-      // Save permissions in AuthContext
-      await setAuthData({
-        permissions: JSON.stringify(res.data),
-      });
-    } catch (err) {
-      console.error("Permission fetch failed", err);
+      setErrors({ password: "Incorrect password" });
     }
   };
 
   const isInitial = screenState === "phone";
+  const handleSubmit = () => {
+    isInitial ? handleCheckUser() : handleFinalLogin();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -160,7 +171,6 @@ export default function LoginScreen({ navigation }) {
 
           <Text style={styles.title}>Login</Text>
 
-          {/* 📱 Phone */}
           <View style={styles.inputContainer}>
             <Text style={styles.prefix}>+91</Text>
             <TextInput
@@ -169,52 +179,67 @@ export default function LoginScreen({ navigation }) {
               keyboardType="phone-pad"
               maxLength={10}
               value={phone}
-              onChangeText={setPhone}
+              editable={screenState !== "password"}
+              onChangeText={(t) => {
+                setPhone(t);
+                setErrors({ ...errors, phone: "" });
+              }}
             />
           </View>
+          {!!errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
-          {/* 🔐 Password */}
           {screenState === "password" && (
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter Password"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-            </View>
+            <>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Enter Password"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    setErrors({ ...errors, password: "" });
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeBtn}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={22}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
+              {!!errors.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              )}
+            </>
           )}
 
-          {/* 🔢 OTP UI (future use) */}
-          {/*<View style={styles.otpContainer}>
-            {otp.map((digit, index) => (
-              <TextInput
-                key={index}
-                ref={(el) => (inputRefs.current[index] = el)}
-                style={styles.otpBox}
-                value={digit ? "*" : ""}
-                onChangeText={(text) =>
-                  handleOtpChange(text.slice(-1), index)
-                }
-                keyboardType="number-pad"
-                maxLength={1}
-                textAlign="center"
-              />
-            ))}
-          </View>*/}
+          {!!errors.general && (
+            <Text style={styles.errorText}>{errors.general}</Text>
+          )}
 
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
 
-          {/* ▶️ BUTTON */}
-          <TouchableOpacity
-            style={[styles.nextBtn, loading && { opacity: 0.5 }]}
-            onPress={isInitial ? handleCheckUser : handleFinalLogin}
-            disabled={loading}
-          >
-            <Text style={styles.nextText}>
-              {loading ? "Processing..." : isInitial ? "Next" : "Login"}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.nextBtn, loading && { opacity: 0.5 }]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              <Text style={styles.nextText}>
+                {isInitial ? "Next" : "Login"}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.signupRow}>
             <Text>No Account?</Text>
@@ -227,14 +252,41 @@ export default function LoginScreen({ navigation }) {
             Disclaimer: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
           </Text>
 
-          <Text style={styles.tnc}>Accept T&Cs</Text>
+          <View style={styles.tncRow}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPressIn={(e) => e.stopPropagation()}
+              onPress={() => {
+                setAcceptedTnc((prev) => !prev);
+                setTncError("");
+              }}
+              style={[
+                styles.checkbox,
+                acceptedTnc && styles.checkboxChecked,
+                tncError && styles.checkboxError,
+              ]}
+            >
+              {acceptedTnc && (
+                <Ionicons name="checkmark" size={14} color="#fff" />
+              )}
+            </TouchableOpacity>
+
+
+            <Text style={styles.tncText}>
+              I accept the <Text style={styles.tncLink}>T&Cs</Text>
+            </Text>
+          </View>
+
+          {!!tncError && (
+            <Text style={styles.errorText1}>{tncError}</Text>
+          )}
+
         </ScrollView>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
 
-/* 🎨 STYLES */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   scroll: { padding: 12, alignItems: "center" },
@@ -256,32 +308,49 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 45,
   },
-  otpContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 12,
-  },
   prefix: { fontSize: 16, marginRight: 6, color: "#000" },
   input: { flex: 1, fontSize: 16 },
-  otpBox: {
-    width: 45,
-    height: 45,
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderColor: "#ccc",
+    borderWidth: 1,
     borderRadius: 8,
-    backgroundColor: "#EAEAEA",
-    marginHorizontal: 5,
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-    marginTop: 10,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    width: "100%",
+    height: 45,
   },
+  passwordInput: { flex: 1, fontSize: 16 },
+  eyeBtn: { paddingLeft: 8 },
+  errorText: {
+    width: "100%",
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  errorText1: {
+    width: "100%",
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  backBtn: {
+    backgroundColor: "#EAEAEA",
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 25,
+  },
+  backText: { fontSize: 16, fontWeight: "600", color: "#210F47" },
   nextBtn: {
     backgroundColor: "#210F47",
     borderRadius: 25,
     paddingVertical: 10,
-    paddingHorizontal: 30,
-    marginTop: 25,
+    paddingHorizontal: 25,
   },
-  nextText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  nextText: { color: "#fff", fontWeight: "600" },
   signupRow: {
     flexDirection: "row",
     marginTop: 15,
@@ -295,4 +364,50 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   tnc: { fontSize: 13, marginTop: 8, color: "#000", fontWeight: "600" },
+  topBar: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  tncRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    width: "100%",
+  },
+
+  checkbox: {
+    width: 17,
+    height: 17,
+    borderWidth: 1.5,
+    borderColor: "#666",
+    borderRadius: 4,
+    marginRight: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  checkboxChecked: {
+    backgroundColor: "#210F47",
+    borderColor: "#210F47",
+  },
+
+  checkboxError: {
+    borderColor: "red",
+  },
+
+  tncText: {
+    fontSize: 13,
+    color: "#000",
+  },
+
+  tncLink: {
+    fontWeight: "700",
+    color: "#210F47",
+  },
+
 });

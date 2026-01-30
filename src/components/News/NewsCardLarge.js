@@ -7,9 +7,10 @@ import {
     TouchableOpacity,
     Pressable,
     Modal,
-    TextInput,
     Alert, // Added import
 } from "react-native";
+import { useAlert } from "../../context/AlertContext";
+import TextInput from "../../components/TextInput";
 import {
     AlertCircle
 } from 'lucide-react-native';
@@ -21,7 +22,7 @@ import { formatPublishedTime } from "../../utils/dateFormat"
 import { useAuth } from "../../context/AuthContext"; // Added import
 
 const NewsCardLarge = ({ item, onPress }) => {
-
+    const { showSuccess, showError } = useAlert();
     const { userId } = useAuth(); // Get userId
 
     // console.log('item', item.news_content)
@@ -49,7 +50,10 @@ const NewsCardLarge = ({ item, onPress }) => {
 
     const handleReport = () => {
         if (!userId) {
-            alert('Please login to report content!');
+            showError(
+                "Alert",
+                "Please login to report content."
+            );
             return;
         }
 
@@ -60,7 +64,10 @@ const NewsCardLarge = ({ item, onPress }) => {
     const submitReportIssue = async () => {
         try {
             if (!issueCategory || !issueDescription) {
-                alert("Please select category and description");
+                showError(
+                    "Alert",
+                    "Please select category and description."
+                );
                 return;
             }
 
@@ -105,7 +112,10 @@ const NewsCardLarge = ({ item, onPress }) => {
 
         } catch (err) {
             console.log("❌ REPORT ERROR:", err?.response?.data || err.message);
-            alert("Failed to submit issue: " + (err.response?.data?.message || err.message));
+            showError(
+                "Alert",
+                "Failed to submit issue: " + (err.response?.data?.message || err.message)
+            );
         }
     };
     // --- REPORTING LOGIC END ---

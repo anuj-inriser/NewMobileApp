@@ -7,9 +7,9 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from "react-native";
 import TextInput from "../components/TextInput";
-import axiosInstance from "../api/axios";
 import * as Device from "expo-device";
 import { Ionicons } from "@expo/vector-icons";
 import { apiUrl } from "../utils/apiUrl";
@@ -26,17 +26,17 @@ export default function PasswordScreen({ navigation, route }) {
   const [ip, setIp] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     async function init() {
       try {
         setDeviceId(
           Device.osBuildId ||
-          Device.modelId ||
-          Device.deviceName ||
-          "Unknown"
+            Device.modelId ||
+            Device.deviceName ||
+            "Unknown"
         );
+
         const res = await fetch("https://api.ipify.org?format=json");
         const data = await res.json();
         setIp(data.ip || "Unknown");
@@ -48,48 +48,32 @@ export default function PasswordScreen({ navigation, route }) {
     init();
   }, []);
 
-  const validate = () => {
-    const e = {};
-
-    if (!password)
-      e.password = "Password required";
-    else if (password.length < 6)
-      e.password = "Password must be at least 6 characters";
-    else if (!/[!@#$%^&*(),.?":{}|<>]/.test(password))
-      e.password = "Password must contain 1 special character";
-
-    if (!confirmPassword)
-      e.confirmPassword = "Confirm password required";
-    else if (password !== confirmPassword)
-      e.confirmPassword = "Passwords do not match";
-
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
   const handleSubmit = async () => {
-    if (!validate()) return;
+    if (!password || !confirmPassword) {
+      Alert.alert("Missing", "Enter password");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert("Mismatch", "Passwords do not match");
+      return;
+    }
 
     setLoading(true);
 
     try {
-      const payload = {
-        name,
-        phone,
-        password,
-        signupip: ip,
-        signupdeviceid: deviceId,
-        fcmToken,
-      };
-
-      if (email && email.trim()) {
-        payload.email = email.trim();
-      }
-
       const res = await fetch(`${apiUrl}/api/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          password,
+          signupip: ip,
+          signupdeviceid: deviceId,
+          fcmToken,
+        }),
       });
 
       const result = await res.json();
@@ -103,20 +87,13 @@ export default function PasswordScreen({ navigation, route }) {
           userData: { name, email, phone, userimage },
         });
 
-        const res = await axiosInstance.get(`/me/permissions`);
-        await setAuthData({ permissions: JSON.stringify(res.data) });
-
-        navigation.navigate("App", { screen: "Equity" });
+        navigation.navigate('App', { screen: 'Equity' })
       } else {
-        setErrors({
-          general: result.message || "Signup failed",
-        });
+        Alert.alert("Error", result.message || "Signup failed");
       }
-    } catch {
+    } catch (err) {
       setLoading(false);
-      setErrors({
-        general: "Server not reachable",
-      });
+      Alert.alert("Error", "Server not reachable");
     }
   };
 
@@ -131,16 +108,14 @@ export default function PasswordScreen({ navigation, route }) {
 
         <Text style={styles.title}>Set Password</Text>
 
+        {/* Password */}
         <View style={styles.passwordContainer}>
           <TextInput
             style={styles.passwordInput}
             placeholder="Password"
             secureTextEntry={!showPassword}
             value={password}
-            onChangeText={(t) => {
-              setPassword(t);
-              setErrors({ ...errors, password: "" });
-            }}
+            onChangeText={setPassword}
           />
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
@@ -153,20 +128,15 @@ export default function PasswordScreen({ navigation, route }) {
             />
           </TouchableOpacity>
         </View>
-        {!!errors.password && (
-          <Text style={styles.errorText}>{errors.password}</Text>
-        )}
 
+        {/* Confirm Password */}
         <View style={styles.passwordContainer}>
           <TextInput
             style={styles.passwordInput}
             placeholder="Confirm Password"
             secureTextEntry={!showConfirmPassword}
             value={confirmPassword}
-            onChangeText={(t) => {
-              setConfirmPassword(t);
-              setErrors({ ...errors, confirmPassword: "" });
-            }}
+            onChangeText={setConfirmPassword}
           />
           <TouchableOpacity
             onPress={() =>
@@ -185,16 +155,8 @@ export default function PasswordScreen({ navigation, route }) {
             />
           </TouchableOpacity>
         </View>
-        {!!errors.confirmPassword && (
-          <Text style={styles.errorText}>
-            {errors.confirmPassword}
-          </Text>
-        )}
 
-        {!!errors.general && (
-          <Text style={styles.errorText}>{errors.general}</Text>
-        )}
-
+        {/* Buttons */}
         <View style={styles.btnRow}>
           <TouchableOpacity
             style={styles.backBtn}
@@ -219,15 +181,21 @@ export default function PasswordScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  scroll: { padding: 24 },
-  image: { width: "100%", height: 220, marginTop: 90 },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  scroll: {
+    padding: 24,
+  },
+   image: { width: "100%", height: 220, marginTop: 90 },
   title: {
     fontSize: 22,
     fontWeight: "700",
     color: "#210F47",
     marginVertical: 10,
   },
+
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -240,14 +208,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
     backgroundColor: "#fff",
   },
-  passwordInput: { flex: 1, fontSize: 16 },
-  eyeBtn: { paddingLeft: 8 },
-  errorText: {
-    width: "100%",
-    color: "red",
-    fontSize: 12,
-    marginTop: 4,
+  passwordInput: {
+    flex: 1,
+    fontSize: 16,
   },
+  eyeBtn: {
+    paddingLeft: 8,
+  },
+
   btnRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -259,12 +227,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 25,
   },
-  backText: { fontWeight: "600", color: "#000" },
+  backText: {
+    fontWeight: "600",
+    color: "#000",
+  },
   nextBtn: {
     backgroundColor: "#210F47",
     borderRadius: 25,
     paddingVertical: 10,
     paddingHorizontal: 25,
   },
-  nextText: { color: "#fff", fontWeight: "600" },
+  nextText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
 });

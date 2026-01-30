@@ -25,13 +25,13 @@ import {
   TouchableOpacity,
   View,
   Modal,
-  TextInput,
   Image,
   ScrollView,
   Alert,
   Share,
   useWindowDimensions,
 } from 'react-native';
+import TextInput from "../components/TextInput";
 import { LineChart } from 'react-native-gifted-charts';
 import * as ImagePicker from 'expo-image-picker';
 import { useIntervalData } from '../hooks/useIntervalData';
@@ -42,12 +42,13 @@ import CommentOverlay from './CommentOverlay';
 import SequencePost from './SequencePost';
 const { width } = Dimensions.get('window');
 import { useNavigation, useNavigationState } from "@react-navigation/native";
-
+import { useAlert } from "../context/AlertContext";
 import { Asset } from 'expo-asset';
 
 // Added postNumber prop with default "1/1"
 const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber, fullScreen }) => {
   const { userId } = useAuth();
+  const { showSuccess, showError } = useAlert();
   const [likeCount, setLikeCount] = useState(0);
   const [dislikeCount, setDislikeCount] = useState(0);
   const [reaction, setReaction] = useState(null); // 'like', 'dislike', null
@@ -125,7 +126,10 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
 
   const handleReaction = async (type) => {
     if (!userId) {
-      alert('Please login to react!');
+      showError(
+        "Alert",
+        "Please login to react."
+      );
       return;
     }
     const isLike = type === 'like';
@@ -166,9 +170,15 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
       console.error('Reaction failed error:', err);
       if (err.response) {
         console.error('Response data:', err.response.data);
-        alert('Reaction failed: ' + JSON.stringify(err.response.data));
+        showError(
+          "Error",
+          JSON.stringify(err.response.data)
+        );
       } else {
-        alert('Reaction failed: ' + err.message);
+        showError(
+          "Error",
+          err.message
+        );
       }
       // Revert optimistic update
       setReaction(current);
@@ -189,7 +199,10 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
 
   const handleReport = () => {
     if (!userId) {
-      alert('Please login to report content!');
+      showError(
+        "Alert",
+        "Please login to report content."
+      );
       return;
     }
 
@@ -200,7 +213,10 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   const submitReportIssue = async () => {
     try {
       if (!issueCategory || !issueDescription) {
-        alert("Please select category and description");
+        showError(
+          "Alert",
+          "Please select category and description."
+        );
         return;
       }
 
@@ -245,7 +261,10 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
 
     } catch (err) {
       console.log("❌ REPORT ERROR:", err?.response?.data || err.message);
-      alert("Failed to submit issue: " + (err.response?.data?.message || err.message));
+      showError(
+        "Alert",
+        "Failed to submit issue: " + (err.response?.data?.message || err.message)
+      );
     }
   };
 
@@ -399,7 +418,10 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
       }
     } catch (error) {
       console.error('Share error:', error.message);
-      Alert.alert('Unable to share', error.message);
+      showError(
+        "Alert",
+        'Unable to share', error.message
+      );
     }
   };
 

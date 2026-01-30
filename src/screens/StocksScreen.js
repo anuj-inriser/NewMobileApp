@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
   filterDropdown: {
     backgroundColor: "#fff",
     borderRadius: 10,
-    marginTop: 140,
+    marginTop: 230,
     marginRight: 20,
     width: 120,
     paddingVertical: 6,

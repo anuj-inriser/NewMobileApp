@@ -6,11 +6,12 @@ import {
   StyleSheet,
   Modal,
   Pressable,
-  TextInput,
   Animated,
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import { useAlert } from "../context/AlertContext";
+import TextInput from "../components/TextInput";
 import { Entypo, Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -20,6 +21,7 @@ import { apiUrl } from "../utils/apiUrl";
 const API = `${apiUrl}/api/wishlistcontrol`;
 
 const TopWatchlistMenu = ({ onWatchlistChange }) => {
+  const { showSuccess, showError } = useAlert();
   const SHOW_KEY = "watchlist_show_names";
   const [active, setActive] = useState(1);
   const [showPopup, setShowPopup] = useState(false);
@@ -119,7 +121,10 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
       const userId = await AsyncStorage.getItem("userId"); // ✅ Get userId
 
       if (!userId) {
-        alert("User not logged in");
+        showError(
+          "Error",
+          "User not logged In."
+        );
         return;
       }
 
@@ -136,7 +141,10 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
       }
     } catch (err) {
       console.error("Delete error:", err.response?.data || err.message);
-      alert("Failed to delete watchlist. It may not belong to you or no longer exist.");
+      showError(
+          "Error",
+         "Failed to delete watchlist. It may not belong to you or no longer exist."
+        );
     } finally {
       setDeleteIndex(null);
     }

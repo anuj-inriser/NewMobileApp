@@ -7,7 +7,9 @@ import {
   Text,
   TouchableOpacity,
   Modal,
+  BackHandler, Platform
 } from "react-native";
+import { useAlert } from "../context/AlertContext";
 import { WebView } from "react-native-webview";
 import { useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,6 +26,7 @@ import { useAuth } from "../context/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 export default function TradeOrderScreen({ navigation }) {
+  const { showSuccess, showError } = useAlert();
   const { authToken } = useAuth();
   const { setAuthData } = useAuth();
   const [validationErrors, setValidationErrors] = useState([]);
@@ -109,8 +112,10 @@ export default function TradeOrderScreen({ navigation }) {
 
         // Force refresh of page → triggers new token usage
         setSwipeKey(Date.now());
-
-        alert("✔ Angel One login successful");
+        showSuccess(
+          "Success",
+          "Angel One login successfully."
+        );
       } catch (e) {
         console.log("Token parse error:", e);
       }
@@ -119,8 +124,7 @@ export default function TradeOrderScreen({ navigation }) {
 
   const [showAngelOneModal, setShowAngelOneModal] = useState(false);
 
-  const angelOneUrl =
-    "https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=tradepage";
+  const angelOneUrl = "https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=tradepage";
 
   const handleUserPriceInput = (val) => {
     setIsUserTypedPrice(true);
@@ -228,7 +232,21 @@ export default function TradeOrderScreen({ navigation }) {
       console.log("Brokerage Error:", err.message);
     }
   };
+  // ADD THIS useEffect AFTER your existing useEffects
+  useEffect(() => {
+    let backHandler;
 
+    if (showAngelOneModal && Platform.OS === 'android') {
+      backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+        setShowAngelOneModal(false);
+        return true; // Prevent default back behavior
+      });
+    }
+
+    return () => {
+      if (backHandler) backHandler.remove();
+    };
+  }, [showAngelOneModal]);
   useEffect(() => {
     const p = parseFloat(price || 0);
     const q = parseInt(qty || 0);
@@ -329,13 +347,22 @@ export default function TradeOrderScreen({ navigation }) {
       const data = await res.json();
 
       if (data.success) {
-        alert("Order Modified Successfully");
+        showSuccess(
+          "Success",
+          "Order Modified Successfully."
+        );
         navigation.navigate("OrdersScreen", { defaultTab: 2 });
       } else {
-        alert(data.message || "Failed to modify order");
+        showError(
+          "Error",
+          data.message || "Failed to modify order"
+        );
       }
     } catch (err) {
-      alert("ERROR: " + err.message);
+      showError(
+        "Error",
+        err.message
+      );
     }
   };
 
@@ -384,13 +411,22 @@ export default function TradeOrderScreen({ navigation }) {
       const data = await res.json();
 
       if (data.angelResponse?.message === "SUCCESS") {
-        alert("Order Placed Successfully.");
+        showSuccess(
+          "Success",
+          "Order Placed Successfully."
+        );
         navigation.navigate("OrdersScreen", { defaultTab: 2 });
       } else {
-        alert(JSON.stringify(data));
+        showError(
+          "Error",
+          JSON.stringify(data)
+        );
       }
     } catch (err) {
-      alert("ERROR: " + err.message);
+      showError(
+        "Error",
+        err.message
+      );
     }
   };
 
@@ -525,9 +561,7 @@ export default function TradeOrderScreen({ navigation }) {
   useEffect(() => {
     fetchFunds(segment);
   }, [segment]);
-  // const handleSwipe = () => {
-  //   alert("✔ Order Placed!");
-  // };
+
   const menuItems = [
     { id: 1, name: "Intraday" },
     { id: 2, name: "Margin" },
@@ -721,12 +755,7 @@ export default function TradeOrderScreen({ navigation }) {
                 return;
               }
 
-              // if (!isOrderValid) {
-              //   alert("⚠ Fix order conditions");
-              //   setSwipeKey(Date.now());
-              //   return;
-              // }
-              // placeOrder();
+
               if (internaltype?.toLowerCase() === "modify") {
                 modifyOrder();
               } else {
@@ -810,8 +839,37 @@ export default function TradeOrderScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+      {/* ANGEL ONE OVERLAY - REPLACES MODAL */}
+      {showAngelOneModal && (
+        <View style={styles.angelOneOverlay}>
+          <TouchableOpacity
+            style={styles.angelOneCloseButton}
+            onPress={() => setShowAngelOneModal(false)}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          >
+            <Text style={styles.angelOneCloseText}>✕</Text>
+          </TouchableOpacity>
 
-      <Modal
+          <WebView
+            source={{ uri: angelOneUrl }}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            useWebKit={true}
+            onNavigationStateChange={handleAngelOneNavigation}
+
+            // 🔑 CRITICAL ANDROID FIXES:
+            androidLayerType="hardware"        // Prevents WebView disappearing on keyboard open
+            nestedScrollEnabled={true}         // Allows proper scrolling with keyboard
+            thirdPartyCookiesEnabled={true}    // Required for Angel One auth
+            originWhitelist={['*']}            // Allows OAuth redirects
+
+            style={styles.webView}
+            // Prevent keyboard from shrinking WebView
+            contentInsetAdjustmentBehavior="automatic"
+          />
+        </View>
+      )}
+      {/* <Modal
         visible={showAngelOneModal}
         animationType="slide"
         transparent={false}
@@ -846,7 +904,7 @@ export default function TradeOrderScreen({ navigation }) {
             onNavigationStateChange={handleAngelOneNavigation}
           />
         </View>
-      </Modal>
+      </Modal> */}
     </SafeAreaView>
   );
 }
@@ -878,4 +936,36 @@ const styles = StyleSheet.create({
   row: { width: "30%", marginBottom: 4 },
   label: { fontSize: 12, color: "#555" },
   value: { fontSize: 13, fontWeight: "600", color: "#000" },
+  // ADD THESE TO YOUR styles OBJECT
+  angelOneOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#fff',
+    zIndex: 9999, // Must be highest to cover all UI
+  },
+  angelOneCloseButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40, // Adjust for iOS status bar
+    right: 20,
+    zIndex: 10000,
+    backgroundColor: '#eee',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+  },
+  angelOneCloseText: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: '#333',
+  },
+  webView: {
+    flex: 1,
+    marginTop: Platform.OS === 'ios' ? 80 : 60, // Space for close button + status bar
+  },
 });

@@ -3,11 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
+import TextInput from "../components/TextInput";
 const OrderInputBox = ({
   label = "Price",
   value,

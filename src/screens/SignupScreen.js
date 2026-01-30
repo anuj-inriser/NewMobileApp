@@ -1,29 +1,29 @@
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import React, { useRef, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   Image,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  Alert,
 } from "react-native";
-
+import TextInput from "../components/TextInput";
 import { getPushToken } from "../utils/pushToken";
-
+import { Ionicons } from "@expo/vector-icons";
 export default function SignupScreen({ navigation, route }) {
   const initialPhone = route?.params?.phone || "";
-
+  const [acceptedTnc, setAcceptedTnc] = useState(false);
+  const [tncError, setTncError] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState(initialPhone);
   const [otp, setOtp] = useState(["", "", "", ""]);
+  const [errors, setErrors] = useState({});
 
   const inputRefs = useRef([]);
 
-  /* 🔢 OTP HANDLER */
   const handleOtpChange = (text, index) => {
     if (!/^[0-9]?$/.test(text)) return;
 
@@ -35,38 +35,40 @@ export default function SignupScreen({ navigation, route }) {
     if (!text && index > 0) inputRefs.current[index - 1]?.focus();
   };
 
-  /* ▶️ NEXT */
+  const validate = () => {
+    const e = {};
+    if (!name.trim()) e.name = "Name required";
+
+    if (email.trim() && !/^\S+@\S+\.\S+$/.test(email))
+      e.email = "Invalid email address";
+
+    if (!phone.trim()) e.phone = "Phone number required";
+    else if (!/^\d{10}$/.test(phone))
+      e.phone = "Enter valid 10 digit number";
+
+
+
+    if (otp.join("") !== "1111") e.otp = "Invalid OTP";
+    if (otp.join("") === "") e.otp = "Please Enter OTP";
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
   const handleNext = async () => {
-    const enteredOtp = otp.join("");
 
-    if (!name || !email || !phone) {
-      Alert.alert("Missing Fields", "Please fill all fields");
+    if (!validate()) return;
+    if (!acceptedTnc) {
+      setTncError("Please accept Terms & Conditions");
       return;
     }
 
-    if (!/^\d{10}$/.test(phone)) {
-      Alert.alert("Invalid Phone", "Enter valid 10-digit number");
-      return;
-    }
-
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      Alert.alert("Invalid Email", "Enter valid email");
-      return;
-    }
-
-    if (enteredOtp !== "1111") {
-      Alert.alert("Invalid OTP", "Correct OTP is 1111");
-      return;
-    }
-
-    /* 🔥 GET PUSH TOKEN */
+    setTncError("");
     const fcmToken = await getPushToken();
-
-    console.log("🔥 Signup Push Token:", fcmToken);
 
     navigation.navigate("Password", {
       name,
-      email,
+      email: email.trim() || null,
       phone,
       fcmToken,
     });
@@ -74,79 +76,128 @@ export default function SignupScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Image
-          source={require("../../assets/signup.png")}
-          style={styles.image}
-          resizeMode="contain"
-        />
-
-        <Text style={styles.title}>Sign up</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Name"
-          value={name}
-          onChangeText={setName}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-
-        <View style={styles.phoneRow}>
-          <Text style={styles.prefix}>+91</Text>
-          <TextInput
-            style={styles.phoneInput}
-            keyboardType="phone-pad"
-            maxLength={10}
-            value={phone}
-            onChangeText={setPhone}
+      <KeyboardAwareScrollView
+        extraHeight={300}
+        enableOnAndroid
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.scroll}
+      >
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Image
+            source={require("../../assets/signup.png")}
+            style={styles.image}
+            resizeMode="contain"
           />
-        </View>
 
-        {/* 🔢 OTP BOXES */}
-        <View style={styles.otpRow}>
-          {otp.map((d, i) => (
+          <Text style={styles.title}>Sign up</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Name"
+            value={name}
+            onChangeText={(t) => {
+              setName(t);
+              setErrors({ ...errors, name: "" });
+            }}
+          />
+          {!!errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+
+          <TextInput
+            style={styles.input}
+            placeholder="Email (optional)"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={(t) => {
+              setEmail(t);
+              setErrors({ ...errors, email: "" });
+            }}
+          />
+          {!!errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+
+          <View style={styles.phoneRow}>
+            <Text style={styles.prefix}>+91</Text>
             <TextInput
-              key={i}
-              ref={(el) => (inputRefs.current[i] = el)}
-              style={styles.otpBox}
-              keyboardType="number-pad"
-              maxLength={1}
-              value={d ? "*" : ""}
-              onChangeText={(t) => handleOtpChange(t.slice(-1), i)}
-              textAlign="center"
+              style={styles.phoneInput}
+              keyboardType="phone-pad"
+              maxLength={10}
+              value={phone}
+              onChangeText={(t) => {
+                setPhone(t);
+                setErrors({ ...errors, phone: "" });
+              }}
             />
-          ))}
-        </View>
+          </View>
+          {!!errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
-        <View style={styles.btnRow}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
+          <View style={styles.otpRow}>
+            {otp.map((d, i) => (
+              <TextInput
+                key={i}
+                ref={(el) => (inputRefs.current[i] = el)}
+                style={styles.otpBox}
+                keyboardType="number-pad"
+                maxLength={1}
+                value={d ? "*" : ""}
+                onChangeText={(t) => {
+                  handleOtpChange(t.slice(-1), i);
+                  setErrors({ ...errors, otp: "" });
+                }}
+                textAlign="center"
+              />
+            ))}
+          </View>
+          {!!errors.otp && <Text style={styles.errorText}>{errors.otp}</Text>}
 
-          <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
-            <Text style={styles.nextText}>Next</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+          <View style={styles.tncRow}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPressIn={(e) => e.stopPropagation()}
+              onPress={() => {
+                setAcceptedTnc((prev) => !prev);
+                setTncError("");
+              }}
+              style={[
+                styles.checkbox,
+                acceptedTnc && styles.checkboxChecked,
+                tncError && styles.checkboxError,
+              ]}
+            >
+              {acceptedTnc && (
+                <Ionicons name="checkmark" size={14} color="#fff" />
+              )}
+            </TouchableOpacity>
+
+
+            <Text style={styles.tncText}>
+              I accept the <Text style={styles.tncLink}>T&Cs</Text>
+            </Text>
+          </View>
+          {!!tncError && (
+            <Text style={styles.errorText1}>{tncError}</Text>
+          )}
+          <View style={styles.btnRow}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
+              <Text style={styles.nextText}>Next</Text>
+            </TouchableOpacity>
+          </View>
+
+        </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
 
-/* 🎨 STYLES */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  scroll: { padding: 24, alignItems: "center" },
-  image: { width: "100%", height: 240 },
+container: { flex: 1, backgroundColor: "#fff" },
+  scroll: { padding: 12, alignItems: "center" },
+  image: { width: "100%", height: 220, marginTop: 90 },
   title: {
     fontSize: 22,
     fontWeight: "700",
@@ -176,7 +227,6 @@ const styles = StyleSheet.create({
   },
   prefix: { fontSize: 16, marginRight: 6 },
   phoneInput: { flex: 1, fontSize: 16 },
-
   otpRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -191,7 +241,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-
+  errorText: {
+    width: "100%",
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
+  },
   btnRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -212,4 +267,49 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
   },
   nextText: { color: "#fff", fontWeight: "600" },
+  tnc: { fontSize: 13, marginTop: 8, color: "#000", fontWeight: "600" },
+  tncRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    width: "100%",
+  },
+
+  checkbox: {
+    width: 17,
+    height: 17,
+    borderWidth: 1.5,
+    borderColor: "#666",
+    borderRadius: 4,
+    marginRight: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  checkboxChecked: {
+    backgroundColor: "#210F47",
+    borderColor: "#210F47",
+  },
+
+  checkboxError: {
+    borderColor: "red",
+  },
+
+  tncText: {
+    fontSize: 13,
+    color: "#000",
+  },
+
+  tncLink: {
+    fontWeight: "700",
+    color: "#210F47",
+  },
+  errorText1: {
+    width: "100%",
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: "center",
+  },
 });

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   View,
-  TextInput,
   StyleSheet,
   Image,
   TouchableOpacity,
@@ -13,6 +12,8 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import { useAlert } from "../context/AlertContext";
+import TextInput from "../components/TextInput";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -26,6 +27,7 @@ import Profile from "../../assets/Profile.png";
 
 const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
+  const { showSuccess, showError } = useAlert();
   const insets = useSafeAreaInsets();
   const { authToken, clientId, clearAuth } = useAuth();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -235,18 +237,26 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
         const msg = response.data.message || "Added to watchlist";
         if (msg === "Added to watchlist") {
           onWatchlistAdded?.(parseInt(wishlist.id, 10));
-          alert(`✅ ${msg}`);
         }
         else {
-          alert(`❌ ${msg}`);
+          showError(
+            "Alert",
+            msg
+          );
         }
         closeWatchlistModal();
       } else {
-        alert("❌ " + (response.data.message || "Failed"));
+        showError(
+            "Alert",
+            (response.data.message || "Failed")
+          );
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Failed to add";
-      alert("❌ " + msg);
+      showError(
+            "Alert",
+            msg
+          );
     } finally {
       setAddingToWishlist(prev => ({ ...prev, [wishlist.id]: false }));
     }

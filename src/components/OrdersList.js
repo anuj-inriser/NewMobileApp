@@ -10,6 +10,7 @@ import {
   Alert,
   AppState,
 } from "react-native";
+import { useAlert } from "../context/AlertContext";
 import { Ionicons } from "@expo/vector-icons";
 import OrderItemCard from "./OrderItemCard";
 import { apiUrl } from "../utils/apiUrl";
@@ -22,6 +23,7 @@ const filterOptions = ["All", "Executed", "Cancelled", "Rejected", "Pending"];
 const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
 
 const OrdersList = () => {
+  const { showSuccess, showError } = useAlert();
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState([]);
@@ -282,14 +284,14 @@ const OrdersList = () => {
                       onPress: async () => {
                         const res = await cancelOrderApi(item);
                         if (res.success) {
-                          Alert.alert(
+                          showSuccess(
                             "Success",
-                            "Order cancelled successfully.",
+                            "Order cancelled successfully."
                           );
                         } else {
-                          Alert.alert(
+                          showError(
                             "Error",
-                            res?.message || "Failed to cancel order.",
+                            res?.message || "Failed to cancel order."
                           );
                         }
                       },

@@ -16,7 +16,7 @@ import Swipeable from "react-native-gesture-handler/Swipeable";
 // ✅ Vertical Card with Swipe Gesture
 const IndexVerticalCard = ({ index, onPress, onSwipeRight }) => {
   const isPositive = index.change >= 0;
-  const color = isPositive ? "#22c55e" : "#ef4444";
+  const color = isPositive ? "#2E7D32" : "#C62828";
 
   const displayChange =
     typeof index.change === "number"
@@ -47,14 +47,14 @@ const IndexVerticalCard = ({ index, onPress, onSwipeRight }) => {
         onPress={() => onPress && onPress(index)}
       >
         <View style={styles.verticalCardLeft}>
-          <Text style={styles.verticalSymbol}>{index.name}</Text>
+          <Text style={styles.companyName}>{index.name}</Text>
           <Text
-            style={[styles.verticalSymbol, { color: "#888", fontSize: 12 }]}
+            style={[styles.verticalSymbol, { color: "#666", fontSize: 11 }]}
           >{`${index.symbol}`}</Text>
         </View>
 
         <View style={styles.verticalCardRight}>
-          <Text style={styles.verticalPrice}>
+          <Text style={[styles.verticalPrice, { color }]}>
             ₹
             {index.value.toLocaleString("en-IN", {
               minimumFractionDigits: 2,
@@ -230,8 +230,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     marginBottom: 10,
     borderWidth: 1,
@@ -246,30 +246,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   verticalCardRight: {
-    flex: 1.2,
     alignItems: "flex-end",
   },
+  companyName: { fontSize: 14, fontWeight: "600" },
   verticalSymbol: {
+    fontSize: 14,
+    // fontWeight: "600",
+    color: "#333",
+  },
+   verticalPrice: {
     fontSize: 14,
     fontWeight: "600",
     color: "#333",
   },
-  verticalPrice: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
-  },
   verticalChange: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
-    marginTop: 4,
+    marginTop: 2,
   },
-  
+
   // Swipe Actions
   rightAction: {
     backgroundColor: "#210F47",
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "flex-end",
     paddingHorizontal: 24,
     borderTopRightRadius: 20,
     borderBottomRightRadius: 20,
@@ -330,6 +330,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#888",
   },
+  actionWrapper: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    marginVertical: 6,
+    borderRadius: 14,
+    backgroundColor: "#ECECEC",
+  }
+
 });
 
 export default Indices;

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   View,
-  TextInput,
   StyleSheet,
   Image,
   TouchableOpacity,
@@ -13,6 +12,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import TextInput from "../components/TextInput";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -24,9 +24,10 @@ import { useWatchlistRefresh } from "../context/WatchlistContext";
 import rupeeIcon from "../../assets/dropdownrupees.png";
 // import watchlistIcon from "../../assets/dropdownwatchlist.png";
 import Profile from "../../assets/Profile.png";
-
+import { useAlert } from "../context/AlertContext";
 const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
+  const { showSuccess, showError } = useAlert();
   const insets = useSafeAreaInsets();
   const { authToken, clientId, clearAuth } = useAuth();
   const { triggerRefresh } = useWatchlistRefresh();
@@ -242,17 +243,26 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
           // ✅ Trigger context refresh for real-time update
           triggerRefresh(parseInt(wishlist.id, 10));
           onWatchlistAdded?.(parseInt(wishlist.id, 10));
-          alert(`✅ ${msg}`);
+          // alert(`✅ ${msg}`);
         } else {
-          alert(`❌ ${msg}`);
+          showError(
+            "Error",
+            msg
+          );
         }
         closeWatchlistModal();
       } else {
-        alert("❌ " + (response.data.message || "Failed"));
+        showError(
+            "Error",
+            (response.data.message || "Failed")
+          );
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Failed to add";
-      alert("❌ " + msg);
+      showError(
+            "Error",
+            msg
+          );
     } finally {
       setAddingToWishlist((prev) => ({ ...prev, [wishlist.id]: false }));
     }
@@ -263,7 +273,7 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
     if (watchlistModalVisible) {
       fetchWatchlists();
     }
-  }, [watchlistModalVisible, userId,addingToWishlist]);
+  }, [watchlistModalVisible, userId, addingToWishlist]);
 
   return (
     <View style={styles.container}>

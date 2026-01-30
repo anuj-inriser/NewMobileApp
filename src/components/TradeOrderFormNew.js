@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAlert } from "../context/AlertContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -29,7 +30,7 @@ export default function TradeOrderFormNew({
 }) {
   const navigation = useNavigation();
   const { authToken } = useAuth();
-
+  const { showSuccess, showError } = useAlert();
   // -- State --
   const [selected, setSelected] = useState(exchange); // NSE/BSE
   const [segment, setSegment] = useState("INTRADAY");
@@ -269,7 +270,10 @@ export default function TradeOrderFormNew({
   const placeOrder = async (transactionType = "BUY") => {
     try {
       if (!authToken) {
-        Alert.alert("Login Required", "Please login to place orders.");
+        showError(
+          "Alert",
+          "Please login to place orders."
+        );
         return;
       }
       if (!isOrderValid) {
@@ -311,13 +315,22 @@ export default function TradeOrderFormNew({
 
       const data = await res.json();
       if (data.angelResponse?.message === "SUCCESS") {
-        Alert.alert("Success", "Order Placed Successfully.");
+        showSuccess(
+          "Success",
+          "Order Placed Successfully."
+        );
         if (onOrderPlaced) onOrderPlaced();
       } else {
-        Alert.alert("Failed", JSON.stringify(data));
+        showError(
+          "Alert",
+          JSON.stringify(data)
+        );
       }
     } catch (err) {
-      Alert.alert("Error", err.message);
+      showError(
+        "Alert",
+        err.message
+      );
     }
   };
 
@@ -414,8 +427,8 @@ export default function TradeOrderFormNew({
                 ₹
                 {format2(
                   parseFloat(brokerage) +
-                    parseFloat(charges) +
-                    parseFloat(taxes),
+                  parseFloat(charges) +
+                  parseFloat(taxes),
                 )}
               </Text>
             </View>

@@ -15,7 +15,7 @@ const getActiveRouteName = (state) => {
 };
 
 const BottomTabBar = () => {
-  const canViewCommunity = usePermission("VIEW_COMMUNITY");
+  const canViewCommunity = usePermission("VIEW_EXPLORE");
   const canViewTrade = usePermission("VIEW_TRADE");
   const canViewIdeas = usePermission("VIEW_IDEAS");
   const canViewNews = usePermission("VIEW_NEWS");

@@ -60,8 +60,8 @@ export default function WelcomeScreen({navigation}) {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
     scroll: { padding: 24, alignItems: 'center' },
-    image: { width: '100%', height:250, marginTop:80},
-    title: { fontSize: 24, fontWeight: '700', color: '#210F47', marginTop: 10 },
+    image: { width: "100%", height: 220, marginTop: 90 },
+    title: { fontSize: 24, fontWeight: '700', color: '#210F47', marginTop: 20 },
     subtitle: { fontSize: 16, textAlign: 'center', marginTop: 8, color: '#000' },
     bold: { fontWeight: '700' },
     body: {
