@@ -32,7 +32,7 @@ const OrderInputNew = ({
           keyboardType="numeric"
           placeholder="0"
           editable={editable}
-          placeholderTextColor="#999"
+          placeholderTextColor={global.colors.disabled}
         />
         {/* ---- ICONS ---- */}
         {!isValid && (
@@ -40,7 +40,7 @@ const OrderInputNew = ({
             onPress={onWarningPress}
             style={styles.iconContainer}
           >
-            <Ionicons name="alert-circle" size={20} color="#da3e30" />
+            <Ionicons name="alert-circle" size={20} color={global.colors.error} />
           </TouchableOpacity>
         )}
       </View>
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   },
   borderBox: {
     borderWidth: 1.5,
-    borderColor: "#5b4c7c", // Purple-ish border
+    borderColor: global.colors.primary, // Purple-ish border
     borderRadius: 8,
     paddingHorizontal: 12,
     // paddingVertical: 10,
@@ -72,29 +72,29 @@ const styles = StyleSheet.create({
     height: 52,
   },
   errorBorder: {
-    borderColor: "#da3e30",
+    borderColor: global.colors.error,
   },
   input: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: global.colors.textPrimary,
     flex: 1,
     height: "100%",
   },
   disabledText: {
-    color: "#999",
+    color: global.colors.disabled,
   },
   labelContainer: {
     position: "absolute",
     top: -10,
     left: 12,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     paddingHorizontal: 4,
     zIndex: 1,
   },
   labelText: {
     fontSize: 12,
-    color: "#6c5ce7", // Matching label color
+    color: global.colors.secondary,
     fontWeight: "500",
   },
   iconContainer: {

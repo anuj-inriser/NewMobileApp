@@ -15,8 +15,7 @@ const PositionCard = ({
   unrealised,
   realised,
 }) => {
-  const pnlColor = Number(pnl) < 0 ? "red" : "#22C55E";
-
+  const pnlColor = Number(pnl) < 0 ? global.colors.error : global.colors.success;
   return (
     <View style={styles.card}>
       {/* HEADER ROW */}
@@ -40,7 +39,7 @@ const PositionCard = ({
       <View style={{ flexDirection: "row", marginBottom: 8 }}>
         <View
           style={{
-            backgroundColor: Number(netqty) !== 0 ? "#E3F2FD" : "#EEEEEE",
+            backgroundColor: Number(netqty) !== 0 ? global.colors.surface : global.colors.surface,
             paddingHorizontal: 8,
             paddingVertical: 2,
             borderRadius: 4,
@@ -49,7 +48,7 @@ const PositionCard = ({
         >
           <Text
             style={{
-              color: Number(netqty) !== 0 ? "#1976D2" : "#757575",
+              color: Number(netqty) !== 0 ? global.colors.secondary : global.colors.textSecondary,
               fontSize: 10,
               fontWeight: "700",
             }}
@@ -128,11 +127,11 @@ export default PositionCard;
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#DDD",
+    borderColor: global.colors.border,
     marginHorizontal: 20,
     marginTop: 10,
   },
@@ -147,7 +146,7 @@ const styles = StyleSheet.create({
   symbol: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#000",
+    color: global.colors.textPrimary,
     flex: 1,
   },
 
@@ -192,18 +191,18 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 11,
-    color: "#777",
+    color: global.colors.textSecondary,
   },
   topValue: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#000",
+    color: global.colors.textPrimary,
     marginTop: 2,
   },
   value: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#000",
+    color: global.colors.textPrimary,
     marginTop: 2,
   },
 });

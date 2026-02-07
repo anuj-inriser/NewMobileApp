@@ -36,7 +36,7 @@ const NewsReadingScreen = ({ route }) => {
                         }
                     }}
                 >
-                    <Ionicons name="arrow-back" size={22} color="#210F47" />
+                    <Ionicons name="arrow-back" size={22} color={global.colors.secondary} />
                     <Text style={styles.backButtonText}>Back</Text>
                 </TouchableOpacity>
                 <ScrollView
@@ -58,9 +58,9 @@ const NewsReadingScreen = ({ route }) => {
 
                         {/* Image Container */}
                         <View style={styles.imageCard}>
-                            {console.log("item.image_url",item.image_url)}
+                            {console.log("item.image_url", item.image_url)}
                             {/* <Image source={{ uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }} style={styles.image} /> */}
-                              <Image
+                            <Image
                                 source={
                                     item.image_url
                                         ? { uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }
@@ -74,19 +74,19 @@ const NewsReadingScreen = ({ route }) => {
                         <View style={styles.metaRow}>
                             <View style={styles.metaItem}>
                                 {/* <MaterialIcons name="dot-single" size={18} color="#777" /> */}
-                                <Text style={{ fontSize: 32, color: '#686868ff' }}>•</Text>
+                                <Text style={{ fontSize: 32, color: global.colors.textSecondary }}>•</Text>
                                 <Text style={styles.metaText}>By {item.publisher}</Text>
                             </View>
 
                             <View style={styles.metaItem}>
-                                <Text style={{ fontSize: 32, color: '#686868ff' }}>•</Text>
+                                <Text style={{ fontSize: 32, color: global.colors.textSecondary }}>•</Text>
                                 {/* <MaterialIcons name="event" size={18} color="#777" /> */}
                                 {/* <Text style={styles.metaText}>{item.date}</Text> */}
                                 <Text style={styles.metaText}>{formatPublishedDate(item.published_at)}</Text>
                             </View>
 
                             <View style={styles.metaItem}>
-                                <Text style={{ fontSize: 32, color: '#686868ff' }}>•</Text>
+                                <Text style={{ fontSize: 32, color: global.colors.textSecondary }}>•</Text>
                                 {/* <MaterialIcons name="schedule" size={18} color="#777" /> */}
                                 {/* <Text style={styles.metaText}>{item.readTime}</Text> */}
                                 <Text style={styles.metaText}>{readTime}min Read</Text>
@@ -136,7 +136,7 @@ const NewsReadingScreen = ({ route }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
     },
     scrollContent: {
         paddingVertical: 5,
@@ -145,14 +145,14 @@ const styles = StyleSheet.create({
     },
 
     summary: {
-        backgroundColor: "#E6E0E9",
+        backgroundColor: global.colors.surface,
         borderRadius: 10,
     },
 
     title: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#111",
+        color: global.colors.textPrimary,
         lineHeight: 18,
         marginBottom: 5,
         paddingTop: 5,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
 
     abstract: {
         fontSize: 12,
-        color: "#333333",
+        color: global.colors.textSecondary,
         marginBottom: 16,
         lineHeight: 18,
         width: 316,
@@ -170,14 +170,13 @@ const styles = StyleSheet.create({
 
     abstractLabel: {
         fontWeight: "700",
-        color: "#333333",
+        color: global.colors.textSecondary,
     },
 
     imageCard: {
         borderRadius: 10,
-        backgroundColor: "#eee",
+        backgroundColor: global.colors.surface,
         overflow: "hidden",
-        // marginBottom: 12,
         elevation: 3,
     },
 
@@ -205,12 +204,12 @@ const styles = StyleSheet.create({
     metaText: {
         fontSize: 10,
         lineHeight: 14,
-        color: "#666666",
+        color: global.colors.textSecondary,
     },
 
     content: {
         fontSize: 12,
-        color: "#333333",
+        color: global.colors.textPrimary,
         lineHeight: 18,
         // marginBottom: 40,
         width: 327,
@@ -226,7 +225,7 @@ const styles = StyleSheet.create({
     backButtonText: {
         marginLeft: 6,
         fontSize: 13,
-        color: "#210F47",
+        color: {},
         fontWeight: "600",
     },
 });

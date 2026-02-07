@@ -429,7 +429,7 @@ export default function TradeOrderForm({
             <Ionicons
               name="refresh"
               size={16}
-              color="#210F47"
+              color={global.colors.secondary}
               onPress={() => {
                 fetchFunds(segment);
                 fetchLtp();
@@ -491,12 +491,12 @@ export default function TradeOrderForm({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     paddingHorizontal: 16,
     paddingTop: 10,
   },
   topRow: {
-    flexDirection: "column", // Stack them for small width
+    flexDirection: "column",
     marginBottom: 10,
     gap: 10,
   },
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   summaryBox: {
-    backgroundColor: "#f8f9fa",
+    backgroundColor: global.colors.surface,
     borderRadius: 8,
     padding: 10,
     marginTop: 10,
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    color: "#555",
+    color: global.colors.textSecondary,
     fontWeight: "600",
   },
   actionRow: {
@@ -538,35 +538,35 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   buyBtn: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: global.colors.success,
   },
   sellBtn: {
-    backgroundColor: "#da3e30", // Red
+    backgroundColor: global.colors.error, // Red
   },
   btnText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 16,
     fontWeight: "700",
   },
   modalBg: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   modalContent: {
     width: "80%",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 12,
     padding: 20,
   },
   modalTitle: { fontSize: 16, fontWeight: "700", marginBottom: 10 },
-  errorText: { fontSize: 13, marginBottom: 4, color: "#333" },
+  errorText: { fontSize: 13, marginBottom: 4, color: global.colors.textPrimary },
   modalBtn: {
     marginTop: 15,
     paddingVertical: 10,
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     borderRadius: 8,
   },
-  modalBtnText: { color: "#fff", textAlign: "center", fontSize: 14 },
+  modalBtnText: { color: global.colors.background, textAlign: "center", fontSize: 14 },
 });

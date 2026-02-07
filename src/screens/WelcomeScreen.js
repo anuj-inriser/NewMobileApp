@@ -9,7 +9,7 @@ import {
     ScrollView,
 } from 'react-native';
 
-export default function WelcomeScreen({navigation}) {
+export default function WelcomeScreen({ navigation }) {
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scroll}>
@@ -36,7 +36,7 @@ export default function WelcomeScreen({navigation}) {
 
                 {/* Buttons */}
                 <View style={styles.buttonContainer}>
-                        <TouchableOpacity style={styles.signUpBtn} onPress={() => navigation.navigate('Signup')}>
+                    <TouchableOpacity style={styles.signUpBtn} onPress={() => navigation.navigate('Signup')}>
                         <Text style={styles.signUpText}>Sign Up</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -58,16 +58,16 @@ export default function WelcomeScreen({navigation}) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1, backgroundColor: global.colors.background },
     scroll: { padding: 24, alignItems: 'center' },
     image: { width: "100%", height: 220, marginTop: 90 },
-    title: { fontSize: 24, fontWeight: '700', color: '#210F47', marginTop: 20 },
-    subtitle: { fontSize: 16, textAlign: 'center', marginTop: 8, color: '#000' },
+    title: { fontSize: 24, fontWeight: '700', color: global.colors.secondary, marginTop: 20 },
+    subtitle: { fontSize: 16, textAlign: 'center', marginTop: 8, color: global.colors.textPrimary },
     bold: { fontWeight: '700' },
     body: {
         fontSize: 14,
         textAlign: 'center',
-        color: '#444',
+        color: global.colors.textSecondary,
         marginTop: 10,
         lineHeight: 22,
     },
@@ -76,23 +76,23 @@ const styles = StyleSheet.create({
         marginTop: 25,
     },
     signUpBtn: {
-        backgroundColor: '#EAEAEA',
+        backgroundColor: global.colors.surface,
         borderRadius: 25,
         paddingVertical: 10,
         paddingHorizontal: 25,
         marginRight: 10,
     },
     loginBtn: {
-        backgroundColor: '#210F47',
+        backgroundColor: global.colors.secondary,
         borderRadius: 25,
         paddingVertical: 10,
         paddingHorizontal: 25,
     },
-    signUpText: { color: '#000', fontWeight: '600' },
-    loginText: { color: '#fff', fontWeight: '600' },
+    signUpText: { color: global.colors.textPrimary, fontWeight: '600' },
+    loginText: { color: global.colors.background, fontWeight: '600' },
     footer: {
         fontSize: 12,
-        color: '#666',
+        color: global.colors.textSecondary,
         textAlign: 'center',
         marginTop: 25,
         lineHeight: 18,

@@ -29,7 +29,7 @@ const SequenceCard = ({ item, onPlay }) => {
                     key={i}
                     name={i <= rating ? "star" : "star-outline"}
                     size={14}
-                    color="#FF9800"
+                    color={global.colors.warning}
                     style={{ marginRight: 2 }}
                 />
             );
@@ -66,16 +66,16 @@ const SequenceCard = ({ item, onPlay }) => {
                         <Ionicons
                             name={expanded ? "chevron-up" : "chevron-down"}
                             size={18}
-                            color="#333"
+                            color={global.colors.textPrimary}
                         />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.actionButton} onPress={() => onPlay?.(item)}>
-                        <Ionicons name="play-circle" size={24} color="#333" />
+                        <Ionicons name="play-circle" size={24} color={global.colors.textPrimary} />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.actionButton}>
-                        <Ionicons name="bookmark-outline" size={22} color="#333" />
+                        <Ionicons name="bookmark-outline" size={22} color={global.colors.textPrimary} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -85,13 +85,12 @@ const SequenceCard = ({ item, onPlay }) => {
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
         borderRadius: 16,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: '#EFEFEF',
-        // Shadow for better depth
-        shadowColor: "#000",
+        borderColor: global.colors.border,
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 3,
@@ -108,13 +107,13 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#1A1A1A',
+        color: global.colors.textPrimary,
         lineHeight: 22,
         marginBottom: 8,
     },
     description: {
         fontSize: 13,
-        color: '#666',
+        color: global.colors.textSecondary,
         lineHeight: 18,
         marginBottom: 12,
     },
@@ -125,7 +124,7 @@ const styles = StyleSheet.create({
     },
     ratingCount: {
         fontSize: 12,
-        color: '#888',
+        color: global.colors.disabled,
         marginLeft: 4,
     },
     sideActions: {
@@ -137,7 +136,7 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: '#F7F7F7',
+        backgroundColor: global.colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 15,

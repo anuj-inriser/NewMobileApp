@@ -11,7 +11,7 @@ const TopOrderHeader = ({ title = "TATAMOTORS", onBack, onSettings }) => {
                 activeOpacity={0.7}
                 onPress={onBack}
             >
-                <Ionicons name="arrow-back" size={20} color="#fff" />
+                <Ionicons name="arrow-back" size={20} color={global.colors.background} />
             </TouchableOpacity>
 
             {/* 🏷️ Title */}
@@ -23,7 +23,7 @@ const TopOrderHeader = ({ title = "TATAMOTORS", onBack, onSettings }) => {
                 activeOpacity={0.7}
                 onPress={onSettings}
             >
-                <Ionicons name="settings-outline" size={20} color="#fff" />
+                <Ionicons name="settings-outline" size={20} color={global.colors.background} />
             </TouchableOpacity>
         </View>
     );
@@ -31,7 +31,7 @@ const TopOrderHeader = ({ title = "TATAMOTORS", onBack, onSettings }) => {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: "#f5f0fa", // light lavender background
+        backgroundColor: global.colors.surface, // light lavender background
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
@@ -42,11 +42,11 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#210F47", // dark violet text
+        color: global.colors.secondary, // dark violet text
         textAlign: "center",
     },
     iconButton: {
-        backgroundColor: "#210F47", // dark purple circle
+        backgroundColor: global.colors.secondary, // dark purple circle
         width: 36,
         height: 36,
         borderRadius: 18,

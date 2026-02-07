@@ -106,7 +106,7 @@ const IndicesListScreen = ({ route, navigation }) => {
             <TopHeader />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1f2937" />
+                    <Ionicons name="arrow-back" size={24} color={ global.colors.secondary} />
                 </TouchableOpacity>
                 <Text style={styles.title}>
                     {type === 'sector' ? 'Sectors' : 'Indices'} ({exchange})
@@ -115,7 +115,7 @@ const IndicesListScreen = ({ route, navigation }) => {
 
             {loading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#2F0079" />
+                    <ActivityIndicator size="large" color={global.colors.secondary} />
                 </View>
             ) : (
                 <FlatList
@@ -133,16 +133,16 @@ const IndicesListScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: global.colors.surface,
     },
     backButton: {
         marginRight: 12,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#1f2937',
+        color: global.colors.secondary,
     },
     listContent: {
         padding: 16,
@@ -158,12 +158,12 @@ const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor:global.colors.background,
         padding: 16,
         marginBottom: 12,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#f0f0f0',
+        borderColor: global.colors.border,
     },
     cardLeft: {
         flex: 1,
@@ -171,12 +171,12 @@ const styles = StyleSheet.create({
     symbol: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#1f2937',
+        color: global.colors.secondary,
         marginBottom: 4,
     },
     time: {
         fontSize: 11,
-        color: '#9ca3af',
+        color:  global.colors.textSeconadary,
     },
     cardCenter: {
         width: 100,
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     price: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#1f2937',
+        color: global.colors.secondary,
         marginBottom: 4,
     },
     change: {
@@ -197,10 +197,10 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     positive: {
-        color: '#22c55e',
+        color: global.colors.success,
     },
     negative: {
-        color: '#ef4444',
+        color:  global.colors.error,
     },
     loadingContainer: {
         flex: 1,

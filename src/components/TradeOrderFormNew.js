@@ -446,7 +446,7 @@ export default function TradeOrderFormNew({
                   fetchBrokerage();
                 }}
               >
-                <Ionicons name="refresh" size={24} color="#000" />
+                <Ionicons name="refresh" size={24} color={global.colors.textPrimary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -470,13 +470,13 @@ export default function TradeOrderFormNew({
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingsBtn}>
-          <Ionicons name="settings-outline" size={24} color="#555" />
+          <Ionicons name="settings-outline" size={24} color={global.colors.textPrimary} />
         </TouchableOpacity>
 
         {/* Angel Logo / Icon Placeholder from image */}
         <View style={styles.logoCircle}>
           {/* Use an icon or text if image not available */}
-          <Text style={{ fontSize: 10, fontWeight: "bold", color: "orange" }}>
+          <Text style={{ fontSize: 10, fontWeight: "bold", color: global.colors.warning }}>
             A
           </Text>
         </View>
@@ -513,8 +513,7 @@ export default function TradeOrderFormNew({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-
+    backgroundColor: global.colors.background,
     paddingTop: 10,
   },
   topSection: {
@@ -537,11 +536,11 @@ const styles = StyleSheet.create({
   },
   summaryContainer: {
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: global.colors.border,
     borderRadius: 12,
     padding: 16,
     marginVertical: 10,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
   },
   summaryRow: {
     flexDirection: "row",
@@ -550,13 +549,13 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 12,
-    color: "#777",
+    color: global.colors.textSecondary,
     marginBottom: 4,
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#444",
+    color: global.colors.textPrimary,
   },
   actionRow: {
     flexDirection: "row",
@@ -573,13 +572,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buyBtn: {
-    backgroundColor: "#22C55E", // Green
+    backgroundColor: global.colors.success,
   },
   sellBtn: {
-    backgroundColor: "#DC2626", // Red
+    backgroundColor: global.colors.error,
   },
   btnText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 18,
     fontWeight: "600",
   },
@@ -588,7 +587,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: global.colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -597,30 +596,30 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: global.colors.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f9f9f9",
+    backgroundColor: global.colors.background,
   },
   modalBg: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   modalContent: {
     width: "80%",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 12,
     padding: 20,
   },
   modalTitle: { fontSize: 16, fontWeight: "700", marginBottom: 10 },
-  errorText: { fontSize: 13, marginBottom: 4, color: "#333" },
+  errorText: { fontSize: 13, marginBottom: 4, color: global.colors.textPrimary, },
   modalBtn: {
     marginTop: 15,
     paddingVertical: 10,
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     borderRadius: 8,
   },
-  modalBtnText: { color: "#fff", textAlign: "center", fontSize: 14 },
+  modalBtnText: { color: global.colors.background, textAlign: "center", fontSize: 14 },
 });

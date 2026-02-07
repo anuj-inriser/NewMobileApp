@@ -4,139 +4,139 @@ import { formatFullPublishedDateTime } from "../../utils/dateFormat";
 import { useNavigation } from '@react-navigation/native';
 
 const STATUS_COLORS = {
-    "Live": "#D32F2F",
-    "Target Hit": "#22C55E",
-    "Target Miss": "#D32F2F",
-    "Closed": "#666666",
+    "Live": global.colors.error,
+    "Target Hit": global.colors.success,
+    "Target Miss": global.colors.error,
+    "Closed": global.colors.textSecondary,
 };
 
 const TradeCard = ({
-  script,
-  script_id,
-  status,
-  tradeRecommendation,
-  entryDate,
-  exitDate,
-  entry,
-  target,
-  stopLoss,
-  perspective,
-  token,
-  ltp,
-  change,
-  changePercent,
+    script,
+    script_id,
+    status,
+    tradeRecommendation,
+    entryDate,
+    exitDate,
+    entry,
+    target,
+    stopLoss,
+    perspective,
+    token,
+    ltp,
+    change,
+    changePercent,
 }) => {
-  const navigation = useNavigation();
+    const navigation = useNavigation();
 
-  const statusColor = STATUS_COLORS[status] || "#666666";
+    const statusColor = STATUS_COLORS[status] || global.colors.textSecondary;
 
-  return (
-    <View style={styles.card}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <View style={styles.scriptStatusContainer}>
-         
-            <Text style={styles.script}>{script}</Text>
-            <Text style={[styles.status, { color: statusColor }]}>
-              {status}
-            </Text>
-          
-          {/* LTP DISPLAY */}
-          {ltp && (
-            <View style={{ marginLeft: 12 }}>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#000" }}>
-                ₹{Number(ltp).toFixed(2)}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 11,
-                  fontWeight: "600",
-                  color: Number(change) >= 0 ? "#22C55E" : "#D32F2F",
-                }}
-              >
-                {Number(change).toFixed(2)} ({Number(changePercent).toFixed(2)}
-                %)
-              </Text>
+    return (
+        <View style={styles.card}>
+            {/* Header */}
+            <View style={styles.headerRow}>
+                <View style={styles.scriptStatusContainer}>
+
+                    <Text style={styles.script}>{script}</Text>
+                    <Text style={[styles.status, { color: statusColor }]}>
+                        {status}
+                    </Text>
+
+                    {/* LTP DISPLAY */}
+                    {ltp && (
+                        <View style={{ marginLeft: 12 }}>
+                            <Text style={{ fontSize: 14, fontWeight: "700", color: global.colors.textPrimary }}>
+                                ₹{Number(ltp).toFixed(2)}
+                            </Text>
+                            <Text
+                                style={{
+                                    fontSize: 11,
+                                    fontWeight: "600",
+                                    color: Number(change) >= 0 ? global.colors.success : global.colors.error,
+                                }}
+                            >
+                                {Number(change).toFixed(2)} ({Number(changePercent).toFixed(2)}
+                                %)
+                            </Text>
+                        </View>
+                    )}
+                </View>
+
+                <TouchableOpacity
+                    onPress={() => {
+                        navigation.navigate("TradeOrder", {
+                            symbol: script, // Use script name (e.g. RELIANCE) instead of ID
+                            token: token,
+                            name: script,
+                            price: entry,
+                            quantity: 1,
+                            stoploss: stopLoss,
+                            target: target,
+                            internaltype: "Place",
+                            type: tradeRecommendation, // Buy or Sell
+                        });
+                    }}
+                    activeOpacity={0.7}
+                >
+                    <View
+                        style={[
+                            tradeRecommendation === "Buy" || tradeRecommendation === "buy"
+                                ? styles.greenBadge
+                                : styles.redBadge,
+                        ]}
+                    >
+                        <Text style={styles.badgeText}>{tradeRecommendation}</Text>
+                    </View>
+                </TouchableOpacity>
             </View>
-          )}
-        </View>
 
-        <TouchableOpacity
-          onPress={() => {
-            navigation.navigate("TradeOrder", {
-              symbol: script, // Use script name (e.g. RELIANCE) instead of ID
-              token: token,
-              name: script,
-              price: entry,
-              quantity: 1,
-              stoploss: stopLoss,
-              target: target,
-              internaltype: "Place",
-              type: tradeRecommendation, // Buy or Sell
-            });
-          }}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              tradeRecommendation === "Buy" || tradeRecommendation === "buy"
-                ? styles.greenBadge
-                : styles.redBadge,
-            ]}
-          >
-            <Text style={styles.badgeText}>{tradeRecommendation}</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-                {/* Dates */}
-                <View style={styles.datesRow}>
-                    {exitDate ? (
-                        <>
-                            <Text style={styles.smallText}>
-                                <Text style={styles.smallBold}>Entry: </Text>
-                                {formatFullPublishedDateTime(entryDate)}
-                            </Text>
-                            <Text style={styles.smallText}>
-                                <Text style={styles.smallBold}>Exit: </Text>
-                                {formatFullPublishedDateTime(exitDate)}
-                            </Text>
-                        </>
-                    ) : (
-                        // Only show entry date, no label
+            {/* Dates */}
+            <View style={styles.datesRow}>
+                {exitDate ? (
+                    <>
                         <Text style={styles.smallText}>
                             <Text style={styles.smallBold}>Entry: </Text>
                             {formatFullPublishedDateTime(entryDate)}
                         </Text>
-                    )}
-                </View>
-
-                {/* Data Row */}
-                <View style={styles.dataRow}>
-                    <View>
-                        <Text style={styles.dataLabel}>Entry</Text>
-                        <Text style={styles.dataValue}>{entry}</Text>
-                    </View>
-                    <View>
-                        <Text style={styles.dataLabel}>Target</Text>
-                        <Text style={styles.dataValue}>{target}</Text>
-                    </View>
-                    <View>
-                        <Text style={styles.dataLabel}>Stop Loss</Text>
-                        <Text style={styles.dataValue}>{stopLoss}</Text>
-                    </View>
-                    <View>
-                        <Text style={styles.dataLabel}>Perspective</Text>
-                        <Text style={styles.dataValue}>{perspective}</Text>
-                    </View>
-                </View>
-
-                {/* Disclaimer */}
-                <Text style={styles.disclaimer}>Disclaimer</Text>
-                <Text style={styles.disclaimerText}>lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet.</Text>
+                        <Text style={styles.smallText}>
+                            <Text style={styles.smallBold}>Exit: </Text>
+                            {formatFullPublishedDateTime(exitDate)}
+                        </Text>
+                    </>
+                ) : (
+                    // Only show entry date, no label
+                    <Text style={styles.smallText}>
+                        <Text style={styles.smallBold}>Entry: </Text>
+                        {formatFullPublishedDateTime(entryDate)}
+                    </Text>
+                )}
             </View>
-        );
-    };
+
+            {/* Data Row */}
+            <View style={styles.dataRow}>
+                <View>
+                    <Text style={styles.dataLabel}>Entry</Text>
+                    <Text style={styles.dataValue}>{entry}</Text>
+                </View>
+                <View>
+                    <Text style={styles.dataLabel}>Target</Text>
+                    <Text style={styles.dataValue}>{target}</Text>
+                </View>
+                <View>
+                    <Text style={styles.dataLabel}>Stop Loss</Text>
+                    <Text style={styles.dataValue}>{stopLoss}</Text>
+                </View>
+                <View>
+                    <Text style={styles.dataLabel}>Perspective</Text>
+                    <Text style={styles.dataValue}>{perspective}</Text>
+                </View>
+            </View>
+
+            {/* Disclaimer */}
+            <Text style={styles.disclaimer}>Disclaimer</Text>
+            <Text style={styles.disclaimerText}>lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet.</Text>
+        </View>
+    );
+};
 
 
 const styles = StyleSheet.create({
@@ -144,14 +144,14 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 160,
         alignSelf: "center",
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 16,
         paddingHorizontal: 10,
         paddingVertical: 12,
         marginVertical: 5,
-        borderColor: "#eee",
+        borderColor: global.colors.border,
         borderWidth: 1,
-        shadowColor: "#000",
+        shadowColor: global.colors.textPrimary,
         shadowOpacity: 0.08,
         shadowRadius: 6,
         elevation: 3,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     script: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#210F47",
+        color: global.colors.secondary,
         marginRight: 6,
     },
 
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
         marginTop: 2, // Slight upward alignment
     },
     greenBadge: {
-        backgroundColor: "#22C55E",
+        backgroundColor: global.colors.success,
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
@@ -189,13 +189,13 @@ const styles = StyleSheet.create({
         width: 51,
         height: 24,
         textAlign: "center",
-        shadowColor: "#000",
+        shadowColor: global.colors.textPrimary,
         shadowOpacity: 0.08,
         shadowRadius: 6,
         elevation: 4,
     },
     redBadge: {
-        backgroundColor: "#D32F2F",
+        backgroundColor: global.colors.error,
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
@@ -203,13 +203,13 @@ const styles = StyleSheet.create({
         width: 51,
         height: 24,
         textAlign: "center",
-        shadowColor: "#000",
+        shadowColor: global.colors.textPrimary,
         shadowOpacity: 0.08,
         shadowRadius: 6,
         elevation: 4,
     },
     badgeText: {
-        color: "#fff",
+        color: global.colors.background,
         fontSize: 11,
         fontWeight: "700",
         textAlign: "center",
@@ -221,11 +221,11 @@ const styles = StyleSheet.create({
     },
     smallText: {
         fontSize: 10,
-        color: "#747474",
+        color: global.colors.textSecondary,
     },
     smallBold: {
         fontSize: 10,
-        color: "#565555ff",
+        color: global.colors.textSecondary,
         fontWeight: "600",
     },
     dataRow: {
@@ -235,30 +235,27 @@ const styles = StyleSheet.create({
     },
     dataLabel: {
         fontSize: 12,
-        color: "#666666",
+        color: global.colors.textSecondary,
         fontWeight: "400"
     },
     dataValue: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#565555ff",
+        color: global.colors.textSecondary,
     },
     dataValueBold: {
         fontSize: 13,
         fontWeight: "800",
-        color: "#333",
+        color: global.colors.textPrimary,
     },
     disclaimer: {
         fontSize: 9,
-        color: "#8a8a8a",
-        // marginTop: 2,
+        color: global.colors.disabled,
     },
     disclaimerText: {
         fontSize: 9,
-        color: "#8a8a8a",
+        color: global.colors.disabled,
         marginBottom: 5
     }
 });
-
-
 export default TradeCard;

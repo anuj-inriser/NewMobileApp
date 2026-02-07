@@ -23,7 +23,7 @@ const CustomSwitch = ({ value, onValueChange }) => {
 
     const backgroundColor = animatedValue.interpolate({
         inputRange: [0, 1],
-        outputRange: ['#E6E0E9', '#210F47'],
+        outputRange: [global.colors.primary, global.colors.secondary],
     });
 
     return (
@@ -132,7 +132,7 @@ const PreferencesSection = () => {
     };
 
     if (loading) {
-        return <ActivityIndicator size="small" color="#210F47" style={{ marginTop: 20 }} />;
+        return <ActivityIndicator size="small" color={global.colors.secondary} style={{ marginTop: 20 }} />;
     }
 
     return (
@@ -191,12 +191,12 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#1a1a1a',
+        color: global.colors.textPrimary,
         marginBottom: 8,
     },
     headerSubtitle: {
         fontSize: 14,
-        color: '#666',
+        color: global.colors.textSecondary,
         lineHeight: 20,
         marginBottom: 24,
     },
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#E6E0E9',
+        backgroundColor: global.colors.surface,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     iconText: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#333333',
+        color: global.colors.textPrimary,
     },
     textContainer: {
         flex: 1,
@@ -232,17 +232,17 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#1a1a1a',
+        color: global.colors.textPrimary,
     },
     subtitle: {
         fontSize: 12,
-        color: '#666',
+        color: global.colors.textSecondary,
         lineHeight: 16,
         paddingRight: 10,
     },
     divider: {
         height: 1.2,
-        backgroundColor: '#F0DADADA',
+        backgroundColor: global.colors.border,
         marginTop: 12,
         width: '100%',
     },
@@ -251,13 +251,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     saveBtn: {
-        backgroundColor: "#210F47",
+        backgroundColor: global.colors.secondary,
         paddingVertical: 10,
         paddingHorizontal: 30,
         borderRadius: 20,
     },
     saveBtnText: {
-        color: "#fff",
+        color: global.colors.background,
         fontWeight: "700",
         fontSize: 14,
     },
@@ -271,8 +271,8 @@ const styles = StyleSheet.create({
         width: 20,
         height: 18,
         borderRadius: 13,
-        backgroundColor: '#fff',
-        shadowColor: "#000",
+        backgroundColor: global.colors.background,
+        shadowColor: global.colors.textPrimary,
         shadowOffset: {
             width: 0,
             height: 2,

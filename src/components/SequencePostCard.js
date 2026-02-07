@@ -13,7 +13,7 @@ const SequencePostCard = ({ post, index, total, timeframe, onTimeframeChange }) 
                 </View>
                 <View style={styles.priceContainer}>
                     <Text style={styles.price}>₹{post.price || '430.92'}</Text>
-                    <Text style={[styles.change, { color: '#4CAF50' }]}>+45.30 (11.77%)</Text>
+                    <Text style={[styles.change, { color: global.colors.success }]}>+45.30 (11.77%)</Text>
                 </View>
             </View>
 
@@ -25,7 +25,7 @@ const SequencePostCard = ({ post, index, total, timeframe, onTimeframeChange }) 
                 </View>
 
                 <View style={styles.chartPlaceholder}>
-                    <MaterialCommunityIcons name="chart-line" size={100} color="#E0E0E0" />
+                    <MaterialCommunityIcons name="chart-line" size={100} color={global.colors.disabled} />
                     <Text style={styles.chartHint}>Trading View Chart Placeholder</Text>
                 </View>
 
@@ -48,8 +48,8 @@ const SequencePostCard = ({ post, index, total, timeframe, onTimeframeChange }) 
                 <View style={styles.analysisHeader}>
                     <Text style={styles.analysisTitle}>Market Analysis</Text>
                     <View style={styles.navButtons}>
-                        <TouchableOpacity style={styles.navBtn}><Ionicons name="arrow-back" size={18} color="#666" /></TouchableOpacity>
-                        <TouchableOpacity style={styles.navBtn}><Ionicons name="arrow-forward" size={18} color="#666" /></TouchableOpacity>
+                        <TouchableOpacity style={styles.navBtn}><Ionicons name="arrow-back" size={18} color={global.colors.textSecondary} /></TouchableOpacity>
+                        <TouchableOpacity style={styles.navBtn}><Ionicons name="arrow-forward" size={18} color={global.colors.textSecondary} /></TouchableOpacity>
                     </View>
                 </View>
                 <Text style={styles.analysisContent}>
@@ -61,14 +61,14 @@ const SequencePostCard = ({ post, index, total, timeframe, onTimeframeChange }) 
             {/* Footer Interactive */}
             <View style={styles.footer}>
                 <View style={styles.footerLeft}>
-                    <TouchableOpacity style={styles.actionBtn}><Feather name="thumbs-up" size={18} color="#666" /><Text style={styles.actionCount}>20.9k</Text></TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtn}><Feather name="thumbs-down" size={18} color="#666" /></TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtn}><Feather name="message-circle" size={18} color="#666" /><Text style={styles.actionCount}>23</Text></TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtn}><Feather name="share-2" size={18} color="#666" /></TouchableOpacity>
+                    <TouchableOpacity style={styles.actionBtn}><Feather name="thumbs-up" size={18} color={global.colors.textSecondary} /><Text style={styles.actionCount}>20.9k</Text></TouchableOpacity>
+                    <TouchableOpacity style={styles.actionBtn}><Feather name="thumbs-down" size={18} color={global.colors.textSecondary} /></TouchableOpacity>
+                    <TouchableOpacity style={styles.actionBtn}><Feather name="message-circle" size={18} color={global.colors.textSecondary} /><Text style={styles.actionCount}>23</Text></TouchableOpacity>
+                    <TouchableOpacity style={styles.actionBtn}><Feather name="share-2" size={18} color={global.colors.textSecondary} /></TouchableOpacity>
                 </View>
                 <View style={styles.footerRight}>
-                    <TouchableOpacity style={styles.iconCircle}><MaterialCommunityIcons name="currency-inr" size={16} color="#666" /></TouchableOpacity>
-                    <TouchableOpacity style={styles.iconCircle}><MaterialCommunityIcons name="clock-outline" size={16} color="#666" /></TouchableOpacity>
+                    <TouchableOpacity style={styles.iconCircle}><MaterialCommunityIcons name="currency-inr" size={16} color={global.colors.textSecondary} /></TouchableOpacity>
+                    <TouchableOpacity style={styles.iconCircle}><MaterialCommunityIcons name="clock-outline" size={16} color={global.colors.textSecondary} /></TouchableOpacity>
                 </View>
             </View>
         </View>
@@ -77,13 +77,13 @@ const SequencePostCard = ({ post, index, total, timeframe, onTimeframeChange }) 
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
         borderRadius: 20,
         marginVertical: 10,
         marginHorizontal: 16,
         padding: 16,
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -97,11 +97,11 @@ const styles = StyleSheet.create({
     scriptName: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#210F47',
+        color: global.colors.secondary,
     },
     scriptSymbol: {
         fontSize: 12,
-        color: '#888',
+        color: global.colors.disabled,
         textTransform: 'uppercase',
     },
     priceContainer: {
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     price: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#210F47',
+        color: global.colors.secondary,
     },
     change: {
         fontSize: 12,
@@ -119,11 +119,11 @@ const styles = StyleSheet.create({
     chartContainer: {
         position: 'relative',
         height: 250,
-        backgroundColor: '#F9F9FB',
+        backgroundColor: global.colors.surface,
         borderRadius: 15,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#F0EFFF',
+        borderColor: global.colors.border,
     },
     chartPlaceholder: {
         flex: 1,
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     chartHint: {
-        color: '#BBB',
+        color: global.colors.disabled,
         fontSize: 12,
         marginTop: 10,
     },
@@ -139,26 +139,26 @@ const styles = StyleSheet.create({
         position: 'absolute',
         right: 12,
         top: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        backgroundColor: global.colors.secondary,
         paddingHorizontal: 10,
         paddingVertical: 15,
         borderRadius: 25,
         borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderColor: global.colors.border,
         zIndex: 10,
     },
     progressText: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#210F47',
+        color: global.colors.secondary,
     },
     timeframeContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
         paddingVertical: 8,
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
         borderTopWidth: 1,
-        borderTopColor: '#F0EFFF',
+        borderTopColor: global.colors.border,
     },
     tfButton: {
         paddingHorizontal: 8,
@@ -166,14 +166,14 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     tfActive: {
-        backgroundColor: '#F0EFFF',
+        backgroundColor: global.colors.surface,
     },
     tfText: {
         fontSize: 11,
-        color: '#666',
+        color: global.colors.textSecondary,
     },
     tfTextActive: {
-        color: '#210F47',
+        color: global.colors.secondary,
         fontWeight: '700',
     },
     analysisSection: {
@@ -188,25 +188,25 @@ const styles = StyleSheet.create({
     analysisTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#210F47',
+        color: global.colors.secondary,
     },
     navButtons: {
         flexDirection: 'row',
     },
     navBtn: {
         marginLeft: 10,
-        backgroundColor: '#F0EFFF',
+        backgroundColor: global.colors.surface,
         padding: 4,
         borderRadius: 15,
     },
     analysisContent: {
         fontSize: 13,
-        color: '#555',
+        color: global.colors.textSecondary,
         lineHeight: 18,
     },
     timestamp: {
         fontSize: 10,
-        color: '#AAA',
+        color: global.colors.disabled,
         textAlign: 'right',
         marginTop: 4,
     },
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
         marginTop: 15,
         paddingTop: 15,
         borderTopWidth: 1,
-        borderTopColor: '#EEE',
+        borderTopColor: global.colors.border,
     },
     footerLeft: {
         flexDirection: 'row',
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     },
     actionCount: {
         fontSize: 12,
-        color: '#666',
+        color: global.colors.textSecondary,
         marginLeft: 4,
     },
     footerRight: {
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
         marginLeft: 10,
         padding: 6,
         borderRadius: 20,
-        backgroundColor: '#F9F9FB',
+        backgroundColor: global.colors.surface,
     }
 });
 

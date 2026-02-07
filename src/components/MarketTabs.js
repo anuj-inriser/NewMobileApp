@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const EXCHANGE_KEY = 'MARKET_SELECTED_EXCHANGE';
 
@@ -60,7 +61,7 @@ const MarketTabs = ({
         onExchangeChange && onExchangeChange(exch);
         try {
             await AsyncStorage.setItem(EXCHANGE_KEY, exch);
-        } catch {}
+        } catch { }
     };
 
     const handleTabPress = (tab) => {
@@ -74,63 +75,84 @@ const MarketTabs = ({
     if (!isReady || !exchange) return null;
 
     return (
-        <View style={styles.container}>
-            {/* Exchange Toggle */}
-            <View style={styles.toggleContainer}>
-                <TouchableOpacity
-                    style={[styles.toggleButton, exchange === 'NSE' && styles.activeToggle]}
-                    onPress={() => handleExchangeToggle('NSE')}
-                >
-                    <Text style={[styles.toggleText, exchange === 'NSE' && styles.activeToggleText]}>
-                        NSE
-                    </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[styles.toggleButton, exchange === 'BSE' && styles.activeToggle]}
-                    onPress={() => handleExchangeToggle('BSE')}
-                >
-                    <Text style={[styles.toggleText, exchange === 'BSE' && styles.activeToggleText]}>
-                        BSE
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Tabs */}
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.tabsScroll}
-            >
-                {tabs.map((tab) => (
+        <View style={styles.wrapper}>
+            <View style={styles.container}>
+                {/* Exchange Toggle */}
+                <View style={styles.toggleContainer}>
                     <TouchableOpacity
-                        key={tab}
-                        style={[styles.tabItem, activeTab === tab && styles.activeTabItem]}
-                        onPress={() => handleTabPress(tab)}
+                        style={[styles.toggleButton, exchange === 'NSE' && styles.activeToggle]}
+                        onPress={() => handleExchangeToggle('NSE')}
                     >
-                        <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                            {tab}
+                        <Text style={[styles.toggleText, exchange === 'NSE' && styles.activeToggleText]}>
+                            NSE
                         </Text>
                     </TouchableOpacity>
-                ))}
-            </ScrollView>
+
+                    <TouchableOpacity
+                        style={[styles.toggleButton, exchange === 'BSE' && styles.activeToggle]}
+                        onPress={() => handleExchangeToggle('BSE')}
+                    >
+                        <Text style={[styles.toggleText, exchange === 'BSE' && styles.activeToggleText]}>
+                            BSE
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Tabs */}
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.tabsScroll}
+                >
+                    {tabs.map((tab) => (
+                        <TouchableOpacity
+                            key={tab}
+                            style={[styles.tabItem, activeTab === tab && styles.activeTabItem]}
+                            onPress={() => handleTabPress(tab)}
+                        >
+                            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                                {tab}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+            <LinearGradient
+                colors={[global.colors.overlayLow, 'transparent']}
+                style={styles.bottomShadow}
+            />
         </View>
     );
 };
 
 const styles = StyleSheet.create({
+    wrapper: {
+        position: "relative",
+        marginBottom: 10,
+    },
     container: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 10,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0'
+        backgroundColor: global.colors.background,
+        zIndex: 2,
+        shadowColor: global.colors.textPrimary,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+    },
+    bottomShadow: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: -5,
+        height: 1,
+        zIndex: 1,
     },
     toggleContainer: {
         flexDirection: 'row',
-        backgroundColor: '#F5F5F7',
+        backgroundColor: global.colors.surface,
         borderRadius: 20,
         padding: 2,
         marginRight: 16,
@@ -141,9 +163,9 @@ const styles = StyleSheet.create({
         borderRadius: 18,
     },
     activeToggle: {
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: global.colors.textPrimary,
         shadowOpacity: 0.1,
         shadowRadius: 2,
         shadowOffset: { width: 0, height: 1 },
@@ -151,10 +173,10 @@ const styles = StyleSheet.create({
     toggleText: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#666666',
+        color: global.colors.textSecondary,
     },
     activeToggleText: {
-        color: '#2F0079',
+        color: global.colors.secondary,
     },
     tabsScroll: {
         alignItems: 'center',
@@ -164,18 +186,23 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     activeTabItem: {
-        backgroundColor: '#E6E0E9',
+        backgroundColor: global.colors.surface,
         borderRadius: 20,
-        paddingVertical: 4,
-        paddingHorizontal: 15,
+        paddingVertical: 6,
+        paddingHorizontal: 16,
+        elevation: 4,
+        shadowColor: global.colors.textPrimary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 1,
+        shadowRadius: 3,
     },
     tabText: {
         fontSize: 14,
-        color: '#666',
+        color: global.colors.textSecondary,
         fontWeight: '500',
     },
     activeTabText: {
-        color: '#333333',
+        color: global.colors.textPrimary,
         fontWeight: '700',
     },
 });

@@ -78,22 +78,25 @@ const WatchlistItemCard = ({
   };
 
   const renderItem = ({ item }) => {
-    const symbol = String(item.script_id);
+    const symbol = item.symbol || item.script_symbol || String(item.script_id);
     const rt = realtimePrices[symbol] || realtimePrices[item.token];
 
     const ltp = Number(rt?.price || item.value || item.ltp || 0);
-    const prev = Number(
-      rt?.prevClose || item.prevClose || item.prev_close || ltp
-    );
+    const prev = Number(rt?.prevClose || item.prevClose || item.prev_close || ltp);
 
     const change = ltp - prev;
     const changePercent = prev !== 0 ? (change / prev) * 100 : 0;
     const isUp = change >= 0;
-
+    const initials =
+      item.name
+        ?.split(" ")
+        .map((w) => w[0]?.toUpperCase())
+        .join("")
+        .slice(0, 2) || "?";
     const renderRightActions = () => {
       return (
         <View style={styles.actionWrapper}>
-          <MaterialIcons name="delete-outline" size={22} color="#555" />
+          <MaterialIcons name="delete-outline" size={22} color={global.colors.textSecondary} />
         </View>
       );
     };
@@ -116,24 +119,24 @@ const WatchlistItemCard = ({
       >
         <View style={styles.cardWrapper}>
           <LinearGradient
-            colors={isUp ? ["#E6F7EE", "#21C17A"] : ["#FDEAEA", "#E53935"]}
+            colors={isUp ? [global.colors.surface, global.colors.success] : [global.colors.error, global.colors.error]}
             style={styles.gradientWave}
           />
           <TouchableOpacity style={styles.card} activeOpacity={0.9}>
             <View style={styles.infoContainer}>
               <Text style={styles.companyName} numberOfLines={1}>
-                {item.script_name}
+                {symbol}
               </Text>
-              <Text style={styles.symbol}>{symbol}</Text>
+              <Text style={styles.symbol}>{item.name}</Text>
             </View>
             <View style={styles.verticalCardRight}>
               <Text
-                style={[styles.verticalPrice, { color: isUp ? "#2E7D32" : "#C62828" }]}
+                style={[styles.verticalPrice, { color: isUp ? global.colors.success : global.colors.error }]}
               >
                 ₹ {ltp > 0 ? ltp.toFixed(2) : "--"}
               </Text>
               <Text
-                style={[styles.verticalChange, { color: isUp ? "#2E7D32" : "#C62828" }]}
+                style={[styles.verticalChange, { color: isUp ? global.colors.success : global.colors.error }]}
               >
                 {Math.abs(change).toFixed(2)} ({Math.abs(changePercent).toFixed(2)}%)
               </Text>
@@ -185,21 +188,23 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     padding: 12,
     borderRadius: 14,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: global.colors.border,
   },
   infoContainer: { flex: 1 },
-  companyName: { fontSize: 14, fontWeight: "600" },
-  symbol: { fontSize: 11, color: "#666" },
+  companyName: { fontSize: 14, fontWeight: "600", color: global.colors.textPrimary },
+  symbol: { fontSize: 11, color: global.colors.textSecondary },
   verticalCardRight: {
     alignItems: "flex-end",
   },
   verticalPrice: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: global.colors.textPrimary,
   },
   verticalChange: {
     fontSize: 11,
@@ -207,15 +212,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   leftAction: { justifyContent: "center", paddingLeft: 30, width: 90 },
-  buyText: { fontWeight: "700", color: "#210F47" },
+  buyText: { fontWeight: "700", color: global.colors.secondary },
   rightAction: { justifyContent: "center", paddingRight: 30, width: 110 },
-  removeText: { fontWeight: "700", color: "#D32F2F" },
+  removeText: { fontWeight: "700", color: global.colors.error },
   undoBar: {
     position: "absolute",
     bottom: 70,
     left: 16,
     right: 16,
-    backgroundColor: "#2E2E2E",
+    backgroundColor:global.colors.textSecondary,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -225,15 +230,15 @@ const styles = StyleSheet.create({
     elevation: 20,
     zIndex: 9999,
   },
-  undoText: { color: "#fff", fontSize: 13 },
-  undoAction: { color: "#4CAF50", fontWeight: "700" },
+  undoText: { color: global.colors.background, fontSize: 13 },
+  undoAction: { color:global.colors.success, fontWeight: "700" },
   actionWrapper: {
     justifyContent: "center",
     alignItems: "center",
     width: 80,
     marginVertical: 6,
     borderRadius: 14,
-    backgroundColor: "#ECECEC",
+    backgroundColor:global.colors.surface,
   },
-
+  emptyText: { color: global.colors.textSecondary },
 });

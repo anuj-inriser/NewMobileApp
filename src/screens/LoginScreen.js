@@ -156,170 +156,191 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Fixed Image - yeh keyboard open hone pe bhi fixed rahegi */}
+      <View style={styles.imageWrapper}>
+        <Image
+          source={require("../../assets/login.png")}
+          style={styles.image}
+          resizeMode="contain"
+        />
+      </View>
       <KeyboardAwareScrollView
-        extraHeight={300}
+        extraHeight={150}
         enableOnAndroid
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <Image
-            source={require("../../assets/login.png")}
-            style={styles.image}
-            resizeMode="contain"
+        <Text style={styles.title}>Login</Text>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.prefix}>+91</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter Phone No."
+            keyboardType="phone-pad"
+            maxLength={10}
+            value={phone}
+            editable={screenState !== "password"}
+            onChangeText={(t) => {
+              setPhone(t);
+              setErrors({ ...errors, phone: "" });
+            }}
           />
+        </View>
+        {!!errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
-          <Text style={styles.title}>Login</Text>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.prefix}>+91</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Phone No."
-              keyboardType="phone-pad"
-              maxLength={10}
-              value={phone}
-              editable={screenState !== "password"}
-              onChangeText={(t) => {
-                setPhone(t);
-                setErrors({ ...errors, phone: "" });
-              }}
-            />
-          </View>
-          {!!errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-
-          {screenState === "password" && (
-            <>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Enter Password"
-                  secureTextEntry={!showPassword}
-                  value={password}
-                  onChangeText={(t) => {
-                    setPassword(t);
-                    setErrors({ ...errors, password: "" });
-                  }}
+        {screenState === "password" && (
+          <>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter Password"
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  setErrors({ ...errors, password: "" });
+                }}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeBtn}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={22}
+                  color={global.colors.textSecondary}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeBtn}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                    size={22}
-                    color="#666"
-                  />
-                </TouchableOpacity>
-              </View>
-              {!!errors.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              )}
-            </>
-          )}
+              </TouchableOpacity>
+            </View>
+            {!!errors.password && (
+              <Text style={styles.errorText}>{errors.password}</Text>
+            )}
+          </>
+        )}
 
-          {!!errors.general && (
-            <Text style={styles.errorText}>{errors.general}</Text>
-          )}
+        {!!errors.general && (
+          <Text style={styles.errorText}>{errors.general}</Text>
+        )}
 
-          <View style={styles.topBar}>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.backText}>Back</Text>
-            </TouchableOpacity>
+        <View style={styles.tncRow}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPressIn={(e) => e.stopPropagation()}
+            onPress={() => {
+              setAcceptedTnc((prev) => !prev);
+              setTncError("");
+            }}
+            style={[
+              styles.checkbox,
+              acceptedTnc && styles.checkboxChecked,
+              tncError && styles.checkboxError,
+            ]}
+          >
+            {acceptedTnc && (
+              <Ionicons name="checkmark" size={14} color={global.colors.background} />
+            )}
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.nextBtn, loading && { opacity: 0.5 }]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              <Text style={styles.nextText}>
-                {isInitial ? "Next" : "Login"}
-              </Text>
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.signupRow}>
-            <Text>No Account?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-              <Text style={styles.signUpLink}> Sign up</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.disclaimer}>
-            Disclaimer: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+          <Text style={styles.tncText}>
+            I accept the <Text style={styles.tncLink}>T&Cs</Text>
           </Text>
+        </View>
 
-          <View style={styles.tncRow}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPressIn={(e) => e.stopPropagation()}
-              onPress={() => {
-                setAcceptedTnc((prev) => !prev);
-                setTncError("");
-              }}
-              style={[
-                styles.checkbox,
-                acceptedTnc && styles.checkboxChecked,
-                tncError && styles.checkboxError,
-              ]}
-            >
-              {acceptedTnc && (
-                <Ionicons name="checkmark" size={14} color="#fff" />
-              )}
-            </TouchableOpacity>
+        {!!tncError && (
+          <Text style={styles.errorText1}>{tncError}</Text>
+        )}
 
 
-            <Text style={styles.tncText}>
-              I accept the <Text style={styles.tncLink}>T&Cs</Text>
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.nextBtn, loading && { opacity: 0.5 }]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            <Text style={styles.nextText}>
+              {isInitial ? "Next" : "Login"}
             </Text>
-          </View>
+          </TouchableOpacity>
+        </View>
 
-          {!!tncError && (
-            <Text style={styles.errorText1}>{tncError}</Text>
-          )}
+        <View style={styles.signupRow}>
+          <Text>No Account?</Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
+            <Text style={styles.signUpLink}> Sign up</Text>
+          </TouchableOpacity>
+        </View>
 
-        </ScrollView>
+        <Text style={styles.disclaimer}>
+          Disclaimer: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+        </Text>
+
+
+
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  scroll: { padding: 12, alignItems: "center" },
-  image: { width: "100%", height: 220, marginTop: 90 },
+  container: { flex: 1, backgroundColor: global.colors.background },
+  imageWrapper: {
+    width: "100%",
+    height: 220,
+    marginTop: 120,
+    alignItems: "center",
+    backgroundColor: "#fff",
+    position: "absolute",
+  },
+  scroll: {
+    padding: 12,
+    alignItems: "center",
+    paddingTop: 350,
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+  },
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#210F47",
+    color: global.colors.secondary,
     marginVertical: 10,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderColor: "#ccc",
+    borderColor: global.colors.border,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
     marginTop: 8,
     width: "100%",
     height: 45,
+    backgroundColor: global.colors.background,
   },
-  prefix: { fontSize: 16, marginRight: 6, color: "#000" },
-  input: { flex: 1, fontSize: 16 },
+  prefix: { fontSize: 16, marginRight: 6, color: global.colors.textPrimary },
+  input: { flex: 1, fontSize: 16, color: global.colors.textPrimary },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderColor: "#ccc",
+    borderColor: global.colors.surface,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
     marginTop: 8,
     width: "100%",
     height: 45,
+    backgroundColor: global.colors.background,
   },
   passwordInput: { flex: 1, fontSize: 16 },
   eyeBtn: { paddingLeft: 8 },
@@ -338,32 +359,32 @@ const styles = StyleSheet.create({
   },
 
   backBtn: {
-    backgroundColor: "#EAEAEA",
+    backgroundColor: global.colors.primary,
     borderRadius: 25,
     paddingVertical: 10,
     paddingHorizontal: 25,
   },
-  backText: { fontSize: 16, fontWeight: "600", color: "#210F47" },
+  backText: { fontSize: 16, fontWeight: "600", color: global.colors.secondary, },
   nextBtn: {
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     borderRadius: 25,
     paddingVertical: 10,
     paddingHorizontal: 25,
   },
-  nextText: { color: "#fff", fontWeight: "600" },
+  nextText: { color: global.colors.background, fontWeight: "600", fontSize: 16 },
   signupRow: {
     flexDirection: "row",
     marginTop: 15,
     alignItems: "center",
   },
-  signUpLink: { color: "#210F47", fontWeight: "700" },
+  signUpLink: { color: global.colors.secondary, fontWeight: "700" },
   disclaimer: {
     fontSize: 12,
-    color: "#666",
+    color: global.colors.textSecondary,
     marginTop: 25,
     textAlign: "center",
   },
-  tnc: { fontSize: 13, marginTop: 8, color: "#000", fontWeight: "600" },
+  tnc: { fontSize: 13, marginTop: 8, color: global.colors.textPrimary, fontWeight: "600" },
   topBar: {
     width: "100%",
     flexDirection: "row",
@@ -384,7 +405,7 @@ const styles = StyleSheet.create({
     width: 17,
     height: 17,
     borderWidth: 1.5,
-    borderColor: "#666",
+    borderColor: global.colors.textSecondary,
     borderRadius: 4,
     marginRight: 8,
     justifyContent: "center",
@@ -392,12 +413,12 @@ const styles = StyleSheet.create({
   },
 
   checkboxChecked: {
-    backgroundColor: "#210F47",
-    borderColor: "#210F47",
+    backgroundColor: global.colors.secondary,
+    borderColor: global.colors.secondary,
   },
 
   checkboxError: {
-    borderColor: "red",
+    borderColor: global.colors.error,
   },
 
   tncText: {
@@ -407,7 +428,6 @@ const styles = StyleSheet.create({
 
   tncLink: {
     fontWeight: "700",
-    color: "#210F47",
+    color: global.colors.secondary,
   },
-
 });

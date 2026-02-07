@@ -17,16 +17,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import axiosInstance from "../api/axios";
 import { apiUrl } from "../utils/apiUrl";
-
+import { useKeyboardAvoidingShift } from "../hooks/useKeyboardAvoidingShift";
+import { LinearGradient } from 'expo-linear-gradient';
+import { useQuery } from "@tanstack/react-query";
 const API = `${apiUrl}/api/wishlistcontrol`;
 
 const TopWatchlistMenu = ({ onWatchlistChange }) => {
+  const translateY = useKeyboardAvoidingShift()
   const { showSuccess, showError } = useAlert();
   const SHOW_KEY = "watchlist_show_names";
   const [active, setActive] = useState(1);
   const [showPopup, setShowPopup] = useState(false);
   const [lists, setLists] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [inputVisible, setInputVisible] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [userId, setUserId] = useState(null);
@@ -35,18 +38,59 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
   const [showContent, setShowContent] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const deleteScale = useRef(new Animated.Value(0.5)).current;
+const loadShowState = async (uid) => {
+    // const saved = await AsyncStorage.getItem(SHOW_KEY);
+    // if (saved === "true") {
+    //   setShowContent(true);
+    // }
+    const saved = await axiosInstance.get(`${API}/getShowNames`, {
+      params: { user_id: uid }
+    });
+    if (saved.data.success) {
+      setShowContent(saved.data.data);
+    }
+  };
+
   useEffect(() => {
-    const loadShowState = async () => {
-      const saved = await AsyncStorage.getItem(SHOW_KEY);
-      if (saved === "true") {
-        setShowContent(true);
-      }
-    };
-    loadShowState();
+    loadUserId();
   }, []);
+
+  const loadUserId = async () => {
+    try {
+      const uid = await AsyncStorage.getItem("userId");
+    if (uid) {
+        setUserId(uid);
+        fetchLists(uid);
+        loadShowState(uid)
+      };
+    } catch (err) {
+      console.error("Failed to load userId:", err);
+    }
+  };
+
+  // Use React Query for fetching watchlists
+  const { data: watchlistData = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ['watchlists', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const res = await axiosInstance.get(`${API}?user_id=${userId}`);
+      const listData = res?.data?.data || [];
+      return listData.map((item) => ({
+        id: item.wishlist_id,
+        name: item.wishlist_name,
+        user: item.user_id,
+      }));
+    },
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+  });
+
+  // Sync watchlistData to local state
   useEffect(() => {
-    loadUserAndFetch();
-  }, []);
+    if (watchlistData.length > 0) {
+      setLists(watchlistData);
+    }
+  }, [watchlistData]);
 
   useEffect(() => {
     if (lists.length > 0) {
@@ -57,15 +101,15 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
     }
   }, [active, lists]);
 
-  const loadUserAndFetch = async () => {
-    try {
-      const uid = await AsyncStorage.getItem("userId");
-      setUserId(uid);
-      if (uid) fetchLists(uid);
-    } catch (err) {
-      setLoading(false);
-    }
-  };
+  // const loadUserAndFetch = async () => {
+  //   try {
+  //     const uid = await AsyncStorage.getItem("userId");
+  //     setUserId(uid);
+  //     if (uid) fetchLists(uid);
+  //   } catch (err) {
+  //     setLoading(false);
+  //   }
+  // };
 
   const fetchLists = async (uid) => {
     try {
@@ -111,6 +155,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
     setInputValue("");
     setInputVisible(false);
     setEditIndex(null);
+    refetch();
   };
 
   const handleDeleteConfirm = async () => {
@@ -142,11 +187,12 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
     } catch (err) {
       console.error("Delete error:", err.response?.data || err.message);
       showError(
-          "Error",
-         "Failed to delete watchlist. It may not belong to you or no longer exist."
-        );
+        "Error",
+        "Failed to delete watchlist. It may not belong to you or no longer exist."
+      );
     } finally {
       setDeleteIndex(null);
+      refetch(); // 
     }
   };
 
@@ -168,40 +214,46 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
 
   return (
     <>
-      <View style={styles.paginationContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.pagination}>
-            {lists.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.pageBtn,
-                  { marginHorizontal: showContent ? 4 : 16 },
-                  active === index + 1 && styles.activePage,
-                ]}
-                onPress={() => setActive(index + 1)}
-              >
-                <Text
+      <View style={styles.wrapper}>
+        <View style={styles.paginationContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.pagination}>
+              {lists.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
                   style={[
-                    styles.pageText,
-                    active === index + 1 ? styles.activeText : styles.inactiveText,
+                    styles.pageBtn,
+                    { marginHorizontal: showContent ? 4 : 16 },
+                    active === index + 1 && styles.activePage,
                   ]}
+                  onPress={() => setActive(index + 1)}
                 >
-                  {showContent ? item.name : index + 1}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.pageText,
+                      active === index + 1 ? styles.activeText : styles.inactiveText,
+                    ]}
+                  >
+                    {showContent ? item.name : index + 1}
+                  </Text>
+                </TouchableOpacity>
+              ))}
 
-          </View>
-        </ScrollView>
-        <TouchableOpacity onPress={() => setShowPopup(true)}>
-          <Entypo
-            name="dots-three-vertical"
-            size={14}
-            color="#555"
-            style={{ paddingHorizontal: 10, marginHorizontal: 15 }}
-          />
-        </TouchableOpacity>
+            </View>
+          </ScrollView>
+          <TouchableOpacity onPress={() => setShowPopup(true)}>
+            <Entypo
+              name="dots-three-vertical"
+              size={14}
+              color={global.colors.textSecondary}
+              style={{ paddingHorizontal: 10, marginHorizontal: 15, paddingTop:12 }}
+            />
+          </TouchableOpacity>
+        </View>
+        <LinearGradient
+          colors={[global.colors.overlayLow, 'transparent']}
+          style={styles.bottomShadow}
+        />
       </View>
 
       {/* 🔹 Manage Watchlists Popup */}
@@ -214,6 +266,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
             setEditIndex(null);
           }}
         >
+          <Animated.View style={{ transform: [{ translateY }] }}>
           <Pressable style={styles.popupBox}>
             <View style={styles.titleBar}>
               <Text style={styles.titleText}>Manage Watchlists</Text>
@@ -221,7 +274,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
 
             {loading && (
               <View style={{ padding: 20, alignItems: "center" }}>
-                <ActivityIndicator size="small" color="#210F47" />
+                <ActivityIndicator size="small" color={global.colors.secondary} />
               </View>
             )}
 
@@ -243,13 +296,13 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
                       <Feather
                         name="edit"
                         size={16}
-                        color="#555"
+                        color={global.colors.textSecondary}
                         style={{ marginRight: 12 }}
                       />
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={() => setDeleteIndex(index)}>
-                      <Feather name="trash-2" size={16} color="#555" />
+                      <Feather name="trash-2" size={16} color={global.colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -261,7 +314,10 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
                   onPress={async () => {
                     const newValue = !showContent;
                     setShowContent(newValue);
-                    await AsyncStorage.setItem(SHOW_KEY, newValue ? "true" : "false");
+                   await axiosInstance.put(`${API}/updateShowNames`, {
+                        user_id: userId,
+                        watchlist_eye: newValue
+                      });
                   }}
 
                   style={{ marginTop: 16 }}
@@ -269,8 +325,8 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
                   <Ionicons
                     name={showContent ? "eye-outline" : "eye-off-outline"}
                     size={19}
-                    color="#ffffff"
-                    style={{ backgroundColor: '#210F47', borderRadius: 50, padding: 10 }}
+                    color={global.colors.background}
+                    style={{ backgroundColor: global.colors.secondary, borderRadius: 50, padding: 10 }}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -312,7 +368,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
 
                 <View style={styles.inputButtonRow}>
                   <TouchableOpacity
-                    style={[styles.inputBtn, { backgroundColor: "#ccc" }]}
+                    style={[styles.inputBtn, { backgroundColor: global.colors.disabled, }]}
                     onPress={() => {
                       setInputVisible(false);
                       setInputValue("");
@@ -322,7 +378,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
                     <Text>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.inputBtn} onPress={handleSave}>
-                    <Text style={{ color: "#fff" }}>
+                    <Text style={{ color: global.colors.background, }}>
                       {editIndex !== null ? "Update" : "Add"}
                     </Text>
                   </TouchableOpacity>
@@ -330,6 +386,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
               </Animated.View>
             )}
           </Pressable>
+          </Animated.View>
         </Pressable>
       </Modal>
 
@@ -361,31 +418,56 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    position: "relative",
+    marginBottom: 10,
+  },
   paginationContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     display: 'flex',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
+    paddingHorizontal: 16,
+    // paddingVertical: 10,
+    zIndex: 2,
+    shadowColor: global.colors.textPrimary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
   },
+  bottomShadow: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: -5,
+        height: 1,
+        zIndex: 1,
+    },
   pagination: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 6,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     paddingHorizontal: 10,
   },
   pageBtn: {
-    minWidth: 28,          // Minimum width for numbers
+    minWidth: 28,
     height: 28,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 10, // Space for names
+    paddingHorizontal: 0,
     borderRadius: 14,
   },
 
   activePage: {
-    backgroundColor: "#ebe4f2",
+    backgroundColor: global.colors.surface,
+    paddingVertical: 4,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    elevation: 4,
+    shadowColor: global.colors.textPrimary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 3,
   },
 
   pageText: {
@@ -394,30 +476,30 @@ const styles = StyleSheet.create({
   },
 
   activeText: {
-    color: "#000",
+    color: global.colors.textPrimary,
     fontWeight: "600"
   },
 
   inactiveText: {
-    color: "#555"
+    color: global.colors.textSecondary,
   },
 
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   popupBox: {
     width: 260,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 12,
     overflow: "hidden",
     paddingBottom: 16,
   },
   titleBar: {
     paddingVertical: 12,
-    backgroundColor: "#f0eef5",
+    backgroundColor: global.colors.surface,
     alignItems: "center",
   },
   titleText: { fontSize: 15, fontWeight: "600" },
@@ -427,29 +509,30 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderColor: "#eee",
+    borderBottomColor: global.colors.border,
+    borderColor: global.colors.border,
   },
-  rowLabel: { fontSize: 14, color: "#333" },
+  rowLabel: { fontSize: 14, color: global.colors.textPrimary, },
   rowIcons: { flexDirection: "row" },
   addMoreBtn: {
     marginTop: 16,
     alignSelf: "center",
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     paddingVertical: 10,
     paddingHorizontal: 30,
     borderRadius: 20,
   },
-  addMoreText: { color: "#fff", fontWeight: "600" },
+  addMoreText: { color: global.colors.background, fontWeight: "600" },
   inputArea: {
     marginTop: 16,
     paddingHorizontal: 14,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: global.colors.disabled,
     borderRadius: 8,
     padding: 10,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: global.colors.surface,
   },
   inputButtonRow: {
     flexDirection: "row",
@@ -461,11 +544,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
   },
   deleteBox: {
     width: 260,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     padding: 20,
     borderRadius: 12,
   },
@@ -482,16 +565,16 @@ const styles = StyleSheet.create({
     padding: 10,
     paddingHorizontal: 25,
     borderRadius: 8,
-    backgroundColor: "#ddd",
+    backgroundColor: global.colors.disabled,
   },
   yesBtn: {
     padding: 10,
     paddingHorizontal: 25,
     borderRadius: 8,
-    backgroundColor: "#D32F2F",
+    backgroundColor: global.colors.error,
   },
-  noText: { color: "#333", fontWeight: "600" },
-  yesText: { color: "#fff", fontWeight: "600" },
+  noText: { color: global.colors.textPrimary, fontWeight: "600" },
+  yesText: { color: global.colors.background, fontWeight: "600" },
 });
 
 export default TopWatchlistMenu;

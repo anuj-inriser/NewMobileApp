@@ -64,7 +64,7 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
 
         switch (tabName) {
             case 'Equity':
-              if (!canViewEquity) {
+                if (!canViewEquity) {
                     setShowUpgradeModal(true)
                     return;
                 }
@@ -82,7 +82,9 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
                     setShowUpgradeModal(true)
                     return;
                 }
-                navigation.navigate('Learning');
+                navigation.navigate('App', {
+                    screen: 'Learning'
+                });
                 break;
             case 'NewsScreen':
                 if (!canViewNews) {
@@ -90,14 +92,23 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
                     return;
                 }
 
-                navigation.navigate('NewsScreen');
+                navigation.navigate('App', {
+                    screen: 'MainTabs',
+                    params: { screen: 'NewsScreen' }
+                });
                 break;
 
             case 'OrdersScreen':
-                navigation.navigate('OrdersScreen');
+                navigation.navigate('App', {
+                    screen: 'MainTabs',
+                    params: { screen: 'OrdersScreen' }
+                });
                 break;
             case 'TradeScreen':
-                navigation.navigate('TradeScreen');
+                navigation.navigate('App', {
+                    screen: 'MainTabs',
+                    params: { screen: 'Trade' }
+                });
                 break;
             default:
                 break;
@@ -221,16 +232,17 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
 
 const styles = StyleSheet.create({
     safeArea: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         paddingTop: 6,
     },
     activeTab: {
-        backgroundColor: "#210F47",
-        shadowColor: "#210F47",
+        backgroundColor: global.colors.secondary,
+        shadowColor: global.colors.secondary,
         shadowOpacity: 0.3,
     },
     activeTabText: {
-        color: "#fff",
+        color: global.colors.background,
+        fontWeight: '700',
     },
     scrollContainer: {
         flexDirection: "row",
@@ -241,26 +253,26 @@ const styles = StyleSheet.create({
     tabWhite: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 40,
         paddingVertical: 7,
         paddingHorizontal: 16,
         marginRight: 8,
-        shadowColor: "#000",
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.15,
         shadowRadius: 1.5,
         elevation: 2,
     },
     tabTextDark: {
-        color: "#210F47",
+        color: global.colors.secondary,
         fontSize: 12,
         fontFamily: "Poppins-Medium",
         fontWeight: "500",
     },
     tabTextLight: {
-        color: "#fff",
-        fontSize: 12,
+        color: global.colors.background,
+        fontSize: 13,
         fontFamily: "Poppins-Medium",
         fontWeight: "500",
     },
@@ -268,32 +280,32 @@ const styles = StyleSheet.create({
     tabButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#ffffff',  // default background white
+        backgroundColor: global.colors.background,  // default background white
         paddingHorizontal: 16,
         paddingVertical: 5,
         borderRadius: 40,
         marginRight: 8,
-        shadowColor: "#000",
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.15,
         shadowRadius: 1.5,
         elevation: 2,
     },
     tabButtonActive: {
-        backgroundColor: '#210F47', // purple when active
+        backgroundColor: global.colors.secondary, // purple when active
     },
     tabButtonText: {
         fontSize: 12,
         fontWeight: '500',
-        color: '#210F47',
+        color: global.colors.secondary,
         fontFamily: "Poppins-Medium"
     },
     tabButtonTextActive: {
-        color: '#fff',
+        color: global.colors.background,
     },
     divider: {
         width: 1.2,
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
         marginHorizontal: 10,
         alignSelf: "stretch",
     },
@@ -305,14 +317,14 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     watchlistLeft: {
-        backgroundColor: "#210F47",
+        backgroundColor: global.colors.secondary,
         borderTopLeftRadius: 40,
         borderBottomLeftRadius: 40,
         paddingVertical: 5,
         paddingHorizontal: 14,
     },
     watchlistRight: {
-        backgroundColor: "#210F47",
+        backgroundColor: global.colors.secondary,
         borderTopRightRadius: 40,
         borderBottomRightRadius: 40,
         paddingHorizontal: 10,
@@ -320,23 +332,23 @@ const styles = StyleSheet.create({
         marginLeft: 1,
     },
     activeWatchlistLeft: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
     },
     activeWatchlistLeft: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
     },
 
     // Modal style
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor: global.colors.overlay,
         justifyContent: "center",
         alignItems: "center",
     },
 
     modalBox: {
         width: "80%",
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 12,
         padding: 20,
         alignItems: "center",
@@ -345,26 +357,26 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#210F47",
+        color: global.colors.secondary,
         marginBottom: 8,
     },
 
     modalMessage: {
         fontSize: 13,
-        color: "#555",
+        color: global.colors.textSecondary,
         textAlign: "center",
         marginBottom: 20,
     },
 
     modalButton: {
-        backgroundColor: "#210F47",
+        backgroundColor: global.colors.secondary,
         paddingHorizontal: 24,
         paddingVertical: 10,
         borderRadius: 20,
     },
 
     modalButtonText: {
-        color: "#fff",
+        color: global.colors.background,
         fontSize: 14,
         fontWeight: "500",
     },

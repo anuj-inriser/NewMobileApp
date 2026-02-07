@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text } from "react-native";
 import { usePermission } from "../hooks/usePermission";
+import { ActivityIndicator } from "react-native";
 
 export default function PermissionGuard({ permission, children }) {
     const allowed = usePermission(permission);
@@ -9,7 +10,7 @@ export default function PermissionGuard({ permission, children }) {
     if (!allowed) {
         return (
             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                <Text>Access denied</Text>
+             <ActivityIndicator size="large" />
             </View>
         );
     }

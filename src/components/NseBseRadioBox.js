@@ -25,7 +25,7 @@ const NseBseRadioBox = ({
               selected === "NSE" ? "radio-button-on" : "radio-button-off"
             }
             size={16}
-            color="#210F47"
+            color={global.colors.secondary}
           />
           <Text
             style={[
@@ -53,7 +53,7 @@ const NseBseRadioBox = ({
               selected === "BSE" ? "radio-button-on" : "radio-button-off"
             }
             size={16}
-            color="#210F47"
+            color={global.colors.secondary}
           />
           <Text
             style={[
@@ -78,17 +78,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: global.colors.border,
     borderRadius: 25,
     paddingVertical: 6,
     paddingHorizontal: 14,
     marginHorizontal: 6,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
   },
   optionActive: {
-    backgroundColor: "#f5f0fa",
+    backgroundColor: global.colors.surface,
     borderColor: "transparent",
-    shadowColor: "#000",
+    shadowColor: global.colors.textPrimary,
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   text: {
-    color: "#210F47",
+    color: global.colors.secondary,
     fontWeight: "500",
     fontSize: 13,
     marginLeft: 6,

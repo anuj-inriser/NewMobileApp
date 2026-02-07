@@ -15,21 +15,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // import BottomTabBar from '../components/BottomTabBar';
 import { Ionicons } from '@expo/vector-icons';
 import axiosInstance from "../api/axios";
-import TradeTopMenuSlider from '../components/Trade/TradeTopMenuSlider';
+import GlobalTopMenu from '../components/GlobalTopMenu';
 import TradeCard from '../components/Trade/TradeCard';
 import { useFocusEffect } from "@react-navigation/native";
 import {
   subscribeSymbols,
-    unsubscribeDelayed
+  unsubscribeDelayed
 } from "../ws/marketSubscriptions";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
 
 const filterOptions = [
-    "All",
-    "Live",
-    "Closed",
-    "Target Hit",
-    "Target Miss"
+  "All",
+  "Live",
+  "Closed",
+  "Target Hit",
+  "Target Miss"
 ];
 
 const TradeScreen = () => {
@@ -171,8 +171,16 @@ const TradeScreen = () => {
     <>
       <SafeAreaView edges={["bottom"]} style={styles.container}>
         {/* <TopHeader /> */}
-
-        <View style={styles.topSliders}>
+        <GlobalTopMenu
+          tabs={tradeCategories}
+          activeTab={selectedCategory}
+          onTabChange={setSelectedCategory}
+          showFilter={true}
+          filterOptions={filterOptions}
+          selectedFilter={selectedFilter}
+          onFilterChange={handleFilterSelect}
+        />
+        {/* <View style={styles.topSliders}>
           <View style={styles.tradeContainer}>
             <TradeTopMenuSlider
               tradeCategory={tradeCategories}
@@ -219,11 +227,12 @@ const TradeScreen = () => {
             </TouchableOpacity>
           </Modal>
 
-        </View>
+        </View> */}
+
 
         {tradeRecommendations.length === 0 ? (
           <View style={{ alignItems: "center", marginTop: 20 }}>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#555" }}>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: global.colors.textSecondary }}>
               No Trade Recommendations Found
             </Text>
           </View>
@@ -270,12 +279,12 @@ export default TradeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-        backgroundColor: '#fff'
+    backgroundColor: global.colors.background
   },
   topSliders: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     elevation: 10, // Android shadow
-    shadowColor: "#000",
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 2 }, // bottom direction
     shadowOpacity: 0.2,
     shadowRadius: 3,
@@ -283,25 +292,22 @@ const styles = StyleSheet.create({
     // hide top shadow impact
     marginTop: -3,
     paddingTop: 3,
-        marginBottom: 10
+    marginBottom: 10
   },
 
   tradeContainer: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginHorizontal: 20
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: 20
   },
 
   filterContainer: {
-        display: 'flex',
-        flexDirection: 'row',
+    display: 'flex',
+    flexDirection: 'row',
     gap: 3,
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-    // backgroundColor:"#fff",
-    // left:'-47',
-    // paddingLeft:"10"
+    justifyContent: 'flex-start',
+    alignItems: 'center',
   },
 
   loader: {
@@ -320,27 +326,27 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 40,
     fontSize: 16,
-    color: "#666",
+    color: global.colors.textSecondary,
   },
 
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "flex-start",
     alignItems: "flex-end",
   },
 
   filterDropdown: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 10,
     marginTop: 90,
     marginRight: 20,
     width: 120,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: global.colors.border,
     elevation: 6,
-    shadowColor: "#210F47",
+    shadowColor: global.colors.secondary,
     shadowOpacity: 0.15,
     shadowRadius: 5,
     zIndex: 1000,
@@ -353,9 +359,8 @@ const styles = StyleSheet.create({
 
   dropdownText: {
     fontSize: 14,
-    color: "#000",
+    color: global.colors.textPrimary,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-    }
-
+    borderBottomColor: global.colors.border,
+  }
 });

@@ -71,8 +71,8 @@ const StocksScreen = () => {
 
     url =
       selectedExchange === "BSE"
-        ? `${apiUrl}/api/indicesNew/bseStocks/${filterIndex}`
-        : `${apiUrl}/api/indicesNew/nseStocks/${filterIndex}`;
+       ? `${apiUrl}/api/indicesNew/bseStocks?filterIndex=${filterIndex}&category=${selectedCategory}`
+        : `${apiUrl}/api/indicesNew/nseStocks?filterIndex=${filterIndex}&category=${selectedCategory}`;
 
     try {
       const response = await axiosInstance.get(url);
@@ -163,7 +163,7 @@ const StocksScreen = () => {
   // ✅ Sort Logic
   const applySortToData = (sortType, data) => {
     let sorted = [...data];
-    
+
     if (sortType === "A-Z") {
       sorted.sort((a, b) => {
         const nameA = (a.symbol || "").toUpperCase();
@@ -189,7 +189,7 @@ const StocksScreen = () => {
         return priceA - priceB;
       });
     }
-    
+
     return sorted;
   };
 
@@ -203,15 +203,15 @@ const StocksScreen = () => {
     if (filterType === "All") {
       return data;
     }
-    
+
     return data.filter((stock) => {
       const price = Number(realtimePrices[stock.symbol]?.price || stock.ltp || 0);
       const prevClose = Number(realtimePrices[stock.symbol]?.prevClose || stock.prev_close || price);
       const change = price - prevClose;
-      
+
       if (filterType === "Gainers") return change > 0;
       if (filterType === "Losers") return change < 0;
-      
+
       return true;
     });
   };
@@ -241,7 +241,7 @@ const StocksScreen = () => {
         {/* <TopHeader /> */}
         <TopMenuSlider currentRoute="Stocks" />
         <View style={styles.placeholderContainer}>
-          <ActivityIndicator size="large" color="#1a1a1a" />
+          <ActivityIndicator size="large" color={global.colors.textPrimary} />
           <Text style={styles.loadingText}>
             Loading {selectedCategory} stocks...
           </Text>
@@ -296,30 +296,32 @@ const StocksScreen = () => {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           >
-            <Ionicons name="arrow-back" size={22} color="#210F47" />
+            <Ionicons name="arrow-back" size={22} color={global.colors.secondary} />
             <Text style={styles.backText}>({getBackLabel()})</Text>
           </TouchableOpacity>
 
           {/* Sort & Filter Bar - RIGHT SIDE */}
-          <View style={styles.sortFilterButtonsContainer}>
-            <TouchableOpacity style={styles.sortButton} onPress={() => setSortOpen(true)}>
-              <Image
-                source={require("../../assets/sorticon.png")}
-                style={{ width: 18, height: 18, resizeMode: "contain" }}
-              />
-              <Text style={styles.sortFilterText}>Sort</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterOpen(true)}>
-              <Ionicons name="funnel-outline" size={16} color="#000" />
-              <Text style={styles.sortFilterText}>Filter</Text>
-            </TouchableOpacity>
-          </View>
+          {originalStocks.length > 0 && (
+            <View style={styles.sortFilterButtonsContainer}>
+              <TouchableOpacity style={styles.sortButton} onPress={() => setSortOpen(true)}>
+                <Image
+                  source={require("../../assets/sorticon.png")}
+                  style={{ width: 18, height: 18, resizeMode: "contain" }}
+                />
+                <Text style={styles.sortFilterText}>Sort</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterOpen(true)}>
+                <Ionicons name="funnel-outline" size={16} color={global.colors.textPrimary} />
+                <Text style={styles.sortFilterText}>Filter</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
       {/* Sort & Filter Bar - Only when no back button */}
-      {!from && (
+      {!from && originalStocks.length > 0 && (
         <View style={styles.sortFilterBar}>
           <TouchableOpacity style={styles.sortButton} onPress={() => setSortOpen(true)}>
             <Image
@@ -328,9 +330,9 @@ const StocksScreen = () => {
             />
             <Text style={styles.sortFilterText}>Sort</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterOpen(true)}>
-            <Ionicons name="funnel-outline" size={16} color="#000" />
+            <Ionicons name="funnel-outline" size={16} color={global.colors.textPrimary} />
             <Text style={styles.sortFilterText}>Filter</Text>
           </TouchableOpacity>
         </View>
@@ -414,7 +416,7 @@ const StocksScreen = () => {
           </View>
         </TouchableOpacity>
       </Modal>
-      
+
       {/* <BottomTabBar /> */}
     </SafeAreaView>
   );
@@ -423,46 +425,46 @@ const StocksScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
   },
   placeholderContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
   },
   loadingText: {
     fontSize: 16,
-    color: "#666",
+    color: global.colors.textSecondary,
     fontWeight: "500",
     marginTop: 12,
   },
   errorText: {
     fontSize: 18,
-    color: "#ef4444",
+    color: global.colors.error,
     fontWeight: "600",
     textAlign: "center",
   },
   retryButton: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: global.colors.textPrimary,
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 8,
     marginTop: 12,
   },
   retryButtonText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 16,
     fontWeight: "600",
   },
   headerContext: {
     paddingHorizontal: 16,
     paddingVertical: 6,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: global.colors.surface,
   },
   contextText: {
     fontSize: 14,
-    color: "#333",
+    color: global.colors.textPrimary,
     fontWeight: "600",
   },
   content: {
@@ -474,7 +476,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyText: {
-    color: "#888",
+    color: global.colors.textSecondary,
     fontSize: 16,
   },
 
@@ -485,7 +487,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
   },
   backButton: {
     flexDirection: "row",
@@ -494,13 +496,13 @@ const styles = StyleSheet.create({
   backIcon: {
     fontSize: 25,
     fontWeight: "bold",
-    color: "#1a1a1a",
+    color: global.colors.textPrimary,
     marginRight: 10,
   },
   backText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: global.colors.textPrimary,
     marginLeft: 7,
   },
   sortFilterButtonsContainer: {
@@ -533,28 +535,28 @@ const styles = StyleSheet.create({
   sortFilterText: {
     marginLeft: 6,
     fontSize: 13,
-    color: "#000",
+    color: global.colors.textPrimary,
     fontWeight: "600",
   },
 
   // Overlay and Dropdown
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "flex-start",
     alignItems: "flex-end",
   },
   filterDropdown: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 10,
-    marginTop: 230,
+    marginTop: 240,
     marginRight: 20,
     width: 120,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: global.colors.border,
     elevation: 6,
-    shadowColor: "#210F47",
+    shadowColor: global.colors.secondary,
     shadowOpacity: 0.15,
     shadowRadius: 5,
     zIndex: 1000,
@@ -565,7 +567,7 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 13,
-    color: "#000",
+    color: global.colors.textPrimary,
     fontWeight: "500",
   },
 });

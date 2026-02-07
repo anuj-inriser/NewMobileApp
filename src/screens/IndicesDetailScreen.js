@@ -53,7 +53,7 @@ const IndicesDetailScreen = ({ route, navigation }) => {
     }
 
     const isPositive = indexData.change >= 0;
-    const chartColor = isPositive ? '#22c55e' : '#ef4444';
+    const chartColor = isPositive ? global.colors.success : global.colors.error;
 
     const renderHeader = () => (
         <View style={styles.headerContainer}>
@@ -103,8 +103,8 @@ const IndicesDetailScreen = ({ route, navigation }) => {
             <View style={styles.content}>
                 {loading ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#2F0079" />
-                        <Text style={{ marginTop: 10, color: '#666' }}>Loading Stocks...</Text>
+                        <ActivityIndicator size="large" color={global.colors.secondary} />
+                        <Text style={{ marginTop: 10, color: global.colors.textSecondary }}>Loading Stocks...</Text>
                     </View>
                 ) : (
                     <FlatList
@@ -135,19 +135,19 @@ const IndicesDetailScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
     },
     content: {
         flex: 1,
-        backgroundColor: '#F5F5F7',
+        backgroundColor: global.colors.surface,
     },
     headerContainer: {
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
         padding: 24,
         marginBottom: 8,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
-        shadowColor: "#000",
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#1f2937',
+        color: global.colors.textPrimary,
     },
     priceRow: {
         flexDirection: 'row',
@@ -170,14 +170,14 @@ const styles = StyleSheet.create({
     price: {
         fontSize: 32,
         fontWeight: '700',
-        color: '#111827',
+        color: global.colors.textPrimary,
     },
     change: {
         fontSize: 16,
         fontWeight: '600',
     },
-    positive: { color: '#22c55e' },
-    negative: { color: '#ef4444' },
+    positive: { color: global.colors.success },
+    negative: { color: global.colors.error },
     chartContainer: {
         alignItems: 'center',
         marginVertical: 10,
@@ -191,11 +191,11 @@ const styles = StyleSheet.create({
     listTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#1f2937',
+        color: global.colors.textPrimary,
     },
     countText: {
         fontSize: 14,
-        color: '#6b7280',
+        color: global.colors.textSecondary,
     },
     scrollContent: {
         paddingBottom: 24,

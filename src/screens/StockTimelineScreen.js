@@ -10,16 +10,17 @@ import {
   Text,
   Animated,
   AppState,
+  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// import BottomTabBar from '../components/BottomTabBar';
+import BottomTabBar from '../components/BottomTabBar';
 // import TopHeader from "../components/TopHeader";
 import GainerLoserCard from "../components/GainerLoserCard";
-import CommunitySecondMenuSlider from "../components/CommunitySecondMenuSlider";
-import TopFundamentalSlider from "../components/TopFundamentalSlider";
+import GlobalTopMenu from "../components/GlobalTopMenu";
 import StockCard from "../components/StockCard";
 // import SequenceCard from "../components/SequenceCard";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
   subscribeSymbols,
   unsubscribeDelayed,
@@ -33,6 +34,7 @@ import { useAuth } from "../context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import Learning from "./Learning";
 import ScannerTab from "../components/ScannerTab";
+import { useWatchlistStocks } from "../hooks/useWatchlistStocks";
 
 const StockTimelineScreen = () => {
   // 🔥 TOP MENU (Timeline / Posts / Messages)
@@ -61,23 +63,34 @@ const StockTimelineScreen = () => {
   // 🔥 SEQUENCE NAVIGATION STATE
   const [selectedSequenceId, setSelectedSequenceId] = useState(null);
   const [sequenceName, setSequenceName] = useState("");
+
+  // 🔥 WATCHLIST NAVIGATION STATE
+  const [selectedWatchlistId, setSelectedWatchlistId] = useState(null);
+  const [watchlistName, setWatchlistName] = useState("");
   const [currentPostIndex, setCurrentPostIndex] = useState(0);
   const {
     posts: sequencePosts,
     loading: postsLoading,
     error: postsError,
     refetch: refetchPosts,
-  } = useCommunityPosts(selectedSequenceId); 
+  } = useCommunityPosts(selectedSequenceId);
 
   // 🔥 LIKE SYSTEM
   const { userId } = useAuth();
   const { userLikes, fetchUserLikes } = useUserLikes();
 
+  // 🔥 WATCHLIST STOCK HOOK
+  const {
+    stocks: watchlistSwipeStocks,
+    loading: watchlistSwipeLoading,
+    refetch: refetchWatchlistSwipe
+  } = useWatchlistStocks(selectedWatchlistId);
+
   // Animation State
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const [headerHeight, setHeaderHeight] = useState(130); // Total header height for padding
-  const [collapsibleHeight, setCollapsibleHeight] = useState(60); // Only TopHeader height hides
+  const [tabMenuHeight, setTabMenuHeight] = useState(60);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (userId) {
@@ -188,16 +201,24 @@ const StockTimelineScreen = () => {
       if (selectedSequenceId) {
         refetchPosts();
       }
-    }, [userId, selectedSequenceId])
+      if (selectedWatchlistId) {
+        refetchWatchlistSwipe();
+      }
+    }, [userId, selectedSequenceId, selectedWatchlistId])
   );
 
   const getTimelineSymbols = () => {
-    if (!stockData?.length) return [];
-    if (topTab === "News" || topTab === "Sequence") return [];
+    if (!stockData?.length && !watchlistSwipeStocks?.length) return [];
+    if (topTab === "News" || (topTab === "Sequence" && !selectedSequenceId && !selectedWatchlistId)) return [];
 
-    return stockData
-      .map((s) => s.token ?? s.symboltoken ?? s.script_id ?? s.id ?? null)
-      .filter(Boolean);
+    let syms = [];
+    if (selectedWatchlistId) {
+      syms = watchlistSwipeStocks.map(s => s.token || s.script_id || s.symbol);
+    } else {
+      syms = stockData.map((s) => s.token ?? s.symboltoken ?? s.script_id ?? s.id ?? null);
+    }
+
+    return syms.filter(Boolean);
   };
 
   const subscribeIncremental = (symbols, page, context) => {
@@ -247,12 +268,12 @@ const StockTimelineScreen = () => {
         subscribedRef.current.clear();
         appSub?.remove();
       };
-    }, [stockData, topTab, stockTab])
+    }, [stockData, watchlistSwipeStocks, topTab, stockTab, selectedSequenceId, selectedWatchlistId])
   );
 
-  // 🔥 Vertical Stock Pagination Layout
-  const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-  const ITEM_HEIGHT = SCREEN_HEIGHT - 160; // Adjust for bottom tab mostly
+  // 🔥 Vertical Stock Pagination Layout - Dynamic for all devices
+  const [listHeight, setListHeight] = useState(0);
+  const ITEM_HEIGHT = listHeight > 0 ? listHeight : 600; // Fallback to avoid 0 height
 
   const renderStockItem = ({ item }) => (
     <View style={{ height: ITEM_HEIGHT }}>
@@ -291,189 +312,261 @@ const StockTimelineScreen = () => {
     { useNativeDriver: true }
   );
 
-  const diffClamp = Animated.diffClamp(scrollY, 0, collapsibleHeight);
-  const translateY = diffClamp.interpolate({
-    inputRange: [0, collapsibleHeight],
-    outputRange: [0, -collapsibleHeight], // Move up only by TopHeader height
-  });
+  // Mock State for BottomTabBar
+  const mockTabBarState = {
+    index: 2, 
+    routes: [
+      { name: "Equity", key: "Equity" },
+      { name: "NewsScreen", key: "NewsScreen" },
+      { name: "StockTimelineScreen", key: "StockTimelineScreen" },
+      { name: "Trade", key: "Trade" },
+      { name: "AdvancedChart", key: "AdvancedChart" }, 
+    ],
+  };
 
   return (
-    <>
+    <View style={{ flex: 1, backgroundColor: global.colors.background }}>
       <SafeAreaView style={styles.container}>
         <View>{/* <TopHeader /> */}</View>
 
-        {/* 🔥 TOP TWO MENUS */}
-        <View style={styles.topSliders}>
-          {/* TOP: Timeline / Posts / Messages */}
-          <CommunitySecondMenuSlider
-            activeFilter={topTab}
-            onTabChange={(t) => setTopTab(t)}
-          />
-
-          {/* SECOND: Latest / Watchlists / Gainers / Losers */}
-          {/* <TopFundamentalSlider
-                        selectedCategory={stockTab}
-                        onTabChange={(id) => setStockTab(id)}
-                    /> */}
-        </View>
+        <GlobalTopMenu
+          tabs={[
+            { id: "Timeline", name: "Timeline" },
+            { id: "Sequence", name: "Scanner" },
+            { id: "Learning", name: "Learning" },
+          ]}
+          activeTab={{ id: topTab }}
+          onTabChange={(tab) => setTopTab(tab.id)}
+          showFilter={false}
+          hideShadow={topTab === "Learning" || topTab === "Sequence"}
+          onLayout={(e) => setTabMenuHeight(e.nativeEvent.layout.height)}
+        />
 
         {/* 🔥 MAIN CONTENT AREA */}
-        <View style={{ flex: 1, paddingBottom: 10 }}>
-          {topTab === "Sequence" ? (
-             selectedSequenceId ? (
-                postsLoading ? (
-                  <ActivityIndicator
-                    size="large"
-                    color="#210F47"
-                    style={{ marginTop: headerHeight + 20 }}
-                  />
-                ) : (
-                  <>
-                    <TouchableOpacity
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        zIndex: 100,
-                        backgroundColor: "#f2edf9",
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: 3,
-                        elevation: 5,
-                        opacity: 0.8,
-                      }}
-                      onPress={() => {
-                        setSelectedSequenceId(null);
-                        setSequenceName("");
-                      }}
+        <View 
+          style={{ flex: 1, paddingBottom: 0 }} 
+          onLayout={(e) => setListHeight(e.nativeEvent.layout.height)}
+        >
+          {listHeight > 0 && (
+            topTab === "Sequence" ? (
+            selectedSequenceId ? (
+              postsLoading ? (
+                <ActivityIndicator
+                  size="large"
+                  color={global.colors.secondary}
+                  style={{ marginTop: 20 }}
+                />
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      zIndex: 100,
+                      backgroundColor: global.colors.surface,
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: 3,
+                      elevation: 5,
+                      opacity: 0.8,
+                    }}
+                    onPress={() => {
+                      setSelectedSequenceId(null);
+                      setSequenceName("");
+                    }}
+                  >
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
                     >
-                      <View
-                        style={{ flexDirection: "row", alignItems: "center" }}
+                      <Ionicons name="arrow-back" size={20} color={global.colors.secondary} />
+                      <Text
+                        style={{
+                          marginLeft: 10,
+                          fontWeight: "700",
+                          color: global.colors.secondary,
+                        }}
                       >
-                        <Ionicons name="arrow-back" size={20} color="#210F47" />
-                        <Text
-                          style={{
-                            marginLeft: 10,
-                            fontWeight: "700",
-                            color: "#210F47",
-                          }}
-                        >
-                          {sequenceName}
-                        </Text>
-                      </View>
-                      {/* <Ionicons name="close-circle" size={24} color="#210F47" /> */}
-                    </TouchableOpacity>
-                    <Animated.FlatList
-                      key="sequence-posts-list"
-                      data={sequencePosts || []}
-                      renderItem={({ item, index }) => {
-                        const stockInfo = allStocks.find(
-                          (s) =>
-                            String(s.token) === String(item.content_script_id)
-                        );
-                        return (
-                          <View style={{ height: ITEM_HEIGHT }}>
-                            {/* DEBUG LOG */}
-                            {/* {console.log(`Rendering Item ${index}: News Items Count:`, item.news_items?.length)} */}
-                            <StockCard
-                              stock={{
-                                id: item.content_id,
-                                name:
-                                  item.stock_name ||
-                                  item.content_symbol ||
-                                  getSymbolFromScriptId(item.content_script_id),
-                                symbol:
-                                  item.content_symbol ||
-                                  item.stock_name ||
-                                  stockInfo?.symbol ||
-                                  "Unknown",
-                                price: 430.92,
-                                ltp: 430.92,
-                                change: 45.3,
-                                changePercent: 11.77,
-                                // Prioritize News Description/Title from Backend Enrichment
-                                // If backend successfully found news (via script_id/tags match), show that.
-                                // Otherwise fallback to post content/title, then generic watchlist info.
-                                analysis:
-                                  truncateWords(
-                                    item.news_description ||
-                                      item.content ||
-                                      stockInfo?.news_description,
-                                    10
-                                  ) || "",
-                                news_title:
-                                  item.news_title ||
-                                  item.title ||
-                                  stockInfo?.news_title ||
-                                  "",
-                                news_date:
-                                  item.news_date ||
-                                  item.created_at ||
-                                  stockInfo?.news_date,
-                                news_items: item.news_items, // Pass full array for navigation
-                                content_script_timeframe:
-                                  item.content_script_timeframe,
-                                stats: {
-                                  likes: item.likes_count || 0,
-                                  dislikes: item.dislikes_count || 0,
-                                  comments: item.comments_count || 0,
-                                },
-                              }}
-                              postNumber={`${index + 1}/${
-                                sequencePosts.length
+                        {sequenceName}
+                      </Text>
+                    </View>
+                    {/* <Ionicons name="close-circle" size={24} color="#210F47" /> */}
+                  </TouchableOpacity>
+                  <Animated.FlatList
+                    key="sequence-posts-list"
+                    data={sequencePosts || []}
+                    renderItem={({ item, index }) => {
+                      const stockInfo = allStocks.find(
+                        (s) =>
+                          String(s.token) === String(item.content_script_id)
+                      );
+                      return (
+                        <View style={{ height: ITEM_HEIGHT }}>
+                          {/* DEBUG LOG */}
+                          {/* {console.log(`Rendering Item ${index}: News Items Count:`, item.news_items?.length)} */}
+                          <StockCard
+                            stock={{
+                              id: item.content_id,
+                              token:
+                                item.content_script_id ||
+                                stockInfo?.token ||
+                                item.token,
+                              name:
+                                item.stock_name ||
+                                item.content_symbol ||
+                                getSymbolFromScriptId(item.content_script_id),
+                              symbol:
+                                item.content_symbol ||
+                                item.stock_name ||
+                                stockInfo?.symbol ||
+                                "Unknown",
+                              price: 430.92,
+                              ltp: 430.92,
+                              change: 45.3,
+                              changePercent: 11.77,
+                              // Prioritize News Description/Title from Backend Enrichment
+                              // If backend successfully found news (via script_id/tags match), show that.
+                              // Otherwise fallback to post content/title, then generic watchlist info.
+                              analysis:
+                                truncateWords(
+                                  item.news_description ||
+                                  item.content ||
+                                  stockInfo?.news_description,
+                                  10
+                                ) || "",
+                              news_title:
+                                item.news_title ||
+                                item.title ||
+                                stockInfo?.news_title ||
+                                "",
+                              news_date:
+                                item.news_date ||
+                                item.created_at ||
+                                stockInfo?.news_date,
+                              news_items: item.news_items, // Pass full array for navigation
+                              content_script_timeframe:
+                                item.content_script_timeframe,
+                              stats: {
+                                likes: item.likes_count || 0,
+                                dislikes: item.dislikes_count || 0,
+                                comments: item.comments_count || 0,
+                              },
+                            }}
+                            postNumber={`${index + 1}/${sequencePosts.length
                               }`}
-                              contentType="post"
-                              userReaction={
-                                userLikes[`post_${item.content_id}`]
-                              }
-                              fullScreen={true}
-                            />
-                          </View>
-                        );
-                      }}
-                      // Header removed from here to top overlay
-                      keyExtractor={(item) => item.content_id.toString()}
-                      pagingEnabled
-                      snapToAlignment="start"
-                      decelerationRate="fast"
-                      snapToInterval={ITEM_HEIGHT}
-                      onViewableItemsChanged={onViewableItemsChanged}
-                      viewabilityConfig={viewabilityConfig}
-                      showsVerticalScrollIndicator={false}
-                      onScroll={handleScroll}
-                      contentContainerStyle={{ flexGrow: 0 }}
-                    />
-                  </>
-                )
-             ) : (
-              <ScannerTab 
+                            contentType="post"
+                            userReaction={
+                              userLikes[`post_${item.content_id}`]
+                            }
+                            fullScreen={true}
+                          />
+                        </View>
+                      );
+                    }}
+                    // Header removed from here to top overlay
+                    keyExtractor={(item) => item.content_id.toString()}
+                    pagingEnabled
+                    snapToAlignment="start"
+                    decelerationRate="fast"
+                    snapToInterval={ITEM_HEIGHT}
+                    onViewableItemsChanged={onViewableItemsChanged}
+                    viewabilityConfig={viewabilityConfig}
+                    showsVerticalScrollIndicator={false}
+                    onScroll={handleScroll}
+                    contentContainerStyle={{ flexGrow: 0 }}
+                  />
+                </>
+              )
+            ) : selectedWatchlistId ? (
+              watchlistSwipeLoading ? (
+                <ActivityIndicator
+                  size="large"
+                  color={global.colors.secondary}
+                  style={{ marginTop: 20 }}
+                />
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      zIndex: 100,
+                      backgroundColor: global.colors.surface,
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: 3,
+                      elevation: 5,
+                      opacity: 0.8,
+                    }}
+                    onPress={() => {
+                      setSelectedWatchlistId(null);
+                      setWatchlistName("");
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Ionicons name="arrow-back" size={20} color={global.colors.secondary} />
+                      <Text
+                        style={{
+                          marginLeft: 10,
+                          fontWeight: "700",
+                          color: global.colors.secondary,
+                        }}
+                      >
+                        {watchlistName}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  <Animated.FlatList
+                    key="watchlist-swipe-list"
+                    data={watchlistSwipeStocks || []}
+                    renderItem={renderStockItem}
+                    keyExtractor={(item) => (item.id || item.token || Math.random()).toString()}
+                    pagingEnabled
+                    snapToAlignment="start"
+                    decelerationRate="fast"
+                    snapToInterval={ITEM_HEIGHT}
+                    showsVerticalScrollIndicator={false}
+                    onScroll={handleScroll}
+                  />
+                </>
+              )
+            ) : (
+              <ScannerTab
                 onScannerSelect={(scanner) => {
+                  setSelectedWatchlistId(null);
                   setSelectedSequenceId(scanner.id);
                   setSequenceName(scanner.sequence_name || scanner.name || "Viewing Sequence");
+                }}
+                onWatchlistSelect={(wl) => {
+                  setSelectedSequenceId(null);
+                  setSelectedWatchlistId(wl.id);
+                  setWatchlistName(wl.name);
                 }}
               />
             )
           ) : topTab === "Learning" ? (
-            <Learning />
+            <Learning isEmbedded={true} />
           ) : topTab === "News" ? (
             <View
               style={{
                 flex: 1,
                 justifyContent: "center",
                 alignItems: "center",
-                paddingTop: headerHeight,
               }}
             >
-              <Text style={{ color: "#888" }}>News feed coming soon...</Text>
+              <Text style={{ color: global.colors.textSecondary }}>News feed coming soon...</Text>
             </View>
           ) : stockTab === "Gainers" || stockTab === "Losers" ? (
             moversLoading ? (
               <ActivityIndicator
                 size="large"
-                color="#210F47"
-                style={{ marginTop: headerHeight + 20 }}
+                color={global.colors.secondary}
+                style={{ marginTop: 20 }}
               />
             ) : (
               <Animated.FlatList
@@ -492,51 +585,56 @@ const StockTimelineScreen = () => {
           ) : (
             <View style={{ flex: 1 }}>
 
-                <Animated.FlatList
-                  key="stock-timeline-list"
-                  data={stockData}
-                  renderItem={renderStockItem}
-                  keyExtractor={(item) => item.id}
-                  pagingEnabled
-                  snapToAlignment="start"
-                  decelerationRate="fast"
-                  snapToInterval={ITEM_HEIGHT}
-                  onScroll={handleScroll}
-                  contentContainerStyle={{ flexGrow: 0 }}
-                  getItemLayout={(data, index) => ({
-                    length: ITEM_HEIGHT,
-                    offset: ITEM_HEIGHT * index,
-                    index,
-                  })}
-                  showsVerticalScrollIndicator={false}
-                  onEndReached={handleLoadMore}
-                  onEndReachedThreshold={0.5}
-                  ListFooterComponent={
-                    stocksLoading ? (
-                      <ActivityIndicator
-                        size="small"
-                        color="#210F47"
-                        style={{ padding: 20 }}
-                      />
-                    ) : null
-                  }
-                />
+              <Animated.FlatList
+                key="stock-timeline-list"
+                data={stockData}
+                renderItem={renderStockItem}
+                keyExtractor={(item) => item.id}
+                pagingEnabled
+                snapToAlignment="start"
+                decelerationRate="fast"
+                snapToInterval={ITEM_HEIGHT}
+                onScroll={handleScroll}
+                contentContainerStyle={{ flexGrow: 0 }}
+                getItemLayout={(data, index) => ({
+                  length: ITEM_HEIGHT,
+                  offset: ITEM_HEIGHT * index,
+                  index,
+                })}
+                showsVerticalScrollIndicator={false}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                  stocksLoading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={global.colors.secondary}
+                      style={{ padding: 20 }}
+                    />
+                  ) : null
+                }
+              />
 
             </View>
+            )
           )}
         </View>
       </SafeAreaView>
 
-      {/* <BottomTabBar /> */}
-    </>
+      <BottomTabBar 
+          state={mockTabBarState} 
+          navigation={useNavigation()} 
+          descriptors={{}} 
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   topSliders: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     elevation: 10,
-    shadowColor: "#000",
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
@@ -545,7 +643,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
   },
 });
 

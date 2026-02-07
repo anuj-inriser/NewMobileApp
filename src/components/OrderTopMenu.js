@@ -59,14 +59,13 @@ const OrderTopMenu = ({
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: "#fff",
-  
+    backgroundColor: global.colors.background,
   },
 
   shadowWrapper: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     paddingTop: 1,
-    shadowColor: "#000",
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
@@ -87,12 +86,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 32,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 40,
     paddingVertical: 7,
     paddingHorizontal: 20,
     marginRight: 12,
-    shadowColor: "#000",
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 1.5,
@@ -100,20 +99,20 @@ const styles = StyleSheet.create({
   },
 
   activeTab: {
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 3,
   },
 
   tabTextDark: {
-    color: "#210F47",
+    color: global.colors.secondary,
     fontSize: 13,
     fontWeight: "500",
   },
 
   tabTextActive: {
-    color: "#fff",
+    color: global.colors.background,
   },
 });
 

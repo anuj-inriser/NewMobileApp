@@ -20,12 +20,14 @@ import { X, Send, MoreVertical, Trash2, Edit2, Check } from 'lucide-react-native
 import axios from 'axios';
 import { apiUrl } from '../utils/apiUrl';
 import { useAuth } from '../context/AuthContext';
+import { useKeyboardAvoidingShift } from '../hooks/useKeyboardAvoidingShift';
 
 const { height } = Dimensions.get('window');
 
 const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onCommentAdded, onCommentDeleted }) => {
     const { showSuccess, showError } = useAlert();
     const { userId, user } = useAuth();
+    const translateY = useKeyboardAvoidingShift(15, 0)
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [text, setText] = useState('');
@@ -213,7 +215,7 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
                         </View>
                         {isMyComment && (
                             <TouchableOpacity onPress={() => setMenuVisibleId(menuVisibleId === item.id ? null : item.id)}>
-                                <MoreVertical size={16} color="#999" />
+                                <MoreVertical size={16} color={global.colors.textSecondary} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -223,12 +225,12 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
                     {menuVisibleId === item.id && (
                         <View style={styles.menuContainer}>
                             <TouchableOpacity style={styles.menuOption} onPress={() => startEditing(item)}>
-                                <Edit2 size={14} color="#333" />
+                                <Edit2 size={14} color={global.colors.textPrimary} />
                                 <Text style={styles.menuText}>Edit</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.menuOption} onPress={() => { setMenuVisibleId(null); handleDeleteComment(item.id); }}>
-                                <Trash2 size={14} color="#F44336" />
-                                <Text style={[styles.menuText, { color: '#F44336' }]}>Delete</Text>
+                                <Trash2 size={14} color={global.colors.error} />
+                                <Text style={[styles.menuText, { color: global.colors.error }]}>Delete</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -249,16 +251,16 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
             <View style={styles.overlay}>
                 <TouchableOpacity style={styles.backdrop} onPress={handleClose} activeOpacity={1} />
 
-                <Animated.View style={[styles.container, { transform: [{ translateY: slideAnim }] }]}>
+                <View style={styles.container}>
                     <View style={styles.header}>
                         <Text style={styles.title}>Comments</Text>
                         <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-                            <X size={24} color="#333" />
+                            <X size={24} color={global.colors.textPrimary} />
                         </TouchableOpacity>
                     </View>
 
                     {loading ? (
-                        <ActivityIndicator size="large" color="#210F47" style={{ marginTop: 20 }} />
+                        <ActivityIndicator size="large" color={global.colors.secondary} style={{ marginTop: 20 }} />
                     ) : (
                         <FlatList
                             data={comments}
@@ -269,40 +271,37 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
                             keyboardShouldPersistTaps="handled"
                         />
                     )}
-
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
-                    >
-                        <View style={styles.inputContainer}>
-                            <Image
-                                source={{ uri: user?.profile_pic || 'https://via.placeholder.com/40' }}
-                                style={[styles.avatar, { width: 32, height: 32 }]}
-                            />
-                            <TextInput
-                                style={styles.input}
-                                placeholder={editingCommentId ? "Update comment..." : "Write a comment..."}
-                                value={text}
-                                onChangeText={setText}
-                                multiline
-                            />
-                            {editingCommentId ? (
-                                <View style={{ flexDirection: 'row' }}>
-                                    <TouchableOpacity onPress={() => { setText(''); setEditingCommentId(null); }} style={{ marginRight: 10, padding: 5 }}>
-                                        <X size={24} color="#666" />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity onPress={handleSend} disabled={!text.trim() || sending}>
-                                        <Check size={24} color="#210F47" />
-                                    </TouchableOpacity>
-                                </View>
-                            ) : (
-                                <TouchableOpacity onPress={handleSend} disabled={!text.trim() || sending}>
-                                    <Send size={24} color={text.trim() ? "#210F47" : "#999"} />
+                    <Animated.View style={[styles.inputContainer,
+                    { transform: [{ translateY }] }
+                    ]}>
+                        <Image
+                            source={{ uri: user?.profile_pic || 'https://via.placeholder.com/40' }}
+                            style={[styles.avatar, { width: 32, height: 32 }]}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder={editingCommentId ? "Update comment..." : "Write a comment..."}
+                            value={text}
+                            onChangeText={setText}
+                            multiline
+                        />
+                        {editingCommentId ? (
+                            <View style={{ flexDirection: 'row' }}>
+                                <TouchableOpacity onPress={() => { setText(''); setEditingCommentId(null); }} style={{ marginRight: 10, padding: 5 }}>
+                                    <X size={24} color={global.colors.textSecondary} />
                                 </TouchableOpacity>
-                            )}
-                        </View>
-                    </KeyboardAvoidingView>
-                </Animated.View>
+                                <TouchableOpacity onPress={handleSend} disabled={!text.trim() || sending}>
+                                    <Check size={24} color={global.colors.secondary} />
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <TouchableOpacity onPress={handleSend} disabled={!text.trim() || sending}>
+                                <Send size={24} color={text.trim() ? global.colors.secondary : global.colors.textSecondary} />
+                            </TouchableOpacity>
+                        )}
+                    </Animated.View>
+
+                </View>
             </View>
         </Modal>
     );
@@ -312,17 +311,18 @@ const styles = StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: global.colors.overlay,
     },
     backdrop: {
         ...StyleSheet.absoluteFillObject,
     },
     container: {
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         height: '70%', // Take up 70% of screen
         paddingTop: 10,
+        maxHeight: '100%',
     },
     header: {
         flexDirection: 'row',
@@ -331,12 +331,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: global.colors.border,
     },
     title: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#000',
+        color: global.colors.textPrimary,
     },
     closeBtn: {
         padding: 5,
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
         height: 40,
         borderRadius: 20,
         marginRight: 12,
-        backgroundColor: '#ddd',
+        backgroundColor: global.colors.surface,
     },
     commentContent: {
         flex: 1,
@@ -369,22 +369,22 @@ const styles = StyleSheet.create({
     userName: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#000',
+        color: global.colors.textPrimary,
         marginRight: 8,
     },
     time: {
         fontSize: 12,
-        color: '#888',
+        color: global.colors.textSecondary,
     },
     editedText: {
         fontSize: 11,
-        color: '#999',
+        color: global.colors.textSecondary,
         marginLeft: 4,
         fontStyle: 'italic'
     },
     commentText: {
         fontSize: 14,
-        color: '#333',
+        color: global.colors.textPrimary,
         lineHeight: 20,
     },
     inputContainer: {
@@ -392,32 +392,32 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 15,
         borderTopWidth: 1,
-        borderTopColor: '#eee',
-        backgroundColor: '#fff',
+        borderTopColor: global.colors.border,
+        backgroundColor: global.colors.background,
     },
     input: {
         flex: 1,
-        backgroundColor: '#F5F5F7',
+        backgroundColor: global.colors.surface,
         borderRadius: 20,
         paddingHorizontal: 15,
         paddingVertical: 8,
         marginHorizontal: 10,
         maxHeight: 100,
-        color: '#000',
+        color: global.colors.textPrimary,
     },
     emptyText: {
         textAlign: 'center',
         marginTop: 50,
-        color: '#888'
+        color: global.colors.textSecondary
     },
     // New Menu Styles
     menuContainer: {
         position: 'absolute',
         right: 0,
         top: 25,
-        backgroundColor: '#fff',
+        backgroundColor: global.colors.background,
         borderRadius: 8,
-        shadowColor: '#000',
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     menuText: {
         marginLeft: 8,
         fontSize: 14,
-        color: '#333',
+        color: global.colors.textPrimary,
     }
 });
 

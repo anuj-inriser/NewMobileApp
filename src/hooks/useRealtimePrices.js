@@ -1,9 +1,10 @@
 // useRealtimePrices.js — Final Corrected
 import { useEffect, useRef, useState } from "react";
 import { onMarketMessage } from "../ws/marketWs";
+import { latestPrices } from "../store/marketPrices"; // Import global cache
 
 export const useRealtimePrices = () => {
-  const [prices, setPrices] = useState({});
+  const [prices, setPrices] = useState({ ...latestPrices });
   const bufferRef = useRef({});
 
   useEffect(() => {
@@ -16,16 +17,20 @@ export const useRealtimePrices = () => {
       const { symbol, value: price, close: prevClose, open } = data;
       if (!symbol || price == null) return;
 
-      const prev = bufferRef.current[symbol];
+      const prev = bufferRef.current[symbol] || latestPrices[symbol];
       const base = prev?.prevClose ?? prevClose ?? open ?? prev?.price ?? price;
 
-      bufferRef.current[symbol] = {
+      const newPriceData = {
         price,
         prevClose: base,
         change: price - base,
         changePercent: base ? ((price - base) / base) * 100 : 0,
         __ui_ts: Date.now(), // for flash
       };
+      bufferRef.current[symbol] = newPriceData;
+
+      // Update global cache immediately (so other screens get fresh data)
+      latestPrices[symbol] = newPriceData;
     });
 
     const flush = setInterval(() => {

@@ -15,25 +15,36 @@ const PortfolioHoldingsCard = ({
     return num.toFixed(2);
   };
 
-  const profitColor = profit >= 0 ? "#22C55E" : "#EF4444";
-  const profitDisplay = profit >= 0 ? `+₹${formatAmount(Math.abs(profit))}` : `-₹${formatAmount(Math.abs(profit))}`;
-  const percentDisplay = profitPercent >= 0 ? `+${profitPercent.toFixed(2)}%` : `${profitPercent.toFixed(2)}%`;
+  // const profitColor = profit >= 0 ? global.colors.success : global.colors.error;
+  // const profitDisplay = profit >= 0 ? `₹${formatAmount(Math.abs(profit))}` : `₹${formatAmount(Math.abs(profit))}`;
+  // const percentDisplay = profitPercent >= 0 ? `${profitPercent.toFixed(2)}%` : `${profitPercent.toFixed(2)}%`;
+
+
+  const profitColor =
+    profit >= 0 ? global.colors.success : global.colors.error;
+
+  const profitDisplay = `₹${Math.abs(profit).toFixed(2)}`;
+
+  const percentDisplay = `${Math.abs(profitPercent).toFixed(2)}%`;
 
   return (
     <View style={[styles.card, compactMode && styles.cardCompact]}>
       <View style={styles.mainSection}>
-        <Text style={styles.label}>Portfolio Value</Text>
-        <Text style={styles.portfolioValue}>₹ {formatAmount(totalCurrent)}</Text>
-        
-        <View style={styles.gainSection}>
-          <Text style={styles.gainLabel}>Today's Gain/Loss</Text>
-          <View style={styles.gainRow}>
-            <Text style={[styles.gainAmount, { color: profitColor }]}>
-              {profitDisplay}
-            </Text>
-            <Text style={[styles.gainPercent, { color: profitColor }]}>
-              {" "}({percentDisplay})
-            </Text>
+        <View style={styles.topRow}>
+          <View>
+            <Text style={styles.label}>Portfolio Value</Text>
+            <Text style={styles.portfolioValue}>₹ {Math.abs(totalCurrent).toFixed(2)}</Text>
+          </View>
+          <View style={styles.gainSection}>
+            <Text style={styles.gainLabel}>Today's Gain/Loss</Text>
+            <View style={styles.gainRow}>
+              <Text style={[styles.gainAmount, { color: profitColor }]}>
+                {profitDisplay}
+              </Text>
+              <Text style={[styles.gainPercent, { color: profitColor }]}>
+                {" "}({percentDisplay})
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -42,7 +53,7 @@ const PortfolioHoldingsCard = ({
         <View style={styles.holdingsRow}>
           <View style={styles.dot} />
           <Text style={styles.holdingsLabel}>Equity Holdings</Text>
-          <Text style={styles.holdingsAmount}>₹ {formatAmount(totalInvested)}</Text>
+          <Text style={styles.holdingsAmount}>₹ {Math.abs(totalInvested).toFixed(2)}</Text>
         </View>
       </View>
     </View>
@@ -53,11 +64,11 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginVertical: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: global.colors.background,
     borderRadius: 16,
     padding: 20,
     elevation: 3,
-    shadowColor: "#000",
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -71,24 +82,32 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: "#666",
+    color: global.colors.textSecondary,
     fontWeight: "600",
     marginBottom: 6,
   },
   portfolioValue: {
-    fontSize: 28,
+    fontSize: 23,
     fontWeight: "700",
-    color: "#210F47",
+    // color: global.colors.secondary,
+    marginBottom: 16,
+  },
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 16,
   },
   gainSection: {
-    marginBottom: 16,
+    alignItems: "flex-end",
+    // marginBottom: 16,
   },
   gainLabel: {
     fontSize: 12,
-    color: "#888",
+    color: global.colors.textSecondary,
     fontWeight: "500",
     marginBottom: 4,
+    textAlign: "right",
   },
   gainRow: {
     flexDirection: "row",
@@ -96,7 +115,7 @@ const styles = StyleSheet.create({
   },
   gainAmount: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "500",
   },
   gainPercent: {
     fontSize: 16,
@@ -104,7 +123,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "#E5E5E5",
+    backgroundColor: global.colors.border,
     marginVertical: 12,
   },
   holdingsRow: {
@@ -115,19 +134,19 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     marginRight: 10,
   },
   holdingsLabel: {
     flex: 1,
     fontSize: 14,
-    color: "#444",
+    color: global.colors.textPrimary,
     fontWeight: "500",
   },
   holdingsAmount: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#210F47",
+    color: global.colors.secondary,
   },
 });
 

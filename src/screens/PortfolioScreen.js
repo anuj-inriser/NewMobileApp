@@ -60,27 +60,61 @@ const PorfolioScreen = () => {
 
         setOrders(filtered);
     };
-    
+
     // Calculate Portfolio Totals
+    // const portfolioTotals = orders.reduce((acc, item) => {
+    //     const realisedQty = Number(item.realisedquantity) || 0;
+    //     const ltp = realtimePrices[item.tradingsymbol]?.price || Number(item.ltp) || 0;
+    //     const avg = Number(item.averageprice) || 0;
+    //     const invested = avg * realisedQty;
+    //     const currentValue = ltp * realisedQty;
+    //     const profit = currentValue - invested;
+
+    //     acc.totalCurrent += currentValue;
+    //     acc.totalInvested += invested;
+    //     acc.totalProfit += profit;
+
+    //     return acc;
+    // }, { totalCurrent: 0, totalInvested: 0, totalProfit: 0 });
+
     const portfolioTotals = orders.reduce((acc, item) => {
-        const realisedQty = Number(item.realisedquantity) || 0;
-        const ltp = realtimePrices[item.tradingsymbol]?.price || Number(item.ltp) || 0;
+        const qty = Number(item.realisedquantity) || 0;
+
+        const rt = realtimePrices[item.tradingsymbol];
+        const ltp = rt?.price ?? Number(item.ltp || 0);
+        const prevClose = rt?.prevClose ?? Number(item.close || 0);
         const avg = Number(item.averageprice) || 0;
-        const invested = avg * realisedQty;
-        const currentValue = ltp * realisedQty;
+
+        const invested = avg * qty;
+        const currentValue = ltp * qty;
         const profit = currentValue - invested;
-        
-        acc.totalCurrent += currentValue;
+
+        // 🔥 SAME FORMULA AS PortfolioCard
+        const today = (ltp - prevClose) * qty;
+
         acc.totalInvested += invested;
+        acc.totalCurrent += currentValue;
         acc.totalProfit += profit;
-        
+        acc.totalToday += today;
+
         return acc;
-    }, { totalCurrent: 0, totalInvested: 0, totalProfit: 0 });
-    
-    const profitPercent = portfolioTotals.totalInvested > 0 
-        ? ((portfolioTotals.totalProfit / portfolioTotals.totalInvested) * 100) 
+    }, {
+        totalInvested: 0,
+        totalCurrent: 0,
+        totalProfit: 0,
+        totalToday: 0
+    });
+
+    const todayPercent =
+        portfolioTotals.totalInvested > 0
+            ? (portfolioTotals.totalToday / portfolioTotals.totalInvested) * 100
+            : 0;
+
+
+    const profitPercent = portfolioTotals.totalInvested > 0
+        ? ((portfolioTotals.totalProfit / portfolioTotals.totalInvested) * 100)
         : 0;
-    
+
 
     useFocusEffect(
         useCallback(() => {
@@ -118,14 +152,27 @@ const PorfolioScreen = () => {
         const fetchOrders = async () => {
             try {
                 setLoading(true);
-                
+
                 // Use getPortfolioBalance endpoint for portfolio data (same as EquityScreen)
                 const response = await fetch(`${apiUrl}/api/portfolio/getPortfolioBalance`);
-                
+
                 const json = await response.json();
-                
-                setOrders(json?.data || []);
-                setOriginalOrders(json?.data || []);
+
+                const allOrders = json?.data || [];
+
+                // Deduplicate using tradingsymbol and broker_id
+                const seen = new Set();
+                const uniqueOrders = allOrders.filter(item => {
+                    const key = `${item.tradingsymbol}_${item.broker_id}`;
+                    if (seen.has(key)) {
+                        return false;
+                    }
+                    seen.add(key);
+                    return true;
+                });
+
+                setOrders(uniqueOrders);
+                setOriginalOrders(uniqueOrders);
                 setSortOrder(null);
 
             } catch (error) {
@@ -135,7 +182,7 @@ const PorfolioScreen = () => {
                 setLoading(false);
             }
         };
-        
+
         if (selectedTab === 1) {
             fetchOrders();
         }
@@ -233,7 +280,7 @@ const PorfolioScreen = () => {
 
     return (
         <>
-            <SafeAreaView edges={["bottom"]} style={styles.container}>
+            <SafeAreaView style={styles.container}>
                 {/* <TopHeader /> */}
 
                 {/* Sort + Filter Bar */}
@@ -256,22 +303,31 @@ const PorfolioScreen = () => {
                             <Ionicons
                                 name={selectedBroker ? "funnel" : "funnel-outline"}
                                 size={16}
-                                color="#000"
+                               color={global.colors.textPrimary}
                             />
                             <Text style={styles.actionText}>Filter</Text>
                         </TouchableOpacity> */}
 
                     </View>
                 </View>
-                
+
                 {/* Portfolio Holdings Summary */}
-                <PortfolioHoldingsCard
+                {/* <PortfolioHoldingsCard
                     totalCurrent={portfolioTotals.totalCurrent}
                     totalInvested={portfolioTotals.totalInvested}
                     profit={portfolioTotals.totalProfit}
                     profitPercent={profitPercent}
                     compactMode={true}
+                /> */}
+                <PortfolioHoldingsCard
+                    totalCurrent={portfolioTotals.totalCurrent}
+                    totalInvested={portfolioTotals.totalInvested}
+                    profit={portfolioTotals.totalToday}
+                    profitPercent={todayPercent}
+                    compactMode={true}
                 />
+
+
 
                 {/* SORT MODAL */}
                 <Modal visible={sortOpen} transparent animationType="fade">
@@ -400,7 +456,7 @@ const PorfolioScreen = () => {
                     </ScrollView>
                 )}
             </SafeAreaView>
-            <BottomTabBar />
+            {/* <BottomTabBar /> */}
         </>
     );
 };
@@ -416,16 +472,16 @@ const styles = StyleSheet.create({
     loaderText: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#555",
+        color: global.colors.textSecondary,
     },
     container: {
         flex: 1,
-        backgroundColor: '#fff'
+        backgroundColor: global.colors.background
     },
     topSliders: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         elevation: 10,
-        shadowColor: "#000",
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 3,
@@ -439,13 +495,14 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         alignItems: "center",
         paddingHorizontal: 20,
-        marginTop: 5,
+        marginTop: -30,
     },
 
     orderTitle: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#000",
+        color: global.colors.textPrimary,
+        marginBottom: 10,
     },
 
     row: {
@@ -462,27 +519,27 @@ const styles = StyleSheet.create({
     actionText: {
         marginLeft: 4,
         fontSize: 13,
-        color: "#000",
+        color: global.colors.textPrimary,
     },
 
     overlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.4)",
+        backgroundColor: global.colors.overlay,
         justifyContent: "flex-start",
         alignItems: "flex-end",
     },
 
     filterDropdown: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 10,
-        marginTop: 90,
+        marginTop: 185,
         marginRight: 20,
         width: 120,
         paddingVertical: 6,
         borderWidth: 1,
-        borderColor: "#eee",
+        borderColor: global.colors.border,
         elevation: 6,
-        shadowColor: "#210F47",
+        shadowColor: global.colors.secondary,
         shadowOpacity: 0.15,
         shadowRadius: 5,
         zIndex: 1000,
@@ -494,8 +551,8 @@ const styles = StyleSheet.create({
 
     dropdownText: {
         fontSize: 14,
-        color: "#000",
+        color: global.colors.textPrimary,
         borderBottomWidth: 0.5,
-        borderBottomColor: "#eee",
+        borderBottomColor: global.colors.border,
     },
 });

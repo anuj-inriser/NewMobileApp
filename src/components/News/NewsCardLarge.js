@@ -20,6 +20,7 @@ import axios from 'axios'; // Added import
 import { apiUrl } from "../../utils/apiUrl";
 import { formatPublishedTime } from "../../utils/dateFormat"
 import { useAuth } from "../../context/AuthContext"; // Added import
+import GrievanceModal from "../GrievanceModal";
 import DefaultNewsImage from "../../../assets/Newspaper.jpg";
 
 const NewsCardLarge = ({ item, onPress }) => {
@@ -28,26 +29,26 @@ const NewsCardLarge = ({ item, onPress }) => {
 
     // console.log('item', item.news_content)
     const [menuVisible, setMenuVisible] = useState(false);
-    const [cardLayout, setCardLayout] = useState({ x: 0, y: 0 });
-    const [iconLayout, setIconLayout] = useState({ x: 0, y: 0, w: 0, h: 0 });
+    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+    const moreButtonRef = useRef(null);
 
     // --- REPORTING LOGIC START ---
     const [reportModalOpen, setReportModalOpen] = useState(false);
-    const [successIssueModalOpen, setSuccessIssueModalOpen] = useState(false);
-    const [issueCategory, setIssueCategory] = useState("");
-    const [issueDescription, setIssueDescription] = useState("");
-    const [issueDropdownOpen, setIssueDropdownOpen] = useState(false);
-    const [attachment, setAttachment] = useState(null);
+    // const [successIssueModalOpen, setSuccessIssueModalOpen] = useState(false);
+    // const [issueCategory, setIssueCategory] = useState("");
+    // const [issueDescription, setIssueDescription] = useState("");
+    // const [issueDropdownOpen, setIssueDropdownOpen] = useState(false);
+    // const [attachment, setAttachment] = useState(null);
 
-    const pickAttachment = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.8,
-        });
-        if (!result.canceled) {
-            setAttachment(result.assets[0]);
-        }
-    };
+    // const pickAttachment = async () => {
+    //     const result = await ImagePicker.launchImageLibraryAsync({
+    //         mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    //         quality: 0.8,
+    //     });
+    //     if (!result.canceled) {
+    //         setAttachment(result.assets[0]);
+    //     }
+    // };
 
     const handleReport = () => {
         if (!userId) {
@@ -62,83 +63,90 @@ const NewsCardLarge = ({ item, onPress }) => {
         setReportModalOpen(true);
     };
 
-    const submitReportIssue = async () => {
-        try {
-            if (!issueCategory || !issueDescription) {
-                showError(
-                    "Alert",
-                    "Please select category and description."
-                );
-                return;
-            }
+    // const submitReportIssue = async () => {
+    //     try {
+    //         if (!issueCategory || !issueDescription) {
+    //             showError(
+    //                 "Alert",
+    //                 "Please select category and description."
+    //             );
+    //             return;
+    //         }
 
-            const formData = new FormData();
-            formData.append("complaint_type", "Issue");
-            formData.append("complaint_status", "Opened");
-            formData.append("issue_type", issueCategory);
-            // Combine user description with system context
-            const fullMessage = `${issueDescription} (News ID: ${item.id || 'N/A'})`;
-            formData.append("message_text", fullMessage);
-            formData.append("user_id", userId);
+    //         const formData = new FormData();
+    //         formData.append("complaint_type", "Issue");
+    //         formData.append("complaint_status", "Opened");
+    //         formData.append("issue_type", issueCategory);
+    //         // Combine user description with system context
+    //         const fullMessage = `${issueDescription} (News ID: ${item.id || 'N/A'})`;
+    //         formData.append("message_text", fullMessage);
+    //         formData.append("user_id", userId);
 
-            const getAttachmentFileName = () => {
-                const now = new Date();
-                return `report_news_${item.id || 'err'}_${now.getTime()}.jpg`;
-            };
+    //         const getAttachmentFileName = () => {
+    //             const now = new Date();
+    //             return `report_news_${item.id || 'err'}_${now.getTime()}.jpg`;
+    //         };
 
-            if (attachment) {
-                formData.append("attachment", {
-                    uri: attachment.uri,
-                    name: getAttachmentFileName(),
-                    type: "image/jpeg",
-                });
-            }
+    //         if (attachment) {
+    //             formData.append("attachment", {
+    //                 uri: attachment.uri,
+    //                 name: getAttachmentFileName(),
+    //                 type: "image/jpeg",
+    //             });
+    //         }
 
-            await axios.post(
-                `${apiUrl}/api/grievance/issuesubmit`,
-                formData,
-                {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    },
-                }
-            );
+    //         await axios.post(
+    //             `${apiUrl}/api/grievance/issuesubmit`,
+    //             formData,
+    //             {
+    //                 headers: {
+    //                     "Content-Type": "multipart/form-data",
+    //                 },
+    //             }
+    //         );
 
-            setReportModalOpen(false);
-            setSuccessIssueModalOpen(true);
+    //         setReportModalOpen(false);
+    //         setSuccessIssueModalOpen(true);
 
-            setIssueCategory("");
-            setIssueDescription("");
-            setAttachment(null);
+    //         setIssueCategory("");
+    //         setIssueDescription("");
+    //         setAttachment(null);
 
-        } catch (err) {
-            console.log("❌ REPORT ERROR:", err?.response?.data || err.message);
-            showError(
-                "Alert",
-                "Failed to submit issue: " + (err.response?.data?.message || err.message)
-            );
-        }
-    };
+    //     } catch (err) {
+    //         console.log("❌ REPORT ERROR:", err?.response?.data || err.message);
+    //         showError(
+    //             "Alert",
+    //             "Failed to submit issue: " + (err.response?.data?.message || err.message)
+    //         );
+    //     }
+    // };
     // --- REPORTING LOGIC END ---
 
     const handleMenuPress = () => {
-        setMenuVisible(true);
+        if (moreButtonRef.current) {
+            moreButtonRef.current.measureInWindow((x, y, width, height) => {
+                // Position menu slightly to the left (100 is menu width offset) and below the button
+                setMenuPosition({ x: x + width - 110, y: y + height });
+                setMenuVisible(true);
+            });
+        }
     };
     // Menu position relative to card
-    const menuLeft = iconLayout.x + iconLayout.w - 100; // 120 = menu width
-    const menuTop = iconLayout.y + iconLayout.h + 300;    // small gap below icon
+    // const menuLeft = iconLayout.x + iconLayout.w - 100; // 120 = menu width
+    // const menuTop = iconLayout.y + iconLayout.h + 300;    // small gap below icon
 
     return (
         <>
 
             <TouchableOpacity
+                ref={moreButtonRef}
                 style={styles.card}
                 activeOpacity={0.9}
                 onPress={onPress}
-                onLayout={e => {
-                    const { x, y } = e.nativeEvent.layout;
-                    setCardLayout({ x, y });
-                }}
+            // onLayout={e => {
+            //     const { x, y } = e.nativeEvent.layout;
+            //     setCardLayout({ x, y });
+            // }}
             >
                 {/* <Image
                     source={{ uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }}
@@ -170,12 +178,12 @@ const NewsCardLarge = ({ item, onPress }) => {
                             onPress={handleMenuPress}
                             style={styles.moreButton}
                             hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-                            onLayout={e => {
-                                const { x, y, width, height } = e.nativeEvent.layout;
-                                setIconLayout({ x, y, w: width, h: height });
-                            }}
+                        // onLayout={e => {
+                        //     const { x, y, width, height } = e.nativeEvent.layout;
+                        //     setIconLayout({ x, y, w: width, h: height });
+                        // }}
                         >
-                            <MaterialIcons name="more-vert" size={24} color="#777" />
+                            <MaterialIcons name="more-vert" size={24} color={global.colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -197,8 +205,8 @@ const NewsCardLarge = ({ item, onPress }) => {
                             styles.menuContainer,
                             {
                                 position: "absolute",
-                                left: menuLeft,
-                                top: menuTop,
+                                left: menuPosition.x,
+                                top: menuPosition.y,
                             },
                         ]}
                     >
@@ -215,156 +223,20 @@ const NewsCardLarge = ({ item, onPress }) => {
                             style={styles.menuItem}
                             onPress={handleReport}
                         >
-                            <AlertCircle size={20} color="#333" />
+                            <AlertCircle size={20} color={global.colors.textPrimary} />
                             <Text style={styles.menuText}>Report</Text>
                         </TouchableOpacity>
                     </View>
                 </Pressable>
             </Modal>
 
-            {/* Report Modal - Matches StockCard */}
-            <Modal
+            <GrievanceModal
                 visible={reportModalOpen}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setReportModalOpen(false)}
-            >
-                <View style={styles.reportModalOverlay}>
-                    <View style={styles.reportCard}>
-                        <TouchableOpacity
-                            style={styles.reportClose}
-                            onPress={() => setReportModalOpen(false)}
-                        >
-                            <Text style={{ fontSize: 22 }}>✕</Text>
-                        </TouchableOpacity>
-
-                        <Text style={styles.reportTitle}>Report News</Text>
-                        <Text style={styles.reportSubtitle}>
-                            Your report helps keep the platform accurate and safe.
-                        </Text>
-
-                        <View style={{ position: "relative", zIndex: 10 }}>
-                            <Text style={styles.reportLabel}>Issue Categories</Text>
-                            <TouchableOpacity
-                                style={styles.dropdownBox}
-                                onPress={() => setIssueDropdownOpen(!issueDropdownOpen)}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={{ color: issueCategory ? "#210F47" : "#999" }}>
-                                    {issueCategory || "Select your concern"}
-                                </Text>
-                                <Text style={{ fontSize: 16 }}>▾</Text>
-                            </TouchableOpacity>
-
-                            {issueDropdownOpen && (
-                                <View style={styles.dropdownList}>
-                                    {[
-                                        "Suspected Activity",
-                                        "Incorrect Data",
-                                        "Privacy Concern",
-                                        "Misleading Information",
-                                        "Inappropriate Content",
-                                        "Other Issues",
-                                    ].map((catItem, index) => (
-                                        <TouchableOpacity
-                                            key={index}
-                                            style={styles.dropdownItem}
-                                            onPress={() => {
-                                                setIssueCategory(catItem);
-                                                setIssueDropdownOpen(false);
-                                            }}
-                                        >
-                                            <Text style={styles.dropdownItemText}>{catItem}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            )}
-                        </View>
-
-                        <Text style={styles.reportLabel}>Description</Text>
-                        <View style={styles.textAreaBox}>
-                            <TextInput
-                                placeholder="Tell us what’s wrong..."
-                                value={issueDescription}
-                                onChangeText={setIssueDescription}
-                                multiline
-                                numberOfLines={4}
-                                textAlignVertical="top"
-                                style={styles.textArea}
-                            />
-
-                            <View style={styles.attachInside}>
-                                <TouchableOpacity
-                                    style={{ flexDirection: "row", alignItems: "center" }}
-                                    onPress={pickAttachment}
-                                >
-                                    <Text style={styles.attachText}>Attach Image</Text>
-                                    {/* <Image source={Attach} style={styles.iconSmall2} /> */}
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                        {attachment && (
-                            <View style={styles.attachRow}>
-                                <Text style={styles.attachLabel}>Add Screenshot</Text>
-                                <TouchableOpacity
-                                    onPress={() => setAttachment(null)}
-                                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                                >
-                                    <Text style={styles.attachRemove}>✕</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-
-                        <View style={styles.reportBtnRow}>
-                            <TouchableOpacity
-                                style={styles.reportCancel}
-                                onPress={() => setReportModalOpen(false)}
-                            >
-                                <Text style={styles.reportCancelText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.reportSubmit}
-                                onPress={submitReportIssue}
-                            >
-                                <Text style={styles.reportSubmitText}>Submit Report</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Success Modal */}
-            <Modal
-                visible={successIssueModalOpen}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setSuccessIssueModalOpen(false)}
-            >
-                <View style={styles.reportModalOverlay}>
-                    <View style={styles.reportCard}>
-                        <View style={{ alignItems: 'center', marginVertical: 20 }}>
-                            <View style={{
-                                width: 60, height: 60, borderRadius: 30, backgroundColor: '#E8F5E9',
-                                justifyContent: 'center', alignItems: 'center', marginBottom: 15
-                            }}>
-                                <MaterialIcons name="check" size={40} color="#4CAF50" />
-                            </View>
-                            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#210F47', marginBottom: 10 }}>
-                                Report Submitted!
-                            </Text>
-                            <Text style={{ textAlign: 'center', color: '#666', marginBottom: 20 }}>
-                                Thank you for letting us know. We will review your report shortly.
-                            </Text>
-                            <TouchableOpacity
-                                style={[styles.reportSubmit, { width: '100%' }]}
-                                onPress={() => setSuccessIssueModalOpen(false)}
-                            >
-                                <Text style={styles.reportSubmitText}>Close</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+                onClose={() => setReportModalOpen(false)}
+                userId={userId}
+                contentType="News"
+                contentId={item.id}
+            />
 
         </>
     );
@@ -372,7 +244,7 @@ const NewsCardLarge = ({ item, onPress }) => {
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: "#E5E7EB",
+        backgroundColor: global.colors.border,
         borderRadius: 20,
         marginBottom: 20,
         elevation: 5,
@@ -390,7 +262,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#000",
+        color: global.colors.textPrimary,
         marginBottom: 6,
         lineHeight: 18,
         width: 314,
@@ -398,7 +270,7 @@ const styles = StyleSheet.create({
     },
     description: {
         fontSize: 12,
-        color: "#666666",
+        color: global.colors.textSecondary,
         marginBottom: 12,
         lineHeight: 18,
         width: 314,
@@ -411,7 +283,7 @@ const styles = StyleSheet.create({
     },
     time: {
         fontSize: 12,
-        color: "#8a8a8a",
+        color: global.colors.textSecondary,
     },
     moreButton: {
         padding: 5,
@@ -419,15 +291,15 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.15)",
+        backgroundColor: global.colors.overlay,
     },
     menuContainer: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         width: 120,
         borderRadius: 10,
         paddingVertical: 6,
         elevation: 10,
-        shadowColor: "#000",
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
@@ -441,20 +313,20 @@ const styles = StyleSheet.create({
     },
     menuText: {
         fontSize: 14,
-        color: '#333',
+        color: global.colors.textPrimary,
         fontWeight: '500',
     },
 
     // --- REPORT MODAL STYLES (Copied from StockCard) ---
     reportModalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor: global.colors.overlay,
         justifyContent: "center",
         alignItems: "center",
     },
     reportCard: {
         width: "85%",
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 20,
         padding: 20,
         elevation: 10,
@@ -468,28 +340,28 @@ const styles = StyleSheet.create({
     reportTitle: {
         fontSize: 20,
         fontWeight: "bold",
-        color: "#210F47",
+        color: global.colors.secondary,
         marginBottom: 5,
     },
     reportSubtitle: {
         fontSize: 13,
-        color: "#666",
+        color: global.colors.textSecondary,
         marginBottom: 20,
     },
     reportLabel: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#333",
+        color: global.colors.textPrimary,
         marginBottom: 8,
         marginTop: 10,
     },
     dropdownBox: {
         borderWidth: 1,
-        borderColor: "#DDD",
+        borderColor: global.colors.border,
         borderRadius: 12,
         paddingHorizontal: 15,
         paddingVertical: 12,
-        backgroundColor: "#F9F9FB",
+        backgroundColor: global.colors.surface,
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
@@ -499,9 +371,9 @@ const styles = StyleSheet.create({
         top: 50,
         left: 0,
         right: 0,
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderWidth: 1,
-        borderColor: "#EEE",
+        borderColor: global.colors.border,
         borderRadius: 12,
         elevation: 5,
         paddingVertical: 5,
@@ -511,24 +383,24 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 15,
         borderBottomWidth: 1,
-        borderBottomColor: "#F5F5F5",
+        borderBottomColor: global.colors.border,
     },
     dropdownItemText: {
         fontSize: 14,
-        color: "#333",
+        color: global.colors.textPrimary,
     },
     textAreaBox: {
         borderWidth: 1,
-        borderColor: "#DDD",
+        borderColor: global.colors.border,
         borderRadius: 12,
-        backgroundColor: "#F9F9FB",
+        backgroundColor: global.colors.surface,
         padding: 10,
         height: 120,
         justifyContent: "space-between",
     },
     textArea: {
         fontSize: 14,
-        color: "#333",
+        color: global.colors.textPrimary,
         height: 80,
     },
     attachInside: {
@@ -538,7 +410,7 @@ const styles = StyleSheet.create({
     },
     attachText: {
         fontSize: 12,
-        color: "#6C63FF",
+        color: global.colors.secondary,
         fontWeight: "600",
         marginRight: 5,
     },
@@ -546,18 +418,18 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        backgroundColor: "#F0EFFF",
+        backgroundColor: global.colors.surface,
         padding: 10,
         borderRadius: 8,
         marginTop: 10,
     },
     attachLabel: {
         fontSize: 12,
-        color: "#333",
+        color: global.colors.textPrimary,
     },
     attachRemove: {
         fontSize: 16,
-        color: "#999",
+        color: global.colors.textSecondary,
         paddingHorizontal: 5,
     },
     reportBtnRow: {
@@ -569,28 +441,27 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 12,
         borderRadius: 12,
-        backgroundColor: "#F5F5F5",
+        backgroundColor: global.colors.surface,
         marginRight: 10,
         alignItems: "center",
     },
     reportCancelText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#666",
+        color: global.colors.textSecondary,
     },
     reportSubmit: {
         flex: 1,
         paddingVertical: 12,
         borderRadius: 12,
-        backgroundColor: "#210F47",
+        backgroundColor: global.colors.secondary,
         marginLeft: 10,
         alignItems: "center",
     },
     reportSubmitText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#fff",
+        color: global.colors.background,
     },
 });
-
 export default NewsCardLarge;

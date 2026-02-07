@@ -66,7 +66,7 @@ const StockListCard = ({ stock, realtime, onPress }) => {
             ? Math.abs(currentChangePercent).toFixed(2)
             : "0.00";
 
-    const color = isPositive ? '#2E7D32' : '#C62828';
+    const color = isPositive ? global.colors.success : global.colors.error;
 
     // Prepare Chart Data
     // We strictly want the last 30 points for a clean sparkline (100 is too crowded for 80px)
@@ -144,8 +144,8 @@ const StockListCard = ({ stock, realtime, onPress }) => {
                 {/* <View> */}
                 {/* Left: Info */}
                 <View style={styles.infoContainer}>
-                    <Text style={styles.companyName}>{stock.name}</Text>
-                    <Text style={styles.symbol}>{stock.symbol}</Text>
+                    <Text style={styles.companyName}>{stock.symbol}</Text>
+                    <Text style={styles.symbol}>{stock.name}</Text>
                     {/* <Text style={styles.time}>{lastTime}</Text> */}
                 </View>
 
@@ -188,7 +188,7 @@ const StockListCard = ({ stock, realtime, onPress }) => {
 
                 {/* Right: Price */}
                 <View style={styles.verticalCardRight}>
-                    <Text style={[styles.verticalPrice, { color }]}>
+                    <Text style={[styles.verticalPrice]}>
                         {loading && currentPrice === 0 ? '--' : `₹${currentPrice.toFixed(2)}`}
                     </Text>
                     <Text style={[styles.verticalChange, { color }]}>
@@ -239,31 +239,31 @@ const styles = StyleSheet.create({
         justifyContent: 'center'
     },
     // symbol: { fontSize: 15, fontWeight: '700', color: '#333' },
-    time: { fontSize: 11, color: '#999', marginTop: 4 },
+    time: { fontSize: 11, color: global.colors.textSecondary, marginTop: 4 },
 
-    price: { fontSize: 15, fontWeight: '600', color: '#333' },
+    price: { fontSize: 15, fontWeight: '600', color: global.colors.textPrimary, },
     change: { fontSize: 12, fontWeight: '600', marginTop: 4 },
 
-    noData: { color: '#ccc', fontSize: 12 },
+    noData: {  color: global.colors.disabled, fontSize: 12 },
     cardWrapper: { marginVertical: 6, marginHorizontal: 4 },
     card: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         padding: 12,
         borderRadius: 14,
         elevation: 2,
     },
     infoContainer: { flex: 1 },
     companyName: { fontSize: 14, fontWeight: "600" },
-    symbol: { fontSize: 11, color: "#666" },
+    symbol: { fontSize: 11, color: global.colors.textPrimary, },
     verticalCardRight: {
         alignItems: "flex-end",
     },
     verticalPrice: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#333",
+        color: global.colors.textPrimary,
     },
     verticalChange: {
         fontSize: 11,

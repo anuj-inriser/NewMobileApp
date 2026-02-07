@@ -7,6 +7,8 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Keyboard,
+  Animated,
 } from "react-native";
 import TextInput from "../components/TextInput";
 import axiosInstance from "../api/axios";
@@ -14,10 +16,13 @@ import * as Device from "expo-device";
 import { Ionicons } from "@expo/vector-icons";
 import { apiUrl } from "../utils/apiUrl";
 import { useAuth } from "../context/AuthContext";
+import { useKeyboardAvoidingShift } from "../hooks/useKeyboardAvoidingShift";
+
 
 export default function PasswordScreen({ navigation, route }) {
   const { name, email, phone, fcmToken } = route.params;
   const { setAuthData } = useAuth();
+  const translateY = useKeyboardAvoidingShift()
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,7 +32,18 @@ export default function PasswordScreen({ navigation, route }) {
   const [deviceId, setDeviceId] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  const formTopSpacing = keyboardVisible ? -150 : 0;
   useEffect(() => {
     async function init() {
       try {
@@ -136,12 +152,17 @@ export default function PasswordScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <View style={styles.fixedImageContainer}>
+
         <Image
           source={require("../../assets/password.png")}
           style={styles.image}
           resizeMode="contain"
         />
+      </View>
+
+      <Animated.View style={[styles.formContent, { transform: [{ translateY }] }]}>
+
 
         <Text style={styles.title}>Set Password</Text>
 
@@ -227,19 +248,19 @@ export default function PasswordScreen({ navigation, route }) {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: global.colors.background },
   scroll: { padding: 24 },
-  image: { width: "100%", height: 220, marginTop: 90 },
+
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#210F47",
+    color: global.colors.secondary,
     marginVertical: 10,
   },
   passwordContainer: {
@@ -266,19 +287,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 25,
+    marginBottom: 20,
   },
   backBtn: {
-    backgroundColor: "#EAEAEA",
+    backgroundColor: global.colors.surface,
     borderRadius: 25,
     paddingVertical: 10,
     paddingHorizontal: 25,
   },
-  backText: { fontWeight: "600", color: "#000" },
+  backText: { fontWeight: "600", color: global.colors.textPrimary, },
   nextBtn: {
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     borderRadius: 25,
     paddingVertical: 10,
     paddingHorizontal: 25,
   },
-  nextText: { color: "#fff", fontWeight: "600" },
+  nextText: { color: global.colors.background, fontWeight: "600" },
+  formContent: {
+    paddingBottom: 60,
+    padding: 20
+  },
+  fixedImageContainer: {
+    // This stays fixed at the top
+    marginTop: 110,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  image: {
+    width: "100%",
+    height: 200,
+  },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,17 +11,56 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useCommunitySequences } from "../hooks/useCommunitySequences";
+import GlobalTopMenu from "./GlobalTopMenu";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axiosInstance from "../api/axios";
+import { apiUrl } from "../utils/apiUrl";
 
-
-
-const ScannerTab = ({ onScannerSelect }) => {
+const ScannerTab = ({ onScannerSelect, onWatchlistSelect  }) => {
   const [selectedScanner, setSelectedScanner] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState("All");
 
   const { sequences, loading } = useCommunitySequences(50); // Get enough sequences, though pagination might be better later
 
-  const filterTabs = ["All", "Bullish", "Bearish", "Fundamental", "Technical"];
+   // Watchlist state
+  const [watchlists, setWatchlists] = useState([]);
+  const [watchlistsLoading, setWatchlistsLoading] = useState(false);
+
+  const filterTabs = ["All", "Bullish", "Bearish", "Fundamental", "Technical", "Watchlist"];
+
+  // Fetch watchlists
+  useEffect(() => {
+    const fetchWatchlists = async () => {
+      try {
+        setWatchlistsLoading(true);
+        const userId = await AsyncStorage.getItem("userId");
+        if (!userId) {
+          setWatchlistsLoading(false);
+          return;
+        }
+
+        const res = await axiosInstance.get(`${apiUrl}/api/wishlistcontrol`, {
+          params: { user_id: userId }
+        });
+        const listData = res?.data?.data || [];
+        setWatchlists(
+          listData.map((item) => ({
+            id: item.wishlist_id,
+            name: item.wishlist_name,
+            user: item.user_id,
+            isWatchlist: true // Flag to identify watchlist items
+          }))
+        );
+      } catch (err) {
+        console.error("Error fetching watchlists:", err);
+      } finally {
+        setWatchlistsLoading(false);
+      }
+    };
+
+    fetchWatchlists();
+  }, []);
 
   const handleScannerPress = (scanner) => {
     setSelectedScanner(scanner);
@@ -33,17 +72,24 @@ const ScannerTab = ({ onScannerSelect }) => {
     setTimeout(() => setSelectedScanner(null), 300);
   };
 
-  const renderScannerCard = ({ item }) => (
+  const renderScannerCard = ({ item }) => {
+    const isWatchlist = item.isWatchlist;
+    return(
     <TouchableOpacity
       style={styles.scannerCard}
       onPress={() => handleScannerPress(item)}
     >
       <View style={styles.cardHeader}>
-        <Text style={styles.cardIcon}>{item.icon || "📊"}</Text>
+        <Text style={styles.cardIcon}>{isWatchlist ? "📁" : item.icon || "📊"}</Text>
+        {!isWatchlist && (
         <View style={styles.likeContainer}>
-          <Ionicons name="thumbs-up-outline" size={16} color="#666" />
+          <Ionicons name="thumbs-up-outline" size={16} color={global.colors.textSecondary} />
           <Text style={styles.likeCount}>{item.likes_count || "20.9k"}</Text>
         </View>
+          )}
+             {isWatchlist && (
+            <Ionicons name="bookmark" size={20} color={global.colors.secondary} />
+          )}
       </View>
       
       <Text style={styles.scannerName} numberOfLines={2}>
@@ -56,19 +102,27 @@ const ScannerTab = ({ onScannerSelect }) => {
         style={styles.viewScansButton}
         onPress={(e) => {
           e.stopPropagation();
-          onScannerSelect && onScannerSelect(item);
+      if (isWatchlist) {
+              onWatchlistSelect && onWatchlistSelect(item);
+            } else {
+              onScannerSelect && onScannerSelect(item);
+            }
         }}
       >
-        <Text style={styles.viewScansText}>View Scans</Text>
-        <Ionicons name="chevron-forward" size={16} color="#210F47" />
+        <Text style={styles.viewScansText}> {isWatchlist ? "View Watchlist" : "View Scans"}</Text>
+        <Ionicons name="chevron-forward" size={16} color={global.colors.secondary}/>
       </TouchableOpacity>
     </TouchableOpacity>
-  );
+  )};
 
-  if (loading) {
+    // Determine which data to display based on active tab
+  const displayData = activeTab === "Watchlist" ? watchlists : sequences;
+  const isLoadingData = activeTab === "Watchlist" ? watchlistsLoading : loading;
+  
+  if (isLoadingData) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#210F47" />
+          <ActivityIndicator size="large" color={global.colors.secondary} />
       </View>
     );
   }
@@ -76,25 +130,17 @@ const ScannerTab = ({ onScannerSelect }) => {
   return (
     <View style={styles.container}>
       {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {filterTabs.map((tab) => (
-            <TouchableOpacity 
-              key={tab}
-              style={[styles.tab, activeTab === tab && styles.activeTab]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      <GlobalTopMenu
+        tabs={filterTabs.map(tab => ({ id: tab, name: tab }))}
+        activeTab={{ id: activeTab }}
+        onTabChange={(tab) => setActiveTab(tab.id)}
+        showFilter={false}
+        type="secondary"
+      />
 
       {/* Scanners Grid */}
       <FlatList
-        data={sequences}
+        data={displayData}
         renderItem={renderScannerCard}
         keyExtractor={(item) => (item.id || Math.random()).toString()}
         numColumns={2}
@@ -123,7 +169,7 @@ const ScannerTab = ({ onScannerSelect }) => {
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Details</Text>
                   <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
-                    <Ionicons name="close" size={20} color="#000" />
+                     <Ionicons name="close" size={20} color={global.colors.textPrimary} />
                   </TouchableOpacity>
                 </View>
 
@@ -144,7 +190,7 @@ const ScannerTab = ({ onScannerSelect }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
   },
   center: {
     justifyContent: "center",
@@ -160,18 +206,24 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 8,
     borderRadius: 20,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: global.colors.surface,
   },
   activeTab: {
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.surface,
+    elevation: 4,
+    shadowColor: global.colors.textPrimary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 3,
   },
   tabText: {
-    fontSize: 12,
-    color: "#666",
+    fontSize: 14,
+    color:global.colors.textSecondary,
     fontWeight: "500",
   },
   activeTabText: {
-    color: "#fff",
+    color:global.colors.textPrimary,
+    fontWeight: "700"
   },
   gridContainer: {
     padding: 12,
@@ -183,12 +235,12 @@ const styles = StyleSheet.create({
   },
   scannerCard: {
     width: "48%",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#eee",
-    shadowColor: "#000",
+        borderColor: global.colors.border,
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -210,18 +262,18 @@ const styles = StyleSheet.create({
   },
   likeCount: {
     fontSize: 12,
-    color: "#666",
+        color: global.colors.textSecondary,
     fontWeight: "500",
   },
   scannerName: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1a1a1a",
+    color: global.colors.textPrimary,
     marginBottom: 4,
   },
   scannerDescription: {
     fontSize: 12,
-    color: "#666",
+    color: global.colors.textSecondary,
     marginBottom: 12,
     lineHeight: 16,
   },
@@ -231,12 +283,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: global.colors.surface,
     borderRadius: 8,
   },
   viewScansText: {
     fontSize: 12,
-    color: "#210F47",
+    color: global.colors.secondary,
     fontWeight: "600",
   },
 
@@ -248,16 +300,16 @@ const styles = StyleSheet.create({
   },
   overlayBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: global.colors.overlay,
   },
   modalContent: {
     width: "90%",
     maxWidth: 400,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 20,
     padding: 24,
     zIndex: 10,
-    shadowColor: "#000",
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -268,7 +320,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
-    backgroundColor: "#E8E8E8",
+    backgroundColor: global.colors.border,
     padding: 12,
     borderRadius: 8,
     marginHorizontal: -24,
@@ -279,7 +331,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: global.colors.textPrimary,
     fontSize: 14,
   },
   closeButton: {
@@ -287,7 +339,7 @@ const styles = StyleSheet.create({
   },
   closeIcon: {
     fontSize: 20,
-    color: "#666",
+    color: global.colors.textSecondary,
     fontWeight: "600",
   },
   modalBody: {
@@ -295,21 +347,21 @@ const styles = StyleSheet.create({
   },
   detailsDescription: {
     fontSize: 14,
-    color: "#555",
+        color: global.colors.textSecondary,
     lineHeight: 20,
   },
   modalViewButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 20,
     gap: 8,
   },
   modalViewButtonText: {
-    color: "#fff",
+    color: global.colors.background,
     fontWeight: "600",
     fontSize: 14,
   },

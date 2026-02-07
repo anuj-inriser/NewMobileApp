@@ -15,11 +15,11 @@ const TradeExecutedCard = ({
 }) => {
 
     const getTypeColor = () => {
-        if (!transactiontype) return "#000";
+        if (!transactiontype) return global.colors.textPrimary;
         const t = transactiontype.toLowerCase();
-        if (t === "buy") return "#22C55E";
-        if (t === "sell") return "#E53935";
-        return "#000";
+        if (t === "buy") return global.colors.success;
+        if (t === "sell") return global.colors.error;
+        return global.colors.textPrimary;
     };
 
     return (
@@ -98,11 +98,11 @@ export default TradeExecutedCard;
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 12,
         padding: 14,
         borderWidth: 1,
-        borderColor: "#DDD",
+        borderColor: global.colors.border,
         marginHorizontal: 20,
         marginTop: 10,
     },
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     symbol: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#000",
+        color: global.colors.textPrimary,
         flex: 1,
     },
 
@@ -155,13 +155,13 @@ const styles = StyleSheet.create({
 
     label: {
         fontSize: 11,
-        color: "#777",
+        color: global.colors.textSecondary,
     },
 
     value: {
         fontSize: 13,
         fontWeight: "600",
-        color: "#000",
+        color: global.colors.textPrimary,
         marginTop: 2,
     },
 });

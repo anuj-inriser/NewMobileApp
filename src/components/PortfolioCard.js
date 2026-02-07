@@ -20,11 +20,11 @@ const PortfolioCard = ({
     };
 
     // Colors based on + / - values
-    const profitColor = toNum(profit) >= 0 ? "#1BAE6A" : "#E84242";
-    const profitPercentColor = toNum(profitPercent) >= 0 ? "#1BAE6A" : "#E84242";
-    const todayColor = toNum(today) >= 0 ? "#1BAE6A" : "#E84242";
-    const todayPercentColor = toNum(todayPercent) >= 0 ? "#1BAE6A" : "#E84242";
-    const currentValueColor = toNum(currentValue) >= 0 ? "#1BAE6A" : "#E84242";
+    const profitColor = toNum(profit) >= 0 ? global.colors.success : global.colors.error;
+    const profitPercentColor = toNum(profitPercent) >= 0 ? global.colors.success : global.colors.error;
+    const todayColor = toNum(today) >= 0 ? global.colors.success : global.colors.error;
+    const todayPercentColor = toNum(todayPercent) >= 0 ? global.colors.success : global.colors.error;
+    const currentValueColor = toNum(currentValue) >= 0 ? global.colors.success : global.colors.error;
 
     // Number formatter
     const formatNumber = (num) => {
@@ -51,7 +51,7 @@ const PortfolioCard = ({
 
                 {/* RIGHT SIDE */}
                 <View style={styles.rightBlock}>
-                    <Text style={[styles.profit, { color: profitColor }]}>
+                    <Text style={[styles.profit]}>
                         ₹{formatNumber(profit)}
                         <Text style={[styles.percentText, { color: profitPercentColor }]}>
                             {" "}({formatNumber(profitPercent)}%)
@@ -82,14 +82,14 @@ export default PortfolioCard;
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         padding: 14,
         borderRadius: 16,
         marginHorizontal: 20,
         marginVertical: 6,
         borderWidth: 1,
-        borderColor: "#EDEDED",
-        shadowColor: "#000",
+        borderColor: global.colors.border,
+        shadowColor: global.colors.textPrimary,
         shadowOpacity: 0.08,
         shadowRadius: 4,
         shadowOffset: { width: 0, height: 2 },
@@ -109,19 +109,19 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 15,
         fontWeight: "700",
-        color: "#000",
+        color: global.colors.textPrimary,
         marginBottom: 4,
     },
 
     sharesText: {
         fontSize: 10,
         fontWeight: "600",
-        color: "#666",
+        color: global.colors.textSecondary,
     },
 
     label: {
         fontSize: 12,
-        color: "#666",
+        color: global.colors.textSecondary,
         marginBottom: 2,
     },
 
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
 
     rightLabel: {
         fontSize: 12,
-        color: "#666",
+        color: global.colors.textSecondary,
         marginBottom: 2,
     },
 

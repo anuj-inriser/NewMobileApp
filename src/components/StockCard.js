@@ -12,7 +12,6 @@ import {
   Scan,
   Maximize2,
   MoreVertical,
-
   XCircle,
   AlertCircle
 } from 'lucide-react-native';
@@ -30,12 +29,16 @@ import {
   Alert,
   Share,
   useWindowDimensions,
+  Pressable,
+  Animated,
 } from 'react-native';
 import TextInput from "../components/TextInput";
 import { LineChart } from 'react-native-gifted-charts';
 import * as ImagePicker from 'expo-image-picker';
 import { useIntervalData } from '../hooks/useIntervalData';
 import axios from 'axios';
+import axiosInstance from '../api/axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiUrl } from '../utils/apiUrl';
 import { useAuth } from '../context/AuthContext';
 import CommentOverlay from './CommentOverlay';
@@ -44,9 +47,13 @@ const { width } = Dimensions.get('window');
 import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { useAlert } from "../context/AlertContext";
 import { Asset } from 'expo-asset';
+import { useKeyboardAvoidingShift } from '../hooks/useKeyboardAvoidingShift';
 
+
+const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 // Added postNumber prop with default "1/1"
 const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber, fullScreen }) => {
+  const translateY = useKeyboardAvoidingShift()
   const { userId } = useAuth();
   const { showSuccess, showError } = useAlert();
   const [likeCount, setLikeCount] = useState(0);
@@ -64,7 +71,73 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
   const [chartHeight, setChartHeight] = useState(100);
 
+
+  const [watchlistModalVisible, setWatchlistModalVisible] = useState(false);
+  const [watchlists, setWatchlists] = useState([]);
+  const [loadingWatchlists, setLoadingWatchlists] = useState(false);
+  const [addingToWishlist, setAddingToWishlist] = useState({});
+
   const navigation = useNavigation();
+
+  const fetchWatchlists = async () => {
+    if (!userId) return;
+    setLoadingWatchlists(true);
+    try {
+      const res = await axiosInstance.get(`${WISHLIST_API}?user_id=${userId}`);
+      const listData = res?.data?.data || [];
+      setWatchlists(
+        listData.map((item) => ({
+          id: item.wishlist_id,
+          name: item.wishlist_name,
+          user: item.user_id,
+        }))
+      );
+    } catch (err) {
+      console.log("Watchlist fetch error:", err);
+      setWatchlists([]);
+    }
+    setLoadingWatchlists(false);
+  };
+
+  const handleAddToWatchlist = async (wishlist) => {
+    if (!stock || !wishlist || !userId) return;
+
+    if (addingToWishlist[wishlist.id]) return;
+    setAddingToWishlist(prev => ({ ...prev, [wishlist.id]: true }));
+
+    const payload = {
+      script_id: isNaN(stock.symbol) ? stock.symbol : (stock.token || stock.symbol),
+      user_id: parseInt(userId, 10),
+      wishlist_id: parseInt(wishlist.id, 10)
+    };
+
+    try {
+      const response = await axiosInstance.post(`${apiUrl}/api/wishlistcontrol/add`, payload);
+
+      if (response.status === 201 || response.status === 200 || response.status === 409) {
+        const msg = response.data.message || "Added to watchlist";
+        const alertTitle = (response.status === 201 || msg === "Added to watchlist") ? "Success" : "Info";
+        const alertMsg = (msg === "Added to watchlist" || response.status === 201)
+          ? `Added ${stock.name || stock.symbol} to ${wishlist.name}`
+          : msg;
+        Alert.alert(alertTitle, alertMsg);
+        setWatchlistModalVisible(false);
+      } else {
+        Alert.alert("Error", response.data.message || "Failed to add to watchlist");
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to add";
+      Alert.alert("Error", msg);
+    } finally {
+      setAddingToWishlist(prev => ({ ...prev, [wishlist.id]: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (watchlistModalVisible) {
+      fetchWatchlists();
+    }
+  }, [watchlistModalVisible, userId]);
   // Helper
   const truncateWords = (str, numWords) => {
     if (!str) return '';
@@ -320,7 +393,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   const currentLow = intervalData?.ohlc?.low ?? 0;
 
   const isPositive = currentChange >= 0;
-  const color = isPositive ? '#22c55e' : '#ef4444';
+  const color = isPositive ? global.colors.success : global.colors.error;
 
   const formatXAxisLabel = useCallback((time, interval, index, total) => {
     let date;
@@ -358,7 +431,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
       value: parseFloat(item.close),
       label: formatXAxisLabel(item.time, apiInterval, index, intervalData.candles.length),
       dataPointColor: color,
-      labelTextStyle: { color: '#666', width: 80, textAlign: 'center' },
+      labelTextStyle: { color: global.colors.textSecondary, width: 80, textAlign: 'center' },
     })) || [];
   }, [intervalData, apiInterval, color]);
 
@@ -426,13 +499,16 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   };
 
   return (
-    <View style={[styles.card, fullScreen && { flex: 1 }]}>
+    <View style={[styles.card, fullScreen && styles.cardFullScreen]}>
       {/* Header */}
       <View style={styles.stockHeader}>
         <View style={styles.headerLeft}>
           <View style={styles.textColumn}>
-            <Text style={styles.stockName}>{stock.name}</Text>
-            <Text style={styles.stockSymbol}>{stock.exchange}: {stock.symbol}</Text>
+            <Text style={styles.stockName}>{stock.exchange && stock.exchange !== 'undefined' ? `${stock.exchange}: ` : ''}
+              {isNaN(stock.symbol) ? stock.symbol : (stock.name || stock.symbol || stock.token)}</Text>
+            <Text style={styles.stockSymbol}>
+              {stock.name}
+            </Text>
           </View>
 
           {postNumber && (
@@ -453,7 +529,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
             </Text>
           </View>
           <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
-            <MoreVertical size={20} color="#000" />
+            <MoreVertical size={20} color={global.colors.textPrimary} />
           </TouchableOpacity>
         </View>
         {showMenu && (
@@ -468,8 +544,8 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
                 style={[styles.menuItem]}
                 onPress={handleReport}
               >
-                <AlertCircle size={20} color="#333" />
-                <Text style={[styles.menuText, { color: '#333' }]}>Report</Text>
+                <AlertCircle size={20} color={global.colors.textPrimary} />
+                <Text style={[styles.menuText, { color: global.colors.textPrimary }]}>Report</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -505,12 +581,12 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
               initialSpacing={0}
               endSpacing={0}
               hideDataPoints={chartData.length > 20}
-              rulesColor="#E0E0E0"
+              rulesColor={global.colors.border}
               rulesType="solid"
               xAxisColor="transparent"
               yAxisColor="transparent"
-              yAxisTextStyle={{ color: '#666', fontSize: 11, fontWeight: '500' }}
-              xAxisLabelTextStyle={{ color: '#666', fontSize: 11, fontWeight: '500', width: 55, textAlign: 'center' }}
+              yAxisTextStyle={{ color: global.colors.textSecondary, fontSize: 11, fontWeight: '500' }}
+              xAxisLabelTextStyle={{ color: global.colors.textSecondary, fontSize: 11, fontWeight: '500', width: 55, textAlign: 'center' }}
               noOfSections={5}
               maxValue={Math.max(0.1, yAxisMax - yAxisMin)}
               formatYLabel={(label) => (parseFloat(label) + yAxisMin).toFixed(2)}
@@ -534,7 +610,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
               style={{ position: 'absolute', right: 10, bottom: 10 }}
               onPress={() => navigation.navigate('AdvancedChart', { symbol: stock.symbol })}
             >
-              <Maximize2 size={20} color="#666" />
+              <Maximize2 size={20} color={global.colors.textSecondary} />
             </TouchableOpacity>
           </>
         ) : (
@@ -577,29 +653,39 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
       {/* Action Buttons */}
       <View style={styles.actionsContainer}>
         <TouchableOpacity style={styles.actionButton} onPress={() => handleReaction('like')}>
-          <ThumbsUp size={17} color={reaction === 'like' ? "#210F47" : "#666"} />
-          <Text style={[styles.actionText, reaction === 'like' && { color: "#210F47", fontWeight: 'bold' }]}>
+          <ThumbsUp size={17} color={reaction === 'like' ? global.colors.secondary : global.colors.textSecondary} />
+          <Text style={[styles.actionText, reaction === 'like' && { color: global.colors.secondary, fontWeight: 'bold' }]}>
             {likeCount || "0"}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => handleReaction('dislike')}>
-          <ThumbsDown size={17} color={reaction === 'dislike' ? "#F44336" : "#666"} />
+          <ThumbsDown size={17} color={reaction === 'dislike' ? global.colors.error : global.colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => setShowComments(true)}>
-          <MessageCircle size={17} color="#666" />
+          <MessageCircle size={17} color={global.colors.textSecondary} />
           <Text style={styles.actionText}>{commentCount || "0"}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-          <Share2 size={17} color="#666" />
+          <Share2 size={17} color={global.colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}>
-          <Bookmark size={17} color="#666" />
+          <Bookmark size={17} color={global.colors.textSecondary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <IndianRupee size={17} color="#666" />
+        <TouchableOpacity style={styles.actionButton} onPress={() => setWatchlistModalVisible(true)}>
+          <IndianRupee size={17} color={global.colors.textSecondary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Clock size={17} color="#666" />
+        <TouchableOpacity style={styles.actionButton}
+          onPress={() =>
+            navigation.navigate("TradeOrder", {
+              symbol: stock.symbol,
+              token: stock.token || stock.id,
+              name: stock.name,
+              price: currentPrice,
+              internaltype: "Place",
+            })
+          }
+        >
+          <IndianRupee size={17} color={global.colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -618,7 +704,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
         animationType="fade"
         onRequestClose={() => setReportModalOpen(false)}
       >
-        <View style={styles.modalOverlay}>
+       <Animated.View style={[styles.modalOverlay, { transform: [{ translateY }] }]}>
           <View style={styles.reportCard}>
             <TouchableOpacity
               style={styles.reportClose}
@@ -639,7 +725,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
                 onPress={() => setIssueDropdownOpen(!issueDropdownOpen)}
                 activeOpacity={0.7}
               >
-                <Text style={{ color: issueCategory ? "#210F47" : "#999" }}>
+                <Text style={{ color: issueCategory ? global.colors.secondary : global.colors.textSecondary }}>
                   {issueCategory || "Select your concern"}
                 </Text>
                 <Text style={{ fontSize: 16 }}>▾</Text>
@@ -719,7 +805,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </Modal>
 
       <Modal
@@ -746,45 +832,106 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
           </View>
         </View>
       </Modal>
+      <Modal
+        transparent
+        visible={watchlistModalVisible}
+        animationType="fade"
+        onRequestClose={() => setWatchlistModalVisible(false)}
+      >
+        <Pressable style={styles.watchlistOverlay} onPress={() => setWatchlistModalVisible(false)}>
+          <Pressable
+            style={styles.watchlistPopup}
+            onStartShouldSetResponder={() => true}
+            onResponderTerminationRequest={() => false}
+          >
+            <View style={styles.watchlistTitleBar}>
+              <Text style={styles.watchlistTitleText}>
+                Add to Watchlist
+              </Text>
+            </View>
+
+            {loadingWatchlists ? (
+              <View style={{ padding: 20, alignItems: "center" }}>
+                <ActivityIndicator size="small" color={global.colors.secondary} />
+              </View>
+            ) : watchlists.length > 0 ? (
+              <ScrollView style={{ maxHeight: 300 }}>
+                {watchlists.map((wl) => (
+                  <TouchableOpacity
+                    key={wl.id}
+                    style={[
+                      styles.watchlistRow,
+                      addingToWishlist[wl.id] && { opacity: 0.6 }
+                    ]}
+                    disabled={addingToWishlist[wl.id]}
+                    onPress={() => handleAddToWatchlist(wl)}
+                  >
+                    <Text style={styles.watchlistRowText}>
+                      {wl.name}
+                      {addingToWishlist[wl.id] && (
+                        <ActivityIndicator
+                          size="small"
+                          color={global.colors.secondary}
+                          style={{ marginLeft: 8 }}
+                        />
+                      )}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={{ padding: 20, alignItems: "center" }}>
+                <Text style={{ color: global.colors.textSecondary, textAlign: "center" }}>
+                  No watchlists found. Please create one from your profile.
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View >
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: global.colors.background,
     borderRadius: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
+    marginBottom: 5,
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
     marginHorizontal: 16,
-    marginVertical: 5,
+    marginVertical: 3,
     borderWidth: 1,
-    borderColor: '#eee'
+    borderColor: global.colors.border
   },
   cardFullScreen: {
     flex: 1, // Take full height of container
-    backgroundColor: '#fff',
-    borderRadius: 0,
-    marginBottom: 0,
-    marginHorizontal: 0,
-    marginVertical: 0,
-    borderWidth: 0,
-    elevation: 0,
-    shadowOpacity: 0,
+    backgroundColor: global.colors.background,
+    borderRadius: 15,
+    marginTop: 20,
+    marginBottom: 100,
+    marginHorizontal: 25,
+    borderWidth: 1,
+    borderColor: global.colors.border,
+    elevation: 3,
+    shadowColor: global.colors.textPrimary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   stockHeader: {
-    backgroundColor: '#f2edf9',
+    backgroundColor: global.colors.surface,
     padding: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopLeftRadius: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: global.colors.border,
     borderTopRightRadius: 15,
   },
   stockInfo: { flex: 1 }, // Keep for backward compat if needed, but unused now
@@ -803,17 +950,17 @@ const styles = StyleSheet.create({
   stockName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#000',
+    color: global.colors.textPrimary,
     marginBottom: 4,
   },
   stockSymbol: {
     fontSize: 12,
-    color: '#888',
+    color: global.colors.textSecondary,
     fontWeight: '500',
   },
   // symbolContainer removed as it's no longer used
   postNumberContainer: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: global.colors.surface,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -823,14 +970,14 @@ const styles = StyleSheet.create({
   },
   postNumberText: {
     fontSize: 11,
-    color: '#555',
+    color: global.colors.textSecondary,
     fontWeight: '600',
   },
   priceContainer: { flexDirection: 'row', alignItems: 'left', justifyContent: 'flex-start', border: '1px solid red' },
   price: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#000',
+    color: global.colors.textPrimary,
   },
   change: {
     fontSize: 12,
@@ -839,7 +986,7 @@ const styles = StyleSheet.create({
 
   chartContainer: {
     // height: 300, 
-    backgroundColor: '#fff',
+    backgroundColor: global.colors.background,
     overflow: 'hidden',
     paddingHorizontal: 10,
     marginTop: 10
@@ -848,9 +995,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 15,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: global.colors.border,
     marginBottom: 2,
     marginTop: 5
   },
@@ -859,28 +1006,28 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
   },
-  activeInterval: { backgroundColor: '#fff', borderColor: '#333' },
+  activeInterval: { backgroundColor: global.colors.background, borderColor: global.colors.textPrimary },
   intervalText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
+    color: global.colors.textSecondary,
   },
-  activeIntervalText: { color: '#000' },
+  activeIntervalText: { color: global.colors.textPrimary },
   actionsContainer: {
     padding: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingTop: 15,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    backgroundColor: '#f2edf9',
+    borderTopColor: global.colors.border,
+    backgroundColor: global.colors.surface,
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
   },
   actionButton: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actionText: {
     fontSize: 12,
-    color: '#000',
+    color: global.colors.textPrimary,
     fontWeight: '600',
   },
   noDataContainer: {
@@ -889,16 +1036,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 20,
   },
-  noDataText: { fontSize: 14, color: '#999', fontWeight: '500' },
+  noDataText: { fontSize: 14, color: global.colors.textSecondary, fontWeight: '500' },
 
   menuOverlay: {
     position: 'absolute',
     top: 45,
     right: 15,
-    backgroundColor: '#fff',
+    backgroundColor: global.colors.background,
     borderRadius: 12,
     padding: 10,
-    shadowColor: '#000',
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -924,25 +1071,25 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 14,
-    color: '#333',
+    color: global.colors.textPrimary,
     fontWeight: '500',
   },
   separator: {
     height: 1,
-    backgroundColor: '#000000ff',
+    backgroundColor: global.colors.textPrimary,
     marginHorizontal: 15,
     marginBottom: 10,
   },
   // Report Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   reportCard: {
     width: "90%",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 18,
     padding: 20,
   },
@@ -955,12 +1102,12 @@ const styles = StyleSheet.create({
   reportTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#210F47",
+    color: global.colors.secondary,
     marginBottom: 4,
   },
   reportSubtitle: {
     fontSize: 13,
-    color: "#555",
+    color: global.colors.textSecondary,
     marginBottom: 14,
     width: 270,
   },
@@ -968,12 +1115,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 6,
-    color: "#210F47",
+    color: global.colors.secondary,
   },
   dropdownBox: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderWidth: 1,
-    borderColor: "#DDD",
+    borderColor: global.colors.border,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -987,10 +1134,10 @@ const styles = StyleSheet.create({
     top: 50,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: global.colors.border,
     zIndex: 9999,
     elevation: 10,
   },
@@ -998,16 +1145,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEE",
+    borderBottomColor: global.colors.border,
   },
   dropdownItemText: {
     fontSize: 14,
-    color: "#210F47",
+    color: global.colors.secondary,
   },
   textAreaBox: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderWidth: 1,
-    borderColor: "#DDD",
+    borderColor: global.colors.border,
+
     borderRadius: 12,
     padding: 12,
     position: "relative",
@@ -1016,7 +1164,7 @@ const styles = StyleSheet.create({
   textArea: {
     height: 90,
     fontSize: 14,
-    color: "#210F47",
+    color: global.colors.secondary,
     textAlignVertical: "top",
     paddingBottom: 20,
   },
@@ -1029,7 +1177,7 @@ const styles = StyleSheet.create({
   },
   attachText: {
     fontSize: 12,
-    color: "#777",
+    color: global.colors.textSecondary,
     fontWeight: '600',
   },
   attachRow: {
@@ -1041,19 +1189,19 @@ const styles = StyleSheet.create({
   },
   attachLabel: {
     fontSize: 12,
-    color: "#210F47",
+    color: global.colors.secondary,
   },
   attachRemove: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#ef4444",
+    color: global.colors.error,
   },
   reportBtnRow: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
   reportCancel: {
-    backgroundColor: "#EAE6F2",
+    backgroundColor: global.colors.surface,
     paddingVertical: 10,
     paddingHorizontal: 22,
     borderRadius: 20,
@@ -1063,10 +1211,10 @@ const styles = StyleSheet.create({
   reportCancelText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#210F47",
+    color: global.colors.secondary,
   },
   reportSubmit: {
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     paddingVertical: 10,
     paddingHorizontal: 26,
     borderRadius: 20,
@@ -1074,20 +1222,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reportSubmitText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 13,
     fontWeight: "700",
   },
   // Success Modal
   successOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   successCard: {
     width: "85%",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 20,
     paddingVertical: 30,
     paddingHorizontal: 22,
@@ -1097,39 +1245,71 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#22C55E",
+    backgroundColor: global.colors.success,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
   },
   successTick: {
     fontSize: 32,
-    color: "#fff",
+    color: global.colors.background,
     fontWeight: "bold",
   },
   successTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1F2937",
+    color: global.colors.textPrimary,
     marginBottom: 10,
   },
   successText: {
     fontSize: 15,
-    color: "#4B5563",
+    color: global.colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 24,
   },
   successBtn: {
-    backgroundColor: "#1E0A3C",
+    backgroundColor: global.colors.secondary,
     paddingVertical: 12,
     paddingHorizontal: 40,
     borderRadius: 25,
   },
   successBtnText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 15,
     fontWeight: "600",
+  },
+  // / Watchlist Modal Styles
+  watchlistOverlay: {
+    flex: 1,
+    backgroundColor: global.colors.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  watchlistPopup: {
+    width: 280,
+    backgroundColor: global.colors.background,
+    borderRadius: 12,
+    padding: 16,
+    maxHeight: 400,
+  },
+  watchlistTitleBar: {
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  watchlistTitleText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  watchlistRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: global.colors.border,
+  },
+  watchlistRowText: {
+    fontSize: 15,
+    color: global.colors.textPrimary,
   },
 });
 

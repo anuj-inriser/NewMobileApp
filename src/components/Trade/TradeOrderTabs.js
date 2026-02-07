@@ -25,6 +25,7 @@ const orderTabs = [
   { id: 2, name: "Orders" },
   { id: 3, name: "Positions" },
   { id: 4, name: "Holdings" },
+  { id: 5, name: "PlaceOrder" },
 ];
 
 const TradeOrderTabs = ({ onTabChange, activeTab }) => {
@@ -51,8 +52,8 @@ const TradeOrderTabs = ({ onTabChange, activeTab }) => {
                 style={[
                   styles.pageBtn,
                   active === item.id
-                    ? { backgroundColor: "#210F47" }
-                    : { backgroundColor: "#fff" },
+                    ? { backgroundColor: global.colors.secondary }
+                    : { backgroundColor: global.colors.background },
                 ]}
                 onPress={() => handlePress(item.id)}
               >
@@ -69,7 +70,7 @@ const TradeOrderTabs = ({ onTabChange, activeTab }) => {
               </TouchableOpacity>
             ))}
           </View>
-     
+
         </ScrollView>
         {/* <TouchableOpacity onPress={() => setShowPopup(true)}>
           <Entypo
@@ -87,7 +88,7 @@ const TradeOrderTabs = ({ onTabChange, activeTab }) => {
 
 const styles = StyleSheet.create({
   paginationContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     display: "flex",
     flexDirection: "row",
     justifyContent: "space-between",
@@ -100,12 +101,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   pageBtn: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 40,
-    paddingVertical: 5,
+    paddingVertical: 7,
     paddingHorizontal: 16,
     marginRight: 10,
-    shadowColor: "#000",
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 1.5,
@@ -113,37 +114,37 @@ const styles = StyleSheet.create({
   },
 
   pageText: {
-    color: "#210F47",
+    color: global.colors.secondary,
     fontSize: 12,
     fontFamily: "Poppins-Medium",
     fontWeight: "500",
   },
 
   activeText: {
-    color: "#fff",
+    color: global.colors.background,
     fontWeight: "600",
   },
 
   inactiveText: {
-    color: "#555",
+    color: global.colors.textSecondary,
   },
 
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   popupBox: {
     width: 260,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 12,
     overflow: "hidden",
     paddingBottom: 16,
   },
   titleBar: {
     paddingVertical: 12,
-    backgroundColor: "#f0eef5",
+    backgroundColor: global.colors.surface,
     alignItems: "center",
   },
   titleText: { fontSize: 15, fontWeight: "600" },
@@ -153,29 +154,29 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderColor: "#eee",
+    borderColor: global.colors.border,
   },
-  rowLabel: { fontSize: 14, color: "#333" },
+  rowLabel: { fontSize: 14, color: global.colors.textPrimary },
   rowIcons: { flexDirection: "row" },
   addMoreBtn: {
     marginTop: 16,
     alignSelf: "center",
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     paddingVertical: 10,
     paddingHorizontal: 30,
     borderRadius: 20,
   },
-  addMoreText: { color: "#fff", fontWeight: "600" },
+  addMoreText: { color: global.colors.background, fontWeight: "600" },
   inputArea: {
     marginTop: 16,
     paddingHorizontal: 14,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: global.colors.disabled,
     borderRadius: 8,
     padding: 10,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: global.colors.surface,
   },
   inputButtonRow: {
     flexDirection: "row",
@@ -187,11 +188,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
   },
   deleteBox: {
     width: 260,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     padding: 20,
     borderRadius: 12,
   },
@@ -208,16 +209,16 @@ const styles = StyleSheet.create({
     padding: 10,
     paddingHorizontal: 25,
     borderRadius: 8,
-    backgroundColor: "#ddd",
+    backgroundColor: global.colors.disabled,
   },
   yesBtn: {
     padding: 10,
     paddingHorizontal: 25,
     borderRadius: 8,
-    backgroundColor: "#D32F2F",
+    backgroundColor: global.colors.error,
   },
-  noText: { color: "#333", fontWeight: "600" },
-  yesText: { color: "#fff", fontWeight: "600" },
+  noText: { color: global.colors.textPrimary, fontWeight: "600" },
+  yesText: { color: global.colors.background, fontWeight: "600" },
 });
 
 export default TradeOrderTabs;

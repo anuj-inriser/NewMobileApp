@@ -69,7 +69,7 @@ export function useIntervalData(symbol, interval, limit = 100) {
     enabled: !!symbol,
     refetchInterval: isMarketOpen() ? 60000 : false, // Poll every minute if market is open
     staleTime: 60000, // Data is fresh for 1 minute
-    cacheTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
+    gcTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours (renamed from cacheTime in v5)
     select: selectIntervalData, // Stable reference
     keepPreviousData: true, // Show previous data while fetching new to prevent flickering
   });

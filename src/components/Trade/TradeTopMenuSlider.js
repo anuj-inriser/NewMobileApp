@@ -51,7 +51,7 @@ const TradeTopMenuSlider = ({
 
 const styles = StyleSheet.create({
     safeArea: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
     },
     scrollContainer: {
         flexDirection: "row",
@@ -59,30 +59,30 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     tabItem: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 40,
-       paddingVertical: 5,
+        paddingVertical: 5,
         paddingHorizontal: 16,
         marginRight: 10,
-        shadowColor: "#000",
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.15,
         shadowRadius: 1.5,
         elevation: 2,
     },
     tabText: {
-        color: "#210F47",
+        color: global.colors.secondary,
         fontSize: 12,
         fontFamily: "Poppins-Medium",
         fontWeight: "500",
     },
     activeTab: {
-        backgroundColor: "#210F47",
-        shadowColor: "#210F47",
+        backgroundColor: global.colors.secondary,
+        shadowColor: global.colors.secondary,
         shadowOpacity: 0.2,
     },
     activeTabText: {
-        color: "#fff",
+        color: global.colors.background,
         fontWeight: "600",
     },
 });

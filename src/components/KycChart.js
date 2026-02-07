@@ -6,8 +6,8 @@ const KycChart = ({
   radius = 16,
   strokeWidth = 4,
   percentage,  // center text percentage
-  color = "#210F47",
-  bgColor = "#E5DDF3",
+  color = global.colors.secondary,
+  bgColor = global.colors.surface,
 }) => {
   const normalizedRadius = radius - strokeWidth / 2;
   const circumference = 2 * Math.PI * normalizedRadius;
@@ -44,7 +44,7 @@ const KycChart = ({
 
       {/* Center Text */}
       <View style={{ position: "absolute" }}>
-        <Text style={{ fontSize: 7, fontWeight: "700", color: "#210F47" }}>
+        <Text style={{ fontSize: 7, fontWeight: "700", color: global.colors.secondary }}>
           {percentage}%
         </Text>
       </View>

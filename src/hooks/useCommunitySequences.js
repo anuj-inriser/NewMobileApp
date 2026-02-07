@@ -1,19 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiUrl } from "../utils/apiUrl";
+import axiosInstance from "../api/axios";
 
 export function useCommunitySequences() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["communitySequences"],
     queryFn: async () => {
-      const response = await fetch(
-        `${apiUrl}/api/communitysequence/community-sequences`,
+      const response = await axiosInstance.get(
+        `/communitysequence/community-sequences`,
       );
-
-      if (!response.ok) {
+      if (!response.status || response.status !== 200) {
         throw new Error(`Error fetching sequences: ${response.statusText}`);
       }
-
-      const result = await response.json();
+      const result = response.data;
       if (result && Array.isArray(result.data)) {
         return result.data;
       } else {

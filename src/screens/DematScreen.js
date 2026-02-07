@@ -245,13 +245,13 @@ export default function DematScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1, backgroundColor: global.colors.background },
     scroll: { padding: 24, alignItems: 'center' },
     image: { width: '100%', height: 250, marginTop: 100 },
     title: {
         fontSize: 22,
         fontWeight: '700',
-        color: '#210F47',
+        color: global.colors.secondary,
         marginVertical: 10,
         alignSelf: 'flex-start',
     },
@@ -273,19 +273,19 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     nextBtn: {
-        backgroundColor: '#210F47',
+        backgroundColor: global.colors.secondary,
         borderRadius: 25,
         paddingVertical: 10,
         paddingHorizontal: 25,
     },
-    nextText: { color: '#fff', fontWeight: '600' },
+    nextText: { color: global.colors.background, fontWeight: '600' },
     disclaimer: {
         fontSize: 12,
-        color: '#444',
+        color: global.colors.textSecondary,
         textAlign: 'left',
         lineHeight: 18,
     },
-    modalContainer: { flex: 1, backgroundColor: '#fff' },
+    modalContainer: { flex: 1, backgroundColor: global.colors.background },
     closeButton: {
         position: 'absolute',
         top: Platform.OS === 'ios' ? 50 : 30,
@@ -294,11 +294,11 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#F0F0F0',
+        backgroundColor: global.colors.surface,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    closeButtonText: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+    closeButtonText: { fontSize: 18, fontWeight: 'bold', color: global.colors.textPrimary },
     webview: {
         flex: 1,
         marginTop: Platform.OS === 'ios' ? 60 : 40,
@@ -306,14 +306,14 @@ const styles = StyleSheet.create({
 
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor:global.colors.overlay,
         justifyContent: "center",
         alignItems: "center",
     },
 
     modalBox: {
         width: "80%",
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 12,
         padding: 20,
         alignItems: "center",
@@ -322,26 +322,26 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#210F47",
+        color: global.colors.secondary,
         marginBottom: 8,
     },
 
     modalMessage: {
         fontSize: 13,
-        color: "#555",
+        color: global.colors.textSecondary,
         textAlign: "center",
         marginBottom: 20,
     },
 
     modalButton: {
-        backgroundColor: "#210F47",
+        backgroundColor: global.colors.secondary,
         paddingHorizontal: 24,
         paddingVertical: 10,
         borderRadius: 20,
     },
 
     modalButtonText: {
-        color: "#fff",
+        color: global.colors.background,
         fontSize: 14,
         fontWeight: "500",
     },

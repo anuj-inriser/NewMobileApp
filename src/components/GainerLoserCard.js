@@ -13,7 +13,7 @@ const GainerLoserCard = ({ symbol, name, price, change, percentChange }) => {
     const priceChange = change ?? data?.priceChange ?? 0;
     const percentageChange = percentChange ?? data?.percentChange ?? 0;
     const isPositive = priceChange >= 0;
-    const color = isPositive ? '#22c55e' : '#ef4444';
+    const color = isPositive ? global.colors.success : global.colors.error;
 
     // Prepare chart data
     const candles = data?.candles || [];
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     card: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         padding: 12,
         borderRadius: 14,
         elevation: 2,
@@ -105,12 +105,12 @@ const styles = StyleSheet.create({
     logoFallback: {
         width: 34, height: 34,
         borderRadius: 17,
-        backgroundColor: "#210F47",
+        backgroundColor: global.colors.secondary,
         justifyContent: "center",
         alignItems: "center",
         marginRight: 12,
     },
-    logoFallbackText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+    logoFallbackText: { color: global.colors.background, fontWeight: "700", fontSize: 13 },
     leftSection: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -120,19 +120,19 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: global.colors.surface,
         marginRight: 12,
     },
     name: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#1E293B',
+        color: global.colors.textPrimary,
         marginBottom: 2,
     },
     symbol: {
         fontSize: 12,
         fontWeight: '500',
-        color: '#64748B',
+        color: global.colors.textSecondary,
     },
     chartSection: {
         width: 70,
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     },
     price: {
         fontSize: 14, fontWeight: "600",
-        color: '#1E293B',
+        color: global.colors.textPrimary,
         marginBottom: 2,
     },
     change: {
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         fontSize: 12,
-        color: '#94a3b8',
+        color: global.colors.disabled,
     },
 });
 

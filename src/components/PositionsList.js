@@ -182,9 +182,9 @@ const PositionsList = () => {
             <Ionicons
               name={selectedFilter !== "All" ? "funnel" : "funnel-outline"}
               size={16}
-              color="#000"
+              color={global.colors.textPrimary}
             />
-            <Text style={[styles.actionText, { color: "#000" }]}>Filter</Text>
+            <Text style={[styles.actionText, { color: global.colors.textPrimary }]}>Filter</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -246,7 +246,7 @@ const PositionsList = () => {
           <Text style={styles.loaderText}>Loading...</Text>
         </View>
       ) : positions.length === 0 ? (
-        <View style={{ marginTop: 60, alignItems: "center" }}>
+        <View style={styles.loaderBox}>
           <Text style={styles.noDataText}>No Data Found</Text>
         </View>
       ) : (
@@ -278,7 +278,7 @@ export default PositionsList;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
   },
   loaderBox: {
     marginTop: 40,
@@ -288,13 +288,13 @@ const styles = StyleSheet.create({
   loaderText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#555",
+    color: global.colors.textSecondary,
   },
   noDataText: {
-    marginTop: 10,
+    marginTop: 20,
     fontSize: 16,
     fontWeight: "600",
-    color: "#555",
+    color: global.colors.textSecondary,
   },
   orderTopBar: {
     flexDirection: "row",
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   orderTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#000",
+    color: global.colors.textPrimary,
   },
   row: {
     flexDirection: "row",
@@ -320,25 +320,25 @@ const styles = StyleSheet.create({
   actionText: {
     marginLeft: 4,
     fontSize: 13,
-    color: "#000",
+    color: global.colors.textPrimary,
   },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "flex-start",
     alignItems: "flex-end",
   },
   filterDropdown: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 10,
-    marginTop: 140,
+    marginTop: 185,
     marginRight: 20,
     width: 120,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: global.colors.border,
     elevation: 6,
-    shadowColor: "#210F47",
+    shadowColor: global.colors.secondary,
     shadowOpacity: 0.15,
     shadowRadius: 5,
     zIndex: 1000,
@@ -349,8 +349,8 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 14,
-    color: "#000",
+    color: global.colors.textPrimary,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
+    borderBottomColor: global.colors.border,
   },
 });

@@ -6,10 +6,10 @@ const DonutChart = ({
   radius = 40,
   strokeWidth = 16,
   data = [
-    { value: 29000, color: "#210F47" },
-    { value: 45000, color: "#22C55E" },
-    { value: 15000, color: "#D32F2F" },
-    { value: 10000, color: "#FF9F3F" },
+    { value: 29000, color: global.colors.secondary },
+    { value: 45000, color: global.colors.success },
+    { value: 15000, color: global.colors.error },
+    { value: 10000, color: global.colors.warning },
   ],
 }) => {
   const total = data.reduce((sum, item) => sum + item.value, 0);

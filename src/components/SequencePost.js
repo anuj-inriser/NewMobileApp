@@ -97,10 +97,10 @@ const SequencePost = ({
                     {showNavigation && (
                         <View style={styles.chevronGroup}>
                             <TouchableOpacity style={styles.navButton} onPress={onPrev}>
-                                <ChevronLeft size={16} color="#666" />
+                                <ChevronLeft size={16} color={global.colors.textSecondary} />
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.navButton} onPress={onNext}>
-                                <ChevronRight size={16} color="#666" />
+                                <ChevronRight size={16} color={global.colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
                     )}
@@ -115,7 +115,7 @@ export default SequencePost;
 const styles = StyleSheet.create({
     analysisContainer: {
         marginBottom: 0,
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         paddingHorizontal: 15,
         paddingBottom: 15
     },
@@ -125,12 +125,11 @@ const styles = StyleSheet.create({
     analysisTitle: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#000',
-        // Removed paddingRight to allow full width
+        color: global.colors.textPrimary,
     },
     analysisText: {
         fontSize: 14,
-        color: '#444',
+        color: global.colors.textPrimary,
         lineHeight: 20, // Improved line height for readability
         marginBottom: 10,
     },
@@ -142,7 +141,7 @@ const styles = StyleSheet.create({
     },
     timestampText: {
         fontSize: 12,
-        color: '#999',
+        color: global.colors.disabled,
     },
     chevronGroup: {
         flexDirection: 'row',
@@ -153,7 +152,7 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: '#F5F5F7',
+        backgroundColor: global.colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },

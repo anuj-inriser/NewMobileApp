@@ -12,11 +12,12 @@ import { useRealtimePrices } from "../hooks/useRealtimePrices";
 import { useQuery } from "@tanstack/react-query";
 import { apiUrl } from "../utils/apiUrl";
 import Swipeable from "react-native-gesture-handler/Swipeable";
+import axiosInstance from "../api/axios";
 
 // ✅ Vertical Card with Swipe Gesture
 const IndexVerticalCard = ({ index, onPress, onSwipeRight }) => {
   const isPositive = index.change >= 0;
-  const color = isPositive ? "#2E7D32" : "#C62828";
+  const color = isPositive ? global.colors.success : global.colors.error;
 
   const displayChange =
     typeof index.change === "number"
@@ -31,7 +32,7 @@ const IndexVerticalCard = ({ index, onPress, onSwipeRight }) => {
   // Right swipe action - "View Chart"
   const renderRightActions = () => (
     <View style={styles.rightAction}>
-      <Ionicons name="bar-chart-outline" size={24} color="#fff" />
+      <Ionicons name="bar-chart-outline" size={24} color={global.colors.background} />
       <Text style={styles.actionText}>Chart</Text>
     </View>
   );
@@ -47,14 +48,14 @@ const IndexVerticalCard = ({ index, onPress, onSwipeRight }) => {
         onPress={() => onPress && onPress(index)}
       >
         <View style={styles.verticalCardLeft}>
-          <Text style={styles.companyName}>{index.name}</Text>
+          <Text style={styles.companyName}>{index.symbol}</Text>
           <Text
-            style={[styles.verticalSymbol, { color: "#666", fontSize: 11 }]}
-          >{`${index.symbol}`}</Text>
+            style={[styles.verticalSymbol, { color: global.colors.textSecondary, fontSize: 11 }]}
+          >{`${index.name}`}</Text>
         </View>
 
         <View style={styles.verticalCardRight}>
-          <Text style={[styles.verticalPrice, { color }]}>
+          <Text style={[styles.verticalPrice]}>
             ₹
             {index.value.toLocaleString("en-IN", {
               minimumFractionDigits: 2,
@@ -84,15 +85,15 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart 
     queryFn: async () => {
       const url =
         exchange === "BSE"
-          ? `${apiUrl}/api/indicesNew/bse`
-          : `${apiUrl}/api/indicesNew/nse`;
+          ? `/indicesNew/bse`
+          : `/indicesNew/nse`;
 
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const result = await response.json();
-      return Array.isArray(result.data) ? result.data : [];
+     const response = await axiosInstance.get(url);
+    return Array.isArray(response.data?.data)
+        ? response.data.data
+        : [];
     },
-    enabled: !externalData,
+    enabled: !externalData?.length,
     staleTime: 5 * 60 * 1000, // 5 mins
   });
 
@@ -127,10 +128,15 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart 
   const indicesWithRealtimeData = useMemo(() => {
     if (!indicesSource?.length) return [];
 
-    // Filter based on exchange
-    const NSE_SYMBOLS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "NIFTY50"];
-    const BSE_SYMBOLS = ["SENSEX", "BANKEX", "BSE"];
+   let NSE_SYMBOLS = [];
+    let BSE_SYMBOLS = [];
 
+    if (indicesSource) {
+      if (exchange === "NSE")
+        NSE_SYMBOLS.push(...indicesSource.map(item => item.name));
+      else if (exchange === "BSE")
+        BSE_SYMBOLS.push(...indicesSource.map(item => item.name));
+    }
     const filtered = indicesSource.filter((index) => {
       const name = (index.name || index.symbol || "").toUpperCase();
       if (exchange === "NSE") {
@@ -166,7 +172,7 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart 
   if (isLoading && !externalData) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2F0079" />
+        <ActivityIndicator size="large" color={global.colors.secondary} />
         <Text style={styles.loadingText}>Loading indices...</Text>
       </View>
     );
@@ -176,11 +182,12 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart 
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+        <Ionicons name="alert-circle-outline" size={48} color={global.colors.error} />
         <Text style={styles.errorText}>Failed to load indices</Text>
         <TouchableOpacity
           style={styles.retryButton}
-          onPress={() => window.location.reload()}
+          // onPress={() => window.location.reload()}
+          onPress={() => { }}
         >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
@@ -192,8 +199,7 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart 
   if (indicesWithRealtimeData.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="bar-chart-outline" size={48} color="#888" />
-        <Text style={styles.emptyText}>No indices data</Text>
+        <ActivityIndicator size="large" color={global.colors.secondary} />
       </View>
     );
   }
@@ -219,7 +225,8 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
+    marginBottom:55,
   },
   verticalList: {
     paddingHorizontal: 16,
@@ -229,14 +236,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#eee",
-    shadowColor: "#000",
+    borderColor: global.colors.border,
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -251,13 +258,12 @@ const styles = StyleSheet.create({
   companyName: { fontSize: 14, fontWeight: "600" },
   verticalSymbol: {
     fontSize: 14,
-    // fontWeight: "600",
-    color: "#333",
+    color: global.colors.textPrimary,
   },
-   verticalPrice: {
+  verticalPrice: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: global.colors.textPrimary,
   },
   verticalChange: {
     fontSize: 11,
@@ -267,7 +273,7 @@ const styles = StyleSheet.create({
 
   // Swipe Actions
   rightAction: {
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     justifyContent: "center",
     alignItems: "flex-end",
     paddingHorizontal: 24,
@@ -276,13 +282,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   actionText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 12,
     fontWeight: "600",
     marginTop: 4,
   },
 
-  // States
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -293,7 +298,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: "#666",
+    color: global.colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
@@ -305,17 +310,17 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 12,
     fontSize: 18,
-    color: "#ef4444",
+    color: global.colors.error,
   },
   retryButton: {
     marginTop: 20,
-    backgroundColor: "#2F0079",
+    backgroundColor: global.colors.secondary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -328,7 +333,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
     fontSize: 16,
-    color: "#888",
+    color: global.colors.textSecondary,
   },
   actionWrapper: {
     justifyContent: "center",
@@ -336,9 +341,8 @@ const styles = StyleSheet.create({
     width: 80,
     marginVertical: 6,
     borderRadius: 14,
-    backgroundColor: "#ECECEC",
+    backgroundColor: global.colors.primary,
   }
-
 });
 
 export default Indices;

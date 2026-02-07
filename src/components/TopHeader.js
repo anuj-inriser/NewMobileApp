@@ -247,16 +247,16 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
         closeWatchlistModal();
       } else {
         showError(
-            "Alert",
-            (response.data.message || "Failed")
-          );
+          "Alert",
+          (response.data.message || "Failed")
+        );
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Failed to add";
       showError(
-            "Alert",
-            msg
-          );
+        "Alert",
+        msg
+      );
     } finally {
       setAddingToWishlist(prev => ({ ...prev, [wishlist.id]: false }));
     }
@@ -270,7 +270,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor="#f2edf9" barStyle="dark-content" />
+      <StatusBar backgroundColor={global.colors.surface} barStyle="dark-content" />
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 10) }]}>
         {/* <TouchableOpacity onPress={() => navigation.navigate("ProfileScreen")}>
           <Image source={getImageSource(profileImage)} style={styles.avatar} />
@@ -285,7 +285,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
         {/* Back Button (only if showBackButton is true) */}
         {showBackButton && (
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={22} color="#fff" />
+            <Ionicons name="arrow-back" size={22} color={global.colors.background} />
           </TouchableOpacity>
         )}
 
@@ -294,12 +294,12 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
           <Ionicons
             name="search"
             size={16}
-            color="#888"
+            color={global.colors.disabled}
             style={styles.searchIcon}
           />
           <TextInput
             placeholder="Search"
-            placeholderTextColor="#888"
+            placeholderTextColor={global.colors.disabled}
             style={styles.searchInput}
             onChangeText={searchFilter}
           />
@@ -362,7 +362,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
 
         {/* Notification Button */}
         <TouchableOpacity style={styles.circleButton}>
-          <Ionicons name="notifications-outline" size={20} color="#fff" />
+          <Ionicons name="notifications-outline" size={20} color={global.colors.background} />
           <View style={styles.badge} />
         </TouchableOpacity>
 
@@ -419,7 +419,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
 
             {loadingWatchlists ? (
               <View style={{ padding: 20, alignItems: "center" }}>
-                <ActivityIndicator size="small" color="#210F47" />
+                <ActivityIndicator size="small" color={global.colors.secondary} />
               </View>
             ) : watchlists.length > 0 ? (
               <ScrollView style={{ maxHeight: 300 }}>
@@ -438,7 +438,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
                       {addingToWishlist[wl.id] && (
                         <ActivityIndicator
                           size="small"
-                          color="#210F47"
+                          color={global.colors.secondary}
                           style={{ marginLeft: 8 }}
                         />
                       )}
@@ -448,7 +448,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
               </ScrollView>
             ) : (
               <View style={{ padding: 20, alignItems: "center" }}>
-                <Text style={{ color: "#888", textAlign: "center" }}>
+                <Text style={{ color: global.colors.textSecondary, textAlign: "center" }}>
                   No watchlists found. Please create one from your profile.
                 </Text>
               </View>
@@ -462,10 +462,10 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#f2edf9",
+    backgroundColor: global.colors.surface,
   },
   header: {
-    backgroundColor: "#f2edf9",
+    backgroundColor: global.colors.surface,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 30,
     marginHorizontal: 10,
     paddingHorizontal: 10,
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#333",
+    color: global.colors.textPrimary,
     paddingVertical: 0,
   },
   suggestionBox: {
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     top: 52,
     left: 60,
     width: "60%",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 8,
     elevation: 8,
     zIndex: 99999,
@@ -515,14 +515,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: global.colors.border,
   },
   suggestionText: {
     fontSize: 14,
-    color: "#444",
+    color: global.colors.textPrimary,
   },
   circleButton: {
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     width: 34,
     height: 34,
     borderRadius: 17,
@@ -537,18 +537,18 @@ const styles = StyleSheet.create({
     right: 8,
     width: 8,
     height: 8,
-    backgroundColor: "#ff3b30",
+    backgroundColor: global.colors.error,
     borderRadius: 4,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.15)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "flex-start",
     alignItems: "flex-end",
     marginTop: 50,
   },
   menuContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 8,
     minWidth: 150,
     marginTop: 10,
@@ -559,26 +559,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: global.colors.border,
   },
   lastMenuItem: {
     borderBottomWidth: 0,
   },
   menuItemText: {
     fontSize: 16,
-    color: "#333",
+    color: global.colors.textPrimary,
   },
 
-  // 🔻 Watchlist Popup Styles
   watchlistOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   watchlistPopup: {
     width: 280,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 12,
     padding: 16,
     maxHeight: 400,
@@ -595,21 +594,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: global.colors.border,
   },
   watchlistRowText: {
     fontSize: 15,
-    color: "#333",
+    color: global.colors.textPrimary,
   },
   dropdownWrapper: {
     position: "absolute",
     top: 52,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderTopWidth: 0,
     borderBottomWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: global.colors.border,
     width: "100%", // Fixed from 100vw
     zIndex: 99999,
   },
@@ -623,11 +622,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEE",
+    borderBottomColor: global.colors.border,
   },
   dropdownText: {
     fontSize: 15,
-    color: "#333",
+    color: global.colors.textPrimary,
     flex: 1,
   },
   rightIcons: {
@@ -644,8 +643,8 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#210F47",
-    shadowColor: "#000",
+    backgroundColor: global.colors.secondary,
+    shadowColor: global.colors.textPrimary,
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 1,

@@ -5,6 +5,7 @@ import {
     StyleSheet,
     FlatList,
     Animated,
+    TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Swipeable from "react-native-gesture-handler/Swipeable";
@@ -12,9 +13,15 @@ import { MaterialIcons } from "@expo/vector-icons";
 import axiosInstance from "../api/axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+const UNDO_TIMEOUT = 5000;
+
 const NotificationScreen = () => {
     const [notifications, setNotifications] = useState([]);
     const swipeableRefs = useRef({});
+    const undoTimerRef = useRef(null);
+    const [undoItem, setUndoItem] = useState(null);
+    const pendingDeleteIds = useRef(new Set());
+    const [listData, setListData] = useState([]);
 
     useEffect(() => {
         fetchNotifications();
@@ -25,7 +32,13 @@ const NotificationScreen = () => {
 
         return () => clearInterval(interval);
     }, []);
-
+    useEffect(() => {
+        setListData(
+            notifications.filter(
+                (item) => !pendingDeleteIds.current.has(item.id)
+            )
+        );
+    }, [notifications]);
     const fetchNotifications = async () => {
         try {
             const userId = await AsyncStorage.getItem("userId"); // get user id from storage
@@ -40,7 +53,7 @@ const NotificationScreen = () => {
     const EmptyNotifications = () => {
         return (
             <View style={styles.emptyContainer}>
-                <MaterialIcons name="notifications-off" size={48} color="#999" />
+                <MaterialIcons name="notifications-off" size={48} color={global.colors.disabled} />
                 <Text style={styles.emptyText}>No Notification Found</Text>
             </View>
         );
@@ -59,36 +72,91 @@ const NotificationScreen = () => {
         );
     };
 
-    const handleDelete = async (item) => {
-        console.log("Delete API called for notification id:", item.id);
+    // const handleDelete = async (item) => {
+    //     console.log("Delete API called for notification id:", item.id);
 
-        try {
-            // Close swipe animation first
-            swipeableRefs.current[item.id]?.close();
+    //     try {
+    //         // Close swipe animation first
+    //         swipeableRefs.current[item.id]?.close();
 
-            // small delay to allow swipe animation to complete
-            setTimeout(async () => {
+    //         // small delay to allow swipe animation to complete
+    //         setTimeout(async () => {
+    //             await axiosInstance.delete(`/notification/delete/${item.id}`);
+
+    //             setNotifications((prev) =>
+    //                 prev.filter((n) => n.id !== item.id)
+    //             );
+
+    //             console.log("Notification deleted successfully:", item.id);
+
+    //             // cleanup swipeable ref
+    //             delete swipeableRefs.current[item.id];
+    //         }, 200); // 200ms delay
+    //     } catch (error) {
+    //         console.log("Error deleting notification:", error);
+    //     }
+    // };
+
+    const handleDelete = (item) => {
+        // console.log("Swipe delete initiated for:", item.id);
+
+        // Close swipe animation
+        swipeableRefs.current[item.id]?.close();
+
+        // Mark item as pending delete (hide from UI)
+        pendingDeleteIds.current.add(item.id);
+
+        // Trigger UI update immediately
+        setListData((prev) => prev.filter((n) => n.id !== item.id));
+
+        // Store item for undo
+        setUndoItem(item);
+
+        // Clear any existing undo timer
+        if (undoTimerRef.current) {
+            clearTimeout(undoTimerRef.current);
+        }
+
+        // Start undo countdown
+        undoTimerRef.current = setTimeout(async () => {
+            try {
+                // Actual backend delete happens ONLY after timeout
                 await axiosInstance.delete(`/notification/delete/${item.id}`);
 
+                // Remove permanently from source data
                 setNotifications((prev) =>
                     prev.filter((n) => n.id !== item.id)
                 );
 
-                console.log("Notification deleted successfully:", item.id);
-
-                // cleanup swipeable ref
+                // Cleanup
+                pendingDeleteIds.current.delete(item.id);
+                setUndoItem(null);
                 delete swipeableRefs.current[item.id];
-            }, 200); // 200ms delay
-        } catch (error) {
-            console.log("Error deleting notification:", error);
-        }
+
+                console.log("Notification permanently deleted:", item.id);
+            } catch (error) {
+                console.log("Error deleting notification:", error);
+            }
+        }, UNDO_TIMEOUT);
+    };
+
+    const handleUndo = () => {
+        if (!undoItem) return;
+
+        clearTimeout(undoTimerRef.current);
+
+        pendingDeleteIds.current.delete(undoItem.id);
+
+        setListData((prev) => [undoItem, ...prev]);
+
+        setUndoItem(null);
     };
 
     const renderRightActions = () => {
         // We don’t need a button since swipe itself deletes
         return (
             <View style={styles.actionWrapper}>
-                <MaterialIcons name="delete-outline" size={22} color="#555" />
+                <MaterialIcons name="delete-outline" size={22} color={global.colors.textSecondary} />
             </View>
         );
     };
@@ -116,7 +184,7 @@ const NotificationScreen = () => {
                     </View>
 
                     <View style={styles.timeRow}>
-                        <MaterialIcons name="access-time" size={14} color="#888" />
+                        <MaterialIcons name="access-time" size={14} color={global.colors.disabled} />
                         <Text style={styles.time}>{formatDateTime(item.sent_at)}</Text>
                     </View>
                 </View>
@@ -126,8 +194,18 @@ const NotificationScreen = () => {
 
     return (
         <SafeAreaView edges={["bottom"]} style={styles.container}>
+            {undoItem && (
+                <View style={styles.undoBar}>
+                    <Text style={styles.undoText}>
+                        {undoItem.script_name} removed
+                    </Text>
+                    <TouchableOpacity onPress={handleUndo}>
+                        <Text style={styles.undoAction}>UNDO</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
             <FlatList
-                data={notifications}
+                data={listData}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
                 showsVerticalScrollIndicator={false}
@@ -143,31 +221,31 @@ export default NotificationScreen;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         paddingBottom: 55,
     },
     card: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         marginHorizontal: 12,
         marginVertical: 6,
         padding: 14,
         borderRadius: 14,
         elevation: 2,
     },
-    title: { fontSize: 14, fontWeight: "600", marginBottom: 4 },
-    body: { fontSize: 12, color: "#555", marginBottom: 8 },
+    title: { fontSize: 14, fontWeight: "600", marginBottom: 4, color: global.colors.textPrimary },
+    body: { fontSize: 12, color: global.colors.textSecondary, marginBottom: 8 },
     footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    badge: { backgroundColor: "#F1ECFF", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-    badgeText: { fontSize: 11, fontWeight: "500" },
+    badge: { backgroundColor: global.colors.surface, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+    badgeText: { fontSize: 11, fontWeight: "500", color: global.colors.textPrimary },
     timeRow: { flexDirection: "row", alignItems: "center" },
-    time: { fontSize: 11, color: "#888", marginLeft: 4 },
+    time: { fontSize: 11, color: global.colors.textSecondary, marginLeft: 4 },
     actionWrapper: {
         justifyContent: "center",
         alignItems: "center",
         width: 80,
         marginVertical: 6,
         borderRadius: 14,
-        backgroundColor: "#ECECEC",
+        backgroundColor: global.colors.surface,
     },
     emptyContainer: {
         flex: 1,
@@ -178,8 +256,24 @@ const styles = StyleSheet.create({
     emptyText: {
         marginTop: 10,
         fontSize: 14,
-        color: "#888",
+        color: global.colors.textSecondary,
         fontWeight: "500",
     },
-
+    undoBar: {
+        position: "absolute",
+        bottom: 70,
+        left: 16,
+        right: 16,
+        backgroundColor: "#2E2E2E",
+        borderRadius: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        elevation: 20,
+        zIndex: 9999,
+    },
+    undoText: { color: "#fff", fontSize: 13 },
+    undoAction: { color: "#4CAF50", fontWeight: "700" },
 });

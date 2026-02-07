@@ -31,16 +31,16 @@ const OrderInputBox = ({
           keyboardType="numeric"
           placeholder="0"
           editable={editable}
-          placeholderTextColor="#777"
+          placeholderTextColor={global.colors.textSecondary}
         />
 
         {/* ---- ICONS ---- */}
         {value !== "" &&
           (isValid ? (
-            <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+            <Ionicons name="checkmark-circle" size={20} color={global.colors.success} />
           ) : (
             <TouchableOpacity onPress={onWarningPress}>
-              <Ionicons name="alert-circle" size={20} color="#ffcc00" />
+              <Ionicons name="alert-circle" size={20} color={global.colors.secondary} />
             </TouchableOpacity>
           ))}
       </View>
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   },
 
   labelBox: {
-    backgroundColor: "#f2ebf7",
+    backgroundColor: global.colors.surface,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 14,
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   },
 
   labelText: {
-    color: "#210F47",
+    color: global.colors.secondary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -76,12 +76,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: global.colors.border,
     width: 150,
   },
 
@@ -89,18 +89,18 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: "500",
-    color: "#000",
+    color: global.colors.textPrimary,
     padding: 0,
     margin: 0,
   },
 
   disabledBox: {
-    backgroundColor: "#f0f0f0",
-    borderColor: "#d0d0d0",
+    backgroundColor: global.colors.surface,
+    borderColor: global.colors.border,
   },
 
   disabledText: {
-    color: "#999",
+    color: global.colors.textSecondary,
   },
 });
 

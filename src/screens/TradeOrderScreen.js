@@ -25,7 +25,10 @@ import { getDeviceId } from "../utils/deviceId";
 import { useAuth } from "../context/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-export default function TradeOrderScreen({ navigation }) {
+export default function TradeOrderScreen({ navigation, hideHeader: propHideHeader }) {
+  const route = useRoute();
+  const hideHeader = propHideHeader || route.params?.hideHeader;
+
   const { showSuccess, showError } = useAlert();
   const { authToken } = useAuth();
   const { setAuthData } = useAuth();
@@ -149,7 +152,7 @@ export default function TradeOrderScreen({ navigation }) {
     return "INTRADAY";
   };
 
-  const route = useRoute();
+  // const route = useRoute();
   const {
     symbol: passedSymbol,
     token: passedToken,
@@ -351,7 +354,10 @@ export default function TradeOrderScreen({ navigation }) {
           "Success",
           "Order Modified Successfully."
         );
-        navigation.navigate("OrdersScreen", { defaultTab: 2 });
+        navigation.navigate("App", {
+          screen: "MainTabs",
+          params: { screen: "OrdersScreen", params: { defaultTab: 2 } },
+        });
       } else {
         showError(
           "Error",
@@ -415,7 +421,10 @@ export default function TradeOrderScreen({ navigation }) {
           "Success",
           "Order Placed Successfully."
         );
-        navigation.navigate("OrdersScreen", { defaultTab: 2 });
+        navigation.navigate("App", {
+          screen: "MainTabs",
+          params: { screen: "OrdersScreen", params: { defaultTab: 2 } },
+        });
       } else {
         showError(
           "Error",
@@ -596,9 +605,11 @@ export default function TradeOrderScreen({ navigation }) {
   ]);
 
   const isModifyMode = internaltype?.toLowerCase() === "modify";
-  return (
-    <SafeAreaView edges={["left", "top"]} style={styles.container}>
-      <TopOrderHeader title={symbol} onBack={() => navigation.goBack()} />
+  const content = (
+    <>
+      {!hideHeader && (
+        <TopOrderHeader title={symbol} onBack={() => navigation.goBack()} />
+      )}
       <KeyboardAwareScrollView
         extraHeight={300}
         enableOnAndroid={true}
@@ -710,7 +721,7 @@ export default function TradeOrderScreen({ navigation }) {
           <Ionicons
             name="refresh"
             size={20}
-            color="#210F47"
+            color={global.colors.secondary}
             style={styles.refreshIcon}
             onPress={() => {
               fetchFunds(selectedSegmentType);
@@ -725,23 +736,23 @@ export default function TradeOrderScreen({ navigation }) {
             key={swipeKey}
             disabled={false}
             title="Swipe right to buy >>"
-            titleColor="#210F47"
+            titleColor={global.colors.secondary}
             titleFontSize={14}
-            railBackgroundColor="#ffffff"
-            railFillBackgroundColor="#ffffff"
-            thumbIconBackgroundColor="#4CAF50"
+            railBackgroundColor={global.colors.background}
+            railFillBackgroundColor={global.colors.background}
+            thumbIconBackgroundColor={global.colors.success}
             thumbIconBorderColor="transparent"
             railFillBorderColor="transparent"
-            disabledThumbIconBackgroundColor="#4CAF50"
-            disabledRailBackgroundColor="#ffffff"
+            disabledThumbIconBackgroundColor={global.colors.success}
+            disabledRailBackgroundColor={global.colors.background}
             containerStyles={{
               borderRadius: 25,
               height: 52,
               width: "100%",
-              backgroundColor: "#ffffff",
+              backgroundColor: global.colors.background,
             }}
             thumbIconComponent={() => (
-              <Text style={{ color: "#fff", fontWeight: "700" }}>Buy</Text>
+              <Text style={{ color: global.colors.background, fontWeight: "700" }}>Buy</Text>
             )}
             onSwipeSuccess={() => {
               if (!authToken) {
@@ -795,7 +806,7 @@ export default function TradeOrderScreen({ navigation }) {
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
+            backgroundColor: global.colors.overlay,
             justifyContent: "center",
             alignItems: "center",
           }}
@@ -803,19 +814,19 @@ export default function TradeOrderScreen({ navigation }) {
           <View
             style={{
               width: "85%",
-              backgroundColor: "#fff",
+              backgroundColor: global.colors.background,
               borderRadius: 12,
               padding: 20,
             }}
           >
-            <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 10 }}>
+            <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 10, color: global.colors.textPrimary }}>
               ⚠ Order Issues
             </Text>
 
             {validationErrors.map((e, i) => (
               <Text
                 key={i}
-                style={{ fontSize: 14, marginBottom: 6, color: "#222" }}
+                style={{ fontSize: 14, marginBottom: 6, color: global.colors.textSecondary }}
               >
                 • {e}
               </Text>
@@ -826,12 +837,12 @@ export default function TradeOrderScreen({ navigation }) {
               style={{
                 marginTop: 15,
                 paddingVertical: 10,
-                backgroundColor: "#210F47",
+                backgroundColor: global.colors.secondary,
                 borderRadius: 8,
               }}
             >
               <Text
-                style={{ color: "#fff", textAlign: "center", fontSize: 16 }}
+                style={{ color: global.colors.background, textAlign: "center", fontSize: 16 }}
               >
                 OK
               </Text>
@@ -905,12 +916,26 @@ export default function TradeOrderScreen({ navigation }) {
           />
         </View>
       </Modal> */}
+    </>
+  );
+
+  if (hideHeader) {
+    return (
+      <View style={styles.container}>
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView edges={["left", "top"]} style={styles.container}>
+      {content}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1,  backgroundColor: global.colors.background },
   scrollContent: { alignItems: "center", paddingBottom: 160 },
   radioContainer: { marginTop: 10 },
   menuContainer: { width: "100%", marginTop: 10 },
@@ -919,7 +944,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     width: "100%",
-    backgroundColor: "#fff",
+   backgroundColor: global.colors.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     elevation: 10,
@@ -934,8 +959,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   row: { width: "30%", marginBottom: 4 },
-  label: { fontSize: 12, color: "#555" },
-  value: { fontSize: 13, fontWeight: "600", color: "#000" },
+  label: { fontSize: 12, color: global.colors.textSecondary },
+  value: { fontSize: 13, fontWeight: "600", color: global.colors.textPrimary },
+  refreshIcon: { marginLeft: "auto" },
   // ADD THESE TO YOUR styles OBJECT
   angelOneOverlay: {
     position: 'absolute',
@@ -943,7 +969,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#fff',
+    backgroundColor: global.colors.background,
     zIndex: 9999, // Must be highest to cover all UI
   },
   angelOneCloseButton: {

@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     },
 
     labelBox: {
-        backgroundColor: "#f2ebf7",
+        backgroundColor: global.colors.surface,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 14,
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     },
 
     labelText: {
-        color: "#210F47",
+        color: global.colors.secondary,
         fontSize: 14,
         fontWeight: "600",
     },
@@ -96,14 +96,14 @@ const styles = StyleSheet.create({
         minHeight: 40,
         maxHeight: 40,
         borderRadius: 14,
-        borderColor: "#e0e0e0",
+        borderColor: global.colors.border,
         paddingVertical: 2,
         paddingHorizontal: 10,
     },
 
     dropdownContainer: {
         borderRadius: 14,
-        borderColor: "#e0e0e0",
+        borderColor: global.colors.border,
     },
 });
 

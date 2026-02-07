@@ -59,7 +59,7 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy }) => {
     // Right swipe action - "View Chart"
     const renderRightActions = () => (
       <View style={styles.rightAction}>
-        <Ionicons name="bar-chart-outline" size={20} color="#fff" />
+        <Ionicons name="bar-chart-outline" size={20} color={global.colors.background} />
         <Text style={styles.actionText}>Chart</Text>
       </View>
     );
@@ -86,15 +86,14 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy }) => {
           >
             <View style={styles.infoContainer}>
               <Text style={styles.companyName}>
-                {item.group_name || item.name}
+                {item.symbol}
               </Text>
-              <Text style={styles.symbol}>{item.symbol}</Text>
+              <Text style={styles.symbol}>{item.group_name || item.name}</Text>
             </View>
 
             <View style={styles.verticalCardRight}>
               <Text style={[
-                styles.verticalPrice,
-                isPositive ? styles.positive : styles.negative,
+                styles.verticalPrice
               ]}>
                 ₹{item.value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </Text>
@@ -144,7 +143,7 @@ const SectorsList = ({ data, exchange, category, navigation }) => {
     // Right swipe action - "View Chart"
     const renderRightActions = () => (
       <View style={styles.rightAction}>
-        <Ionicons name="bar-chart-outline" size={24} color="#fff" />
+        <Ionicons name="bar-chart-outline" size={24} color={global.colors.background} />
         <Text style={styles.actionText}>Chart</Text>
       </View>
     );
@@ -172,9 +171,9 @@ const SectorsList = ({ data, exchange, category, navigation }) => {
           >
             <View style={styles.infoContainer}>
               <Text style={styles.companyName}>
-                {item.group_name || item.name}
+                {item.symbol}
               </Text>
-              <Text style={styles.symbol}>{item.symbol}</Text>
+              <Text style={styles.symbol}>{item.group_name || item.name}</Text>
             </View>
 
             <View style={styles.verticalCardRight}>
@@ -617,7 +616,6 @@ export default function EquityScreen() {
 
   // ✅ Indices Fetch (unchanged)
   const fetchIndices = async ({ queryKey }) => {
-    console.log("Test1234567890")
     const [, exchange] = queryKey;
     const url =
       exchange === "BSE"
@@ -926,7 +924,7 @@ export default function EquityScreen() {
     if (selectedCategory === "Market Cap" && isMarketCapLoading) {
       return (
         <View style={styles.placeholderContainer}>
-          <ActivityIndicator size="large" color="#1a1a1a" />
+          <ActivityIndicator size="large" color={global.colors.overlay} />
           <Text style={styles.loadingText}>
             Loading {selectedExchange} market cap...
           </Text>
@@ -995,7 +993,7 @@ export default function EquityScreen() {
     if (selectedCategory === "Sectors" && isSectorsLoading) {
       return (
         <View style={styles.placeholderContainer}>
-          <ActivityIndicator size="large" color="#1a1a1a" />
+          <ActivityIndicator size="large" color={global.colors.overlay} />
           <Text style={styles.loadingText}>
             Loading {selectedExchange} sectors...
           </Text>
@@ -1063,7 +1061,7 @@ export default function EquityScreen() {
     if (selectedCategory === "Themes" && isThemesLoading) {
       return (
         <View style={styles.placeholderContainer}>
-          <ActivityIndicator size="large" color="#1a1a1a" />
+          <ActivityIndicator size="large" color={global.colors.overlay} />
           <Text style={styles.loadingText}>
             Loading {selectedExchange} themes...
           </Text>
@@ -1152,7 +1150,7 @@ export default function EquityScreen() {
     <>
       <SafeAreaView
         edges={["bottom"]}
-        style={{ flex: 1, backgroundColor: "#fff" }}
+        style={{ flex: 1, backgroundColor: global.colors.background }}
       >
         {/* <TopHeader /> */}
         <TopMenuSlider currentRoute={route.name} />
@@ -1176,7 +1174,7 @@ export default function EquityScreen() {
                   setShowPreview(false);
                 }}
               >
-                <Ionicons name="arrow-back" size={22} color="#210F47" />
+                <Ionicons name="arrow-back" size={22} color={ global.colors.secondary} />
                 <Text style={styles.backButtonText}>Back</Text>
               </TouchableOpacity>
             )}
@@ -1279,51 +1277,51 @@ const mergeWithRealtime = (list, realtimePrices) => {
 
 // ✅ Styles
 const styles = StyleSheet.create({
-  swipeWrapper: { flex: 1 },
-  content: { flex: 1, backgroundColor: "#fff", },
+  swipeWrapper: { flex: 1},
+  content: { flex: 1, backgroundColor: global.colors.background, },
   placeholderContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
   },
-  placeholderText: { fontSize: 16, color: "#888", fontWeight: "500" },
+  placeholderText: { fontSize: 16, color: global.colors.textSecondary, fontWeight: "500" },
   loadingText: {
     fontSize: 16,
-    color: "#666",
+    color: global.colors.textSecondary,
     fontWeight: "500",
     marginTop: 12,
   },
   errorText: {
     fontSize: 18,
-    color: "#ef4444",
+    color:  global.colors.error,
     fontWeight: "600",
     marginBottom: 8,
     textAlign: "center",
   },
   errorSubtext: {
     fontSize: 14,
-    color: "#666",
+    color: global.colors.textSecondary,
     textAlign: "center",
     marginBottom: 16,
     paddingHorizontal: 32,
   },
   retryButton: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: global.colors.overlay,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 8,
   },
   retryButtonText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 16,
     fontWeight: "700",
   },
 
   // Swipe Actions
   rightAction: {
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
@@ -1332,7 +1330,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   actionText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 12,
     fontWeight: "600",
     marginTop: 4,
@@ -1347,7 +1345,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor:global.colors.background,
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
@@ -1358,19 +1356,19 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   marketCapName: { fontSize: 14, fontWeight: "600" },
-  marketCapSymbol: { fontSize: 11, color: "#666" },
+  marketCapSymbol: { fontSize: 11, color: global.colors.textSecondary },
   marketCapValue: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#1a1a1a",
+    color: global.colors.overlay,
   },
   positive: {
-    color: "#2E7D32",
+    color: global.colors.success,
   },
   negative: {
-    color: "#C62828",
+    color:  global.colors.error,
   },
-  price: { fontSize: 15, fontWeight: "600", color: "#333" },
+  price: { fontSize: 15, fontWeight: "600", color: global.colors.textPrimary },
   change: { fontSize: 12, fontWeight: "600", marginTop: 4 },
   leftAction: {
     justifyContent: "center",
@@ -1380,7 +1378,7 @@ const styles = StyleSheet.create({
   buyText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#210F47",
+    color: global.colors.secondary,
   },
 
   // Sort & Filter Bar
@@ -1400,7 +1398,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     marginLeft: 6,
     fontSize: 13,
-    color: "#210F47",
+    color: global.colors.secondary,
     fontWeight: "600",
   },
   sortFilterButtonsContainer: {
@@ -1432,7 +1430,7 @@ const styles = StyleSheet.create({
   // Overlay and Dropdown
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "flex-start",
     alignItems: "flex-end",
     top: 90,
@@ -1441,16 +1439,16 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   filterDropdown: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 10,
-    marginTop: 140,
+    marginTop: 150,
     marginRight: 20,
     width: 120,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor:  global.colors.border,
     elevation: 6,
-    shadowColor: "#210F47",
+    shadowColor:  global.colors.secondary,
     shadowOpacity: 0.15,
     shadowRadius: 5,
     zIndex: 1000,
@@ -1458,7 +1456,7 @@ const styles = StyleSheet.create({
   verticalPrice: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color:  global.colors.textPrimary,
   },
   verticalChange: {
     fontSize: 11,
@@ -1478,12 +1476,12 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor:global.colors.background,
     padding: 12,
     borderRadius: 14,
     elevation: 2,
   },
   infoContainer: { flex: 1 },
   companyName: { fontSize: 14, fontWeight: "600" },
-  symbol: { fontSize: 11, color: "#666" },
+  symbol: { fontSize: 11, color: global.colors.textSecondary },
 });

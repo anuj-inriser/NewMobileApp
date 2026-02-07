@@ -28,7 +28,7 @@ import {
 } from "../ws/marketSubscriptions";
 import OrdersList from "../components/OrdersList";
 import PositionsList from "../components/PositionsList";
-import BottomTabBar from "../components/BottomTabBar";
+// import BottomTabBar from "../components/BottomTabBar";
 
 const filterOptions = ["All", "Equity", "F&O"];
 const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
@@ -227,9 +227,10 @@ const OrdersScreen = () => {
     );
   };
 
+
   return (
     <>
-      <SafeAreaView edges={["bottom"]} style={[styles.container, { paddingBottom: selectedTab === 1 ? 0 : 70 }]}>
+      <SafeAreaView style={[styles.container]}>
         {/* Tabs */}
         <View style={styles.topSliders}>
           <TradeOrderTabs
@@ -241,7 +242,7 @@ const OrdersScreen = () => {
         {renderContent()}
       </SafeAreaView>
       {/* Show BottomTabBar only when NOT on Place Order tab */}
-      {selectedTab !== 1 && <BottomTabBar />}
+      {/* {selectedTab !== 1 && <BottomTabBar />} */}
     </>
   );
 };
@@ -251,13 +252,13 @@ export default OrdersScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     paddingBottom: 70,
   },
   topSliders: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     elevation: 10,
-    shadowColor: "#000",
+    shadowColor: global.colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
@@ -273,13 +274,13 @@ const styles = StyleSheet.create({
   loaderText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#555",
+    color: global.colors.textSecondary,
   },
   noDataText: {
     marginTop: 10,
     fontSize: 16,
     fontWeight: "600",
-    color: "#555",
+    color: global.colors.textSecondary,
   },
   orderTopBar: {
     flexDirection: "row",
@@ -291,7 +292,7 @@ const styles = StyleSheet.create({
   orderTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#000",
+    color: global.colors.textPrimary,
   },
   row: {
     flexDirection: "row",
@@ -305,25 +306,25 @@ const styles = StyleSheet.create({
   actionText: {
     marginLeft: 4,
     fontSize: 13,
-    color: "#000",
+    color: global.colors.textPrimary,
   },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "flex-start",
     alignItems: "flex-end",
   },
   filterDropdown: {
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 10,
     marginTop: 140,
     marginRight: 20,
     width: 120,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: global.colors.border,
     elevation: 6,
-    shadowColor: "#210F47",
+    shadowColor: global.colors.secondary,
     shadowOpacity: 0.15,
     shadowRadius: 5,
     zIndex: 1000,
@@ -334,8 +335,8 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 14,
-    color: "#000",
+    color: global.colors.textPrimary,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
+    borderBottomColor: global.colors.border,
   },
 });

@@ -1,12 +1,24 @@
-// src/context/QueryClientProvider.js
 import React from "react";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { queryClient } from "../utils/queryClient";
+
+const asyncStoragePersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  throttleTime: 3000, // Sync to disk every 3 seconds max
+});
 
 export const AppQueryProvider = ({ children }) => {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ 
+          persister: asyncStoragePersister,
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours persistence
+      }}
+    >
       {children}
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 };

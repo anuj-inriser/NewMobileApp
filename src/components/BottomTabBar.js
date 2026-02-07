@@ -14,13 +14,13 @@ const getActiveRouteName = (state) => {
   return route.name;
 };
 
-const BottomTabBar = () => {
+const BottomTabBar = ({ state, descriptors, navigation }) => {
   const canViewCommunity = usePermission("VIEW_EXPLORE");
   const canViewTrade = usePermission("VIEW_TRADE");
   const canViewIdeas = usePermission("VIEW_IDEAS");
   const canViewNews = usePermission("VIEW_NEWS");
-  const navigation = useNavigation();
-  const currentRouteName = useNavigationState((state) => getActiveRouteName(state));
+  // const navigation = useNavigation();
+  // const currentRouteName = useNavigationState((state) => getActiveRouteName(state));
   const insets = useSafeAreaInsets();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
@@ -42,15 +42,20 @@ const BottomTabBar = () => {
     { name: "Home", component: "Equity", isPermission: true, icon: require("../../assets/homemenu.png") },
     { name: "News", component: "NewsScreen", isPermission: canViewNews, icon: require("../../assets/portfoliomenu.png") },
     { name: "Explore", component: "StockTimelineScreen", isPermission: canViewCommunity, icon: require("../../assets/communitymenu.png") },
-    { name: "Ideas", component: "Trade", isPermission: canViewIdeas, icon: require("../../assets/ideasmenu.png") },
+    { name: "Ideas", component: "Trade", isPermission: canViewIdeas, icon: require("../../assets/ideasmenu.png"), isRootNav: false },
     { name: "Trade", component: "AdvancedChart", isPermission: canViewTrade, icon: require("../../assets/trademenu.png"), isRootNav: true },
   ];
+
+  if (!state || !state.routes || typeof state.index !== 'number') {
+    return null; // or empty view
+  }
 
   return (
     <View style={[styles.absoluteBar, { paddingBottom: insets.bottom }]}>
       <View style={styles.container}>
         {tabs.map((tab) => {
-          const isActive = currentRouteName === tab.component;
+          const currentRoute = state.routes[state.index] ?? {};
+          const isActive = currentRoute.name === tab.component;
           // console.log("isActive", isActive)
           return (
             <TouchableOpacity
@@ -68,12 +73,14 @@ const BottomTabBar = () => {
                     symbol: "NSE:RELIANCE-EQ",
                   });
                 } else {
-                  navigation.navigate("App", {
-                    screen: tab.component,
-                  })
+                  if (!isActive) {
+                    navigation.navigate('App', {
+                      screen: 'MainTabs',
+                      params: { screen: tab.component }
+                    });
+                  }
                 }
-              }
-              }
+              }}
             >
               <View style={[styles.iconWrapper, isActive && styles.activeBackground]}>
                 <Image source={tab.icon} style={styles.iconImg} resizeMode="contain" />
@@ -84,7 +91,7 @@ const BottomTabBar = () => {
                 )}
               </View>
 
-              <Text style={[styles.label, { color: isActive ? "#210F47" : "#555" }]}>
+              <Text style={[styles.label, { color: isActive ? global.colors.secondary : global.colors.textSecondary }]}>
                 {tab.name}
               </Text>
             </TouchableOpacity>
@@ -136,7 +143,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
   },
 
   container: {
@@ -146,8 +153,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     minHeight: 55,
     borderTopWidth: 1,
-    borderColor: "#eee",
-    backgroundColor: "#fff",
+    borderColor: global.colors.border,
+    backgroundColor: global.colors.background,
   },
 
   tabItem: { alignItems: "center" },
@@ -160,7 +167,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -4,
     right: -8,
-    backgroundColor: "#E53935",
+    backgroundColor: global.colors.error,
     borderRadius: 10,
     paddingHorizontal: 4,
     minWidth: 16,
@@ -168,10 +175,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
+  badgeText: { color: global.colors.background, fontSize: 10, fontWeight: "700" },
 
   activeBackground: {
-    backgroundColor: "#E6E0E9",
+    backgroundColor: global.colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,
@@ -179,14 +186,14 @@ const styles = StyleSheet.create({
   // Modal style
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
 
   modalBox: {
     width: "80%",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 12,
     padding: 20,
     alignItems: "center",
@@ -195,26 +202,26 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#210F47",
+    color: global.colors.secondary,
     marginBottom: 8,
   },
 
   modalMessage: {
     fontSize: 13,
-    color: "#555",
+    color: global.colors.textSecondary,
     textAlign: "center",
     marginBottom: 20,
   },
 
   modalButton: {
-    backgroundColor: "#210F47",
+    backgroundColor: global.colors.secondary,
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 20,
   },
 
   modalButtonText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 14,
     fontWeight: "500",
   },

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axiosInstance from "../api/axios";
 
 export const TOKENS = {
   AUTH_TOKEN: "@angelone_auth_token",
@@ -21,9 +22,26 @@ export const AuthProvider = ({ children }) => {
   const [clientId, setClientId] = useState(null);
   const [userId, setUserId] = useState(null);
   const [userData, setUserData] = useState(null);
-  const [permissions, setPermissions] = useState([]);
+  const [permissions, setPermissions] = useState(null);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profileImage, setProfileImage] = useState(null);
+
+  const refreshUserProfile = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId) return;
+
+      const res = await axiosInstance.get(`/users/${userId}`);
+      const user = res.data.data;
+      const newImage = user?.userimage || null;
+      setProfileImage(newImage);
+      return newImage;
+    } catch (err) {
+      console.log("Refresh user error:", err);
+    }
+  };
 
   const loadTokens = async () => {
     try {
@@ -47,6 +65,9 @@ export const AuthProvider = ({ children }) => {
       if (d) setUserData(JSON.parse(d));
       if (p) {
         setPermissions(JSON.parse(p));
+      } else {
+        setPermissionsLoading(false);
+        setPermissions(null);
       }
     } finally {
       setLoading(false);
@@ -56,6 +77,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     loadTokens();
   }, []);
+
+    useEffect(() => {
+    if (!loading && userId) {
+      refreshUserProfile();
+    }
+  }, [loading, userId]);
 
   const setAuthData = async ({ authToken, feedToken, refreshToken, clientId, userId, userData, permissions, token }) => {
     if (authToken) {
@@ -85,6 +112,7 @@ export const AuthProvider = ({ children }) => {
     if (permissions) {
       await AsyncStorage.setItem("permissions", JSON.stringify(permissions));
       setPermissions(permissions);
+      setPermissionsLoading(false);
     }
     if (token) {
       await AsyncStorage.setItem(STORAGE_KEYS.token, token);
@@ -127,6 +155,9 @@ export const AuthProvider = ({ children }) => {
         clearAuth,
         permissions,
         token,
+        profileImage,
+        refreshUserProfile,
+        permissionsLoading,
       }}
     >
       {children}

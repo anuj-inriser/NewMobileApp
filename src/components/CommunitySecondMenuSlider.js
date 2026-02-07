@@ -40,8 +40,7 @@ const CommunitySecondMenuSlider = ({ activeFilter, onTabChange }) => {
 };
 
 const styles = StyleSheet.create({
-    safeArea: { backgroundColor: "#fff" },
-
+    safeArea: { backgroundColor: global.colors.background },
     tabContainer: {
         flexDirection: "row",
         paddingHorizontal: 20,
@@ -51,7 +50,7 @@ const styles = StyleSheet.create({
     tabItem: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 40,
         paddingVertical: 4,
         paddingHorizontal: 16,
@@ -60,17 +59,17 @@ const styles = StyleSheet.create({
     },
 
     tabText: {
-        color: "#210F47",
+        color: global.colors.secondary,
         fontSize: 12,
         fontWeight: "500",
     },
 
     activeTab: {
-        backgroundColor: "#210F47",
+        backgroundColor: global.colors.secondary,
     },
 
     activeTabText: {
-        color: "#fff",
+        color: global.colors.background,
         fontWeight: "500",
     },
 });

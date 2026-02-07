@@ -23,21 +23,20 @@ const OrderItemCard = ({ name, type, shares, status, price, ltp, onModify, onCan
 
     // 🔵 Status Color Logic
     const getStatusColor = () => {
-        if (!status) return "#999";
+        if (!status) return global.colors.disabled;
 
         const s = status.toString().trim().toLowerCase();
 
-        if (["complete", "completed", "executed"].includes(s)) return "#22C55E"; // Green
-        if (["cancelled", "canceled", "rejected"].includes(s)) return "#D32F2F"; // Red
+        if (["complete", "completed", "executed"].includes(s)) return global.colors.success; // Green
+        if (["cancelled", "canceled", "rejected"].includes(s)) return global.colors.error; // Red
         if (
             s === "pending" ||
             s === "open" ||
             s === "trigger pending" ||
             s === "put order req received" ||
             s === "put order request was received"
-        ) return "#FF9F3F"; // Yellow
-
-        return "#999";
+        ) return global.colors.warning; // Yellow
+        return global.colors.disabled;
     };
 
     // 🔵 Format first letter uppercase
@@ -48,13 +47,13 @@ const OrderItemCard = ({ name, type, shares, status, price, ltp, onModify, onCan
 
     // 🔵 BUY / SELL color logic
     const getTypeColor = () => {
-        if (!type) return "#000";
+        if (!type) return global.colors.textPrimary;
 
         const t = type.toString().trim().toLowerCase();
-        if (t === "buy") return "#22C55E";  // Green
-        if (t === "sell") return "#D32F2F"; // Red
+        if (t === "buy") return global.colors.success;  // Green
+        if (t === "sell") return global.colors.error; // Red
 
-        return "#000";
+        return global.colors.textPrimary;
     };
 
     const closeSwipe = () => swipeRef.current?.close();
@@ -188,7 +187,7 @@ const styles = StyleSheet.create({
     leftText: {
         fontSize: 12,
         fontWeight: "700",
-        color: "#210F47",
+        color: global.colors.secondary,
     },
     rightAction: {
         justifyContent: "center",
@@ -197,15 +196,15 @@ const styles = StyleSheet.create({
         borderRadius: 14,
     },
     rightText: {
-        fontSize: 12, fontWeight: "700", color: "#D32F2F"
+        fontSize: 12, fontWeight: "700", color: global.colors.error
     },
 
     card: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 14,
         padding: 14,
         borderWidth: 1,
-        borderColor: "#EDEDED",
+        borderColor: global.colors.border,
         marginHorizontal: 20,
         marginTop: 5,
         elevation: 0,
@@ -223,7 +222,7 @@ const styles = StyleSheet.create({
     stockName: {
         fontSize: 14,
         fontWeight: "700",
-        color: "#000",
+        color: global.colors.textPrimary,
         marginBottom: 4,
     },
 
@@ -251,14 +250,14 @@ const styles = StyleSheet.create({
 
     sharesLabel: {
         fontSize: 12,
-        color: "#777",
+        color: global.colors.textSecondary,
         fontWeight: "500",
     },
 
     sharesValue: {
         fontSize: 12,
         fontWeight: "700",
-        color: "#444",
+        color: global.colors.textPrimary,
         marginTop: 2,
     },
 
@@ -288,7 +287,7 @@ const styles = StyleSheet.create({
     priceText: {
         fontSize: 14,
         fontWeight: "700",
-        color: "#000",
+        color: global.colors.textPrimary,
     },
     brokerIcon: {
         width: 12,
@@ -296,5 +295,4 @@ const styles = StyleSheet.create({
         marginRight: 6,
         borderRadius: 20,
     },
-
 });

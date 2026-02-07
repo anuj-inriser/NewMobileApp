@@ -1,10 +1,10 @@
 import "react-native-gesture-handler";
 import React, { useEffect } from "react";
 import { Platform } from "react-native";
+import "./src/theme/colors";
 import { apiUrl } from "./src/utils/apiUrl";
 import { AlertProvider } from "./src/context/AlertContext";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 // SDK 54 fix: Use legacy for downloadAsync compatibility
 import * as FileSystem from "expo-file-system/legacy";
 import * as Notifications from "expo-notifications";
@@ -13,6 +13,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import BottomTabBar from "./src/components/BottomTabBar";
 
 import { playNotificationSound } from "./src/utils/soundPlayer";
 import { AuthProvider } from "./src/context/AuthContext";
@@ -21,7 +23,6 @@ import { AppQueryProvider } from "./src/context/QueryClientProvider";
 import { connectMarketWS, onMarketMessage } from "./src/ws/marketWs";
 import { applyPriceMessage } from "./src/store/marketPrices";
 import { useAuth } from "./src/context/AuthContext";
-
 import MainLayout from "./src/Layout/MainLayout";
 
 // 🔹 Screens (Saare imports pehle jaise hi hain)
@@ -67,75 +68,60 @@ function AuthNavigator() {
   );
 }
 
-function AppNavigator() {
+const Tab = createBottomTabNavigator();
+
+// 🔹 Main Tab Navigator
+function MainTabNavigator() {
   return (
-    <MainLayout>
-      <AppStack.Navigator screenOptions={{ headerShown: false }}>
-        <AppStack.Screen
-          name="Equity"
-          // component={EquityScreen}
-          children={() => (
+      <Tab.Navigator
+        tabBar={(props) => <BottomTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+          // Standard tab configs
+          lazy: false, // Keep tabs mounted
+          unmountOnBlur: false, // Don't unmount on blur
+        }}
+      >
+        <Tab.Screen name="Equity">
+          {() => (  
             <PermissionGuard permission="VIEW_EQUITY">
               <EquityScreen />
             </PermissionGuard>
           )}
-        />
-        <AppStack.Screen name="Trade" component={TradeScreen} />
-        <AppStack.Screen name="NewsScreen"
-          children={() => (
-            <PermissionGuard permission="VIEW_NEWS">
-              <NewsScreen />
-            </PermissionGuard>
-          )} />
-        <AppStack.Screen name="NewsReadingScreen" component={NewsReadingScreen} />
-        <AppStack.Screen name="Portfolio"
-          // component={PortfolioScreen}
-          children={() => (
-            <PermissionGuard permission="VIEW_PORTFOLIO">
-              <PortfolioScreen />
-            </PermissionGuard>
-          )}
-        />
-        <AppStack.Screen name="Profile" component={Profile} options={{ presentation: "modal", animation: "slide_from_left" }} />
-        <AppStack.Screen
-          name="TradeOrderList"
-          // component={TradeOrderListScreen}
-          children={() => (
+        </Tab.Screen>
+        <Tab.Screen name="TradeOrderList">
+          {() => (
             <PermissionGuard permission="VIEW_WATCHLIST">
               <TradeOrderListScreen />
             </PermissionGuard>
           )}
-        />
-        <AppStack.Screen name="OrdersScreen" component={OrdersScreen} />
-        <AppStack.Screen name="StockTimelineScreen" component={StockTimelineScreen} />
-        <AppStack.Screen name="Stocks" component={StocksScreen} />
-        <AppStack.Screen name="IndicesList" component={IndicesListScreen} />
-        <AppStack.Screen name="IndicesDetail" component={IndicesDetailScreen} />
-        <AppStack.Screen name="Learning"
-          children={() => (
-            <PermissionGuard permission="VIEW_LEARNING">
-              <Learning />
+        </Tab.Screen>
+        <Tab.Screen name="NewsScreen">
+          {() => (
+            <PermissionGuard permission="VIEW_NEWS">
+              <NewsScreen />
             </PermissionGuard>
-          )} />
-        <AppStack.Screen name="LearningDetail" component={LearningDetail} />
-        <AppStack.Screen name="ChapterScreen" component={ChapterScreen} />
-        <AppStack.Screen name="ChapterDetails" component={ChapterDetails} />
-        <AppStack.Screen name="NotificationScreen" component={NotificationScreen} />
-      </AppStack.Navigator>
-    </MainLayout>
+          )}
+        </Tab.Screen>
+        <Tab.Screen
+          name="StockTimelineScreen"
+          component={StockTimelineScreen}
+        />
+        <Tab.Screen name="Trade" component={TradeScreen} />
+        <Tab.Screen name="OrdersScreen" component={OrdersScreen} />
+        <Tab.Screen name="Profile" component={Profile} />
+        <Tab.Screen name="Stocks" component={StocksScreen} />
+        <Tab.Screen name="Portfolio">
+          {() => (
+            <PermissionGuard permission="VIEW_PORTFOLIO">
+              <PortfolioScreen />
+            </PermissionGuard>
+          )}
+        </Tab.Screen>
+        {/* AdvancedChart moved to RootStack for full-screen without header/footer */}
+      </Tab.Navigator>
   );
 }
-
-/* 🔔 NOTIFICATION SETTINGS */
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: true,
-  }),
-});
-
 function RootNavigator() {
   const { token, loading } = useAuth();
 
@@ -158,9 +144,56 @@ function RootNavigator() {
   );
 }
 
+function AppNavigator() {
+  return (
+    <MainLayout>
+    <AppStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: "slide_from_right",
+      }}
+    >
+      
+      {/* 🔹 Main Tabs as the Root Screen */}
+      <AppStack.Screen name="MainTabs" component={MainTabNavigator} />
+
+      {/* 🔹 Stack Screens (Detail Views) */}
+      <AppStack.Screen name="NewsReadingScreen" component={NewsReadingScreen} />
+
+
+      <AppStack.Screen name="IndicesList" component={IndicesListScreen} />
+      <AppStack.Screen name="IndicesDetail" component={IndicesDetailScreen} />
+      <AppStack.Screen name="Learning">
+        {() => (
+          <PermissionGuard permission="VIEW_LEARNING">
+            <Learning />
+          </PermissionGuard>
+        )}
+      </AppStack.Screen>
+      <AppStack.Screen name="LearningDetail" component={LearningDetail} />
+      <AppStack.Screen name="ChapterScreen" component={ChapterScreen} />
+      <AppStack.Screen name="ChapterDetails" component={ChapterDetails} />
+      
+      <AppStack.Screen
+        name="NotificationScreen"
+        component={NotificationScreen}
+      />
+    </AppStack.Navigator>
+    </MainLayout>
+  );
+}
+
+/* 🔔 NOTIFICATION SETTINGS */
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: true,
+  }),
+});
+
 export default function App() {
-
-
   useEffect(() => {
     const setupNotifications = async () => {
       const { status } = await Notifications.requestPermissionsAsync();
@@ -281,7 +314,15 @@ export default function App() {
         <AppQueryProvider>
           <AuthProvider>
             <WatchlistProvider>
-              <AlertProvider>
+              {/* <NavigationContainer>
+                <RootStack.Navigator screenOptions={{ headerShown: false }}>
+                  <RootStack.Screen name="Auth" component={AuthNavigator} />
+                  <RootStack.Screen name="App" component={AppNavigator} />
+                  <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
+                  <RootStack.Screen name="AdvancedChart" component={AdvancedChartScreen} />
+                </RootStack.Navigator>
+              </NavigationContainer> */}
+               <AlertProvider>
                 <NavigationContainer>
                   <RootNavigator />
                 </NavigationContainer>

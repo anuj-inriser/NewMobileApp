@@ -3,15 +3,16 @@ import { ScrollView, StyleSheet, View, Text, ActivityIndicator } from 'react-nat
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import LearningCard from '../components/LearningCard'; // relative import
 import learning_image from "../../assets/learning_image.jpg"
-// import TopHeader from "../components/TopHeader";
-import TopMenuSlider from "../components/TopMenuSlider";
+import TopHeader from "../components/TopHeader";
+// import TopMenuSlider from "../components/TopMenuSlider";
+import GlobalTopMenu from '../components/GlobalTopMenu';
 import { SafeAreaView } from "react-native-safe-area-context";
 // import BottomTabBar from '../components/BottomTabBar';
 import TopFundamentalSlider from '../components/TopFundamentalSlider';
 import axiosInstance from "../api/axios";
 import { apiUrl } from '../utils/apiUrl';
 
-const Learning = () => {
+const Learning = ({ isEmbedded = false }) => {
     const route = useRoute();
     const navigation = useNavigation();
     const [categories, setCategories] = useState([]);
@@ -79,19 +80,41 @@ const Learning = () => {
     return (
         <>
             <SafeAreaView edges={["bottom"]} style={styles.container}>
-                {/* <TopHeader /> */}
-                <View >
+                {!isEmbedded && <TopHeader />}
+                <View style={{ marginBottom: 10 }}>
                     {/* <TopMenuSlider /> */}
-                    <TopFundamentalSlider
-                        learningCategory={categories}
-                        selectedCategory={selectedCategory}
-                        onTabChange={(item) => setSelectedCategory(item)}
+                    {!isEmbedded && (
+                        <GlobalTopMenu
+                            tabs={[
+                                { id: "Timeline", name: "Timeline" },
+                                { id: "Sequence", name: "Scanner" },
+                                { id: "Learning", name: "Learning" },
+                                { id: "Watchlist", name: "Watchlist" },
+                            ]}
+                            activeTab={{ id: "Learning" }}
+                            onTabChange={(tab) => {
+                                if (tab.id === "Learning") return;
+                                navigation.navigate("StockTimelineScreen", { screen: tab.id });
+                            }}
+                            showFilter={false}
+                            hideShadow={true}
+                        />
+                    )}
+
+
+                    {/* Category Menu (Fundamental, Technical, etc.) */}
+                    <GlobalTopMenu
+                        tabs={categories}
+                        activeTab={selectedCategory}
+                        onTabChange={setSelectedCategory}
+                        showFilter={false}
+                        type="secondary"
                     />
                 </View>
                 <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
                     {loading ? (
                         <View style={styles.loaderContainer}>
-                            <ActivityIndicator size="large" color="#210F47" />
+                            <ActivityIndicator size="large" color={global.colors.secondary} />
                         </View>
                     ) : modules.length === 0 ? (
                         <View style={styles.noDataContainer}>
@@ -111,6 +134,10 @@ const Learning = () => {
                                     onArrowPress={() =>
                                         navigation.navigate('ChapterScreen', { moduleId: item.moduleid, categoryId: selectedCategory.id })
                                     }
+                                    onMiniCardPress={(chapter) => {
+                                        // Optional: Update progress logic here if needed, similar to ChapterScreen
+                                        navigation.navigate('ChapterDetails', { chapter: chapter.chapterid });
+                                    }}
                                 />
                             )
                         })
@@ -123,19 +150,19 @@ const Learning = () => {
 };
 
 const styles = StyleSheet.create({
-    container: { backgroundColor: '#F5F5F7', flex: 1 },
-    topSliders: {
-        backgroundColor: "#fff",
-        elevation: 10, // Android shadow
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 }, // bottom direction
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
+    container: { backgroundColor: global.colors.backgroundColor, flex: 1 },
+    // topSliders: {
+    //     backgroundColor: "#fff",
+    //     elevation: 10, // Android shadow
+    //     shadowColor: "#000",
+    //     shadowOffset: { width: 0, height: 2 }, // bottom direction
+    //     shadowOpacity: 0.2,
+    //     shadowRadius: 3,
 
-        // Trick to hide top shadow impact
-        marginTop: -3,
-        paddingTop: 3
-    },
+    //     // Trick to hide top shadow impact
+    //     marginTop: -3,
+    //     paddingTop: 3
+    // },
     noDataContainer: {
         padding: 20,
         marginTop: 20,
@@ -143,14 +170,12 @@ const styles = StyleSheet.create({
     },
     noDataText: {
         fontSize: 16,
-        color: '#777',
+        color: global.colors.textSecondary,
         fontWeight: '500',
     },
     loaderContainer: {
         marginTop: 30,
         alignItems: 'center',
     },
-
 });
-
 export default Learning;

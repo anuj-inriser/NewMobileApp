@@ -11,8 +11,8 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import FundamentalTopHeader from '../components/FundamentalTopHeader';
 import { SafeAreaView } from "react-native-safe-area-context";
-import TopMenuSlider from '../components/TopMenuSlider';
-import TopFundamentalSlider from '../components/TopFundamentalSlider';
+// import TopMenuSlider from '../components/TopMenuSlider';
+// import TopFundamentalSlider from '../components/TopFundamentalSlider';
 // import BottomTabBar from '../components/BottomTabBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import axiosInstance from '../api/axios';
@@ -131,18 +131,17 @@ export default function ChapterScreen({ route, navigation }) {
         <>
             <SafeAreaView edges={["bottom"]} style={styles.container}>
                 {/* <FundamentalTopHeader /> */}
-                <View style={styles.topSliders}>
+                <View>
 
-                    <TopMenuSlider />
-                    <TopFundamentalSlider
-                        learningCategory={categories}
-                        selectedCategory={selectedCategory}
-                        onTabChange={(item) => {
-                            navigation.navigate("Learning", {
-                                selectedCategoryId: item.id
-                            });
-                        }}
-                    />
+                    <View style={styles.header}>
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => navigation.goBack()}
+                        >
+                            <MaterialIcons name="arrow-back" size={24} color={global.colors.textPrimary} />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>{moduleData?.module_name || "Course Details"}</Text>
+                    </View>
                 </View>
                 <ScrollView
                     // contentContainerStyle={{ paddingBottom: 10 }}
@@ -203,21 +202,18 @@ const cardWidth = width * 0.42;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
-        // paddingBottom: 20,
+        backgroundColor: global.colors.background,
     },
-    topSliders: {
-        backgroundColor: "#fff",
-        elevation: 10, // Android shadow
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 }, // bottom direction
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-
-        // Trick to hide top shadow impact
-        marginTop: -3,
-        paddingTop: 3
-    },
+    // topSliders: {
+    //     backgroundColor: global.colors.background,
+    //     // elevation: 10,
+    //     // shadowColor: "#000",
+    //     // shadowOffset: { width: 0, height: 2 },
+    //     // shadowOpacity: 0.2,
+    //     // shadowRadius: 3,
+    //     // marginTop: -3,
+    //     // paddingTop: 3
+    // },
     sectionContainer: {
         // paddingTop: 10,
         paddingHorizontal: 15,
@@ -225,7 +221,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#2D2D2D',
+        color: global.colors.textPrimary,
         marginTop: 15,
         marginBottom: 12,
         marginLeft: 4,
@@ -270,29 +266,28 @@ const styles = StyleSheet.create({
         right: 10,
         height: 7,
         borderRadius: 5,
-        backgroundColor: '#eee',
+        backgroundColor: global.colors.surface,
         flexDirection: 'row',
         alignItems: 'center',
     },
     headline: {
-        color: '#fff',
+        color: global.colors.background,
         fontSize: 16,
         fontWeight: '500',
     },
     progressBarFill: {
-        backgroundColor: '#31C283',
+        backgroundColor: global.colors.success,
         height: 7,
         borderRadius: 5,
     },
     progressText: {
         position: 'absolute',
         right: 0.00001,
-        // top: -14,
-        backgroundColor: '#31C283',
+        backgroundColor: global.colors.success,
         width: 23,
         height: 23,
         borderRadius: 14,
-        color: '#fff',
+        color: global.colors.background,
         fontWeight: '500',
         fontSize: 10,
         textAlign: 'center',
@@ -300,13 +295,13 @@ const styles = StyleSheet.create({
         overflow: 'hidden'
     },
     overlay: {
-        // backgroundColor: 'rgba(0,0,0,0.3)',
+        // backgroundColor: global.colors.overlay,
         padding: 13,
         borderBottomLeftRadius: 15,
         borderBottomRightRadius: 15,
     },
     topCardText: {
-        color: '#fff',
+        color: global.colors.background,
         fontSize: 15,
         fontWeight: '500',
     },
@@ -314,21 +309,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'flex-start',
-        //  paddingHorizontal: 3,
         width: '100%',
     },
     chapterCard: {
-        backgroundColor: '#F2EEF7',
+        backgroundColor: global.colors.surface,
         borderRadius: 13,
         width: cardWidth,
         minHeight: 80,
         marginBottom: 10,
         marginLeft: 10,
-        // marginHorizontal: 9,
         flexDirection: 'column',
         alignItems: 'flex-start',
         padding: 15,
-        shadowColor: '#000',
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.08,
         shadowRadius: 16,
@@ -338,20 +331,20 @@ const styles = StyleSheet.create({
         width: 24,
         height: 24,
         borderRadius: 19,
-        backgroundColor: '#210F47',
+        backgroundColor: global.colors.secondary,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 13,
         marginBottom: 7,
     },
     chapterNumberText: {
-        color: '#fff',
+        color: global.colors.background,
         fontSize: 12,
         fontWeight: '800',
         textAlign: 'center',
     },
     chapterTitle: {
-        color: '#2D2D2D',
+        color: global.colors.textPrimary,
         fontWeight: '500',
         fontSize: 13,
         letterSpacing: 0.7,
@@ -360,7 +353,7 @@ const styles = StyleSheet.create({
         height: 36,
     },
     certificateCard: {
-        backgroundColor: '#F2EEF7',
+        backgroundColor: global.colors.surface,
         borderRadius: 13,
         width: '100%',
         minHeight: 80,
@@ -369,7 +362,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'flex-start',
         padding: 15,
-        shadowColor: '#000',
+        shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.08,
         shadowRadius: 16,
@@ -379,18 +372,35 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 19,
-        backgroundColor: '#210F47',
+        backgroundColor: global.colors.secondary,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 13,
     },
     certificateTitle: {
-        color: '#2D2D2D',
+        color: global.colors.textPrimary,
         fontWeight: '700',
         fontSize: 15,
         letterSpacing: 0.7,
         flexShrink: 1,
         width: 130,
         height: 36,
-    }
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 15,
+        paddingTop: 10,
+        paddingBottom: 5,
+        backgroundColor: global.colors.background,
+    },
+    backButton: {
+        marginRight: 15,
+        padding: 5,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: global.colors.textPrimary,
+    },
 });

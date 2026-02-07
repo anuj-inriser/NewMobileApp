@@ -7,40 +7,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // import BottomTabBar from '../components/BottomTabBar';
 import NewsCardLarge from '../components/News/NewsCardLarge';
 import NewsCardSmall from '../components/News/NewsCardSmall';
-import axiosInstance from "../api/axios";
+// import axiosInstance from "../api/axios";
+import { useNews } from '../hooks/useCachedQueries';
 import TopHeader from '../components/TopHeader';
 
 const NewsScreen = () => {
 
     const navigation = useNavigation();
-    const [news, setNews] = useState([]);
-    const [loading, setLoading] = useState(false);
-
-
-    useEffect(() => {
-        const fetchNews = async () => {
-            try {
-                setLoading(true);
-                const res = await axiosInstance.get('/newsfeed/published');
-                setNews(res.data?.data || []);
-            } catch (error) {
-                console.log("error fetching news", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchNews();
-    }, []);
-
-
+    const { data: news = [], isLoading: loading } = useNews();
     return (
         <>
             <SafeAreaView edges={["bottom"]} style={styles.container}>
 
                 {loading ? (
                     <View style={styles.loader}>
-                        <ActivityIndicator size="large" color="#210F47" />
+                        <ActivityIndicator size="large" color={global.colors.secondary} />
                     </View>
                 ) : (
                     <ScrollView
@@ -82,18 +63,16 @@ export default NewsScreen;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F7',
+        backgroundColor: global.colors.background,
         marginBottom: 50
     },
     topSliders: {
-        backgroundColor: "#fff",
-        elevation: 10, // Android shadow
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 }, // bottom direction
+        backgroundColor: global.colors.primary,
+        elevation: 10,
+        shadowColor: global.colors.textPrimary,
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 3,
-
-        // Trick to hide top shadow impact
         marginTop: -3,
         paddingTop: 3,
         marginBottom: 10
@@ -113,6 +92,6 @@ const styles = StyleSheet.create({
         textAlign: "center",
         marginTop: 40,
         fontSize: 16,
-        color: "#666",
+        color: global.colors.textSecondary,
     }
 });

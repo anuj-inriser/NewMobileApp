@@ -80,8 +80,7 @@ const TopFundamentalSlider = ({
 };
 
 const styles = StyleSheet.create({
-    safeArea: { backgroundColor: "#fff" },
-
+    safeArea: { backgroundColor: global.colors.background },
     scrollContainer: {
         flexDirection: "row",
         alignItems: "center",
@@ -90,30 +89,30 @@ const styles = StyleSheet.create({
     },
 
     tabItem: {
-        backgroundColor: "#fff",
+        backgroundColor: global.colors.background,
         borderRadius: 40,
         paddingVertical: 4,
         paddingHorizontal: 16,
         marginRight: 10,
         elevation: 2,
-        shadowColor: "#E6E0E9",
+        shadowColor: global.colors.surface,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.15,
         shadowRadius: 1.5,
     },
 
     tabText: {
-        color: "#666666",
+        color: global.colors.textSecondary,
         fontSize: 12,
         fontWeight: "500",
     },
 
     activeTab: {
-        backgroundColor: "#E6E0E9",
+        backgroundColor: global.colors.surface,
     },
 
     activeTabText: {
-        color: "#333333",
+        color: global.colors.textPrimary,
         fontWeight: "600",
     },
 });

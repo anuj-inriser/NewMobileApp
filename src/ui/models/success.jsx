@@ -1,11 +1,13 @@
 import React from 'react';
-import { Modal, Text, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, Text, View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 
 const Success = ({ successIssueModalOpen, setSuccessIssueModalOpen, response }) => {
     // Default to success if status is missing or true
     const isSuccess = response?.status;
-
-    console.log('ise success', isSuccess)
+    const icon =
+        isSuccess
+            ? require("../../../assets/confirmalert.png")
+            : require("../../../assets/redalert.png");
 
     return (
         <Modal
@@ -16,9 +18,10 @@ const Success = ({ successIssueModalOpen, setSuccessIssueModalOpen, response }) 
         >
             <View style={styles.successOverlay}>
                 <View style={styles.successCard}>
-                    <View style={isSuccess ? styles.successIcon : styles.errorIcon}>
+                    {/* <View style={isSuccess ? styles.successIcon : styles.errorIcon}>
                         <Text style={isSuccess ? styles.successTick : styles.errorTick}>{isSuccess ? "✓" : "✕"}</Text>
-                    </View>
+                    </View> */}
+                    <Image source={icon} style={styles.icon} />
                     <Text style={styles.successTitle}>
                         {response?.title || (isSuccess ? "Success" : "Error")}
                     </Text>
@@ -38,20 +41,27 @@ const Success = ({ successIssueModalOpen, setSuccessIssueModalOpen, response }) 
 }
 
 const styles = StyleSheet.create({
+    icon: {
+        width: 70,
+        height: 70,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 16,
+    },
     successOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: global.colors.overlay,
         justifyContent: 'center',
         alignItems: 'center',
     },
     successCard: {
         width: '80%',
-        backgroundColor: 'white',
+        backgroundColor: global.colors.background,
         borderRadius: 20,
         padding: 20,
         alignItems: 'center',
         elevation: 5,
-        shadowColor: '#000',
+        shadowColor: global.colors.textSecondary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
@@ -60,7 +70,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#4CAF50',
+        backgroundColor: global.colors.success,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 15,
@@ -69,37 +79,37 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#F44336', // Red color for error
+        backgroundColor: global.colors.error,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 15,
     },
     errorTick: {
-        color: 'white',
+        color: global.colors.error,
         fontSize: 30,
         fontWeight: 'bold',
     },
     successTick: {
-        color: 'white',
+        color: global.colors.background,
         fontSize: 30,
         fontWeight: 'bold',
     },
     successTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#333',
+        color: global.colors.textPrimary,
         marginBottom: 10,
         textAlign: 'center',
     },
     successText: {
         fontSize: 16,
-        color: '#666',
+        color: global.colors.textSecondary,
         textAlign: 'center',
         marginBottom: 20,
         lineHeight: 22,
     },
     successBtn: {
-        backgroundColor: '#210F47',
+        backgroundColor: global.colors.secondary,
         paddingVertical: 12,
         paddingHorizontal: 30,
         borderRadius: 25,
@@ -107,7 +117,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     errorBtn: {
-        backgroundColor: '#D32F2F', // Darker red for button
+        backgroundColor: global.colors.error,
     },
     successBtnText: {
         color: 'white',

@@ -45,13 +45,13 @@ export default GlobalAlert;
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: global.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   card: {
     width: "85%",
-    backgroundColor: "#fff",
+    backgroundColor: global.colors.background,
     borderRadius: 20,
     paddingVertical: 30,
     paddingHorizontal: 22,
@@ -69,24 +69,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1F2937",
+    color: global.colors.secondary,
     marginBottom: 10,
   },
   text: {
     fontSize: 15,
-    color: "#4B5563",
+    color: global.colors.textPrimary,
     textAlign: "left",
     lineHeight: 20,
     marginBottom: 24,
   },
   btn: {
-    backgroundColor: "#1E0A3C",
+    backgroundColor: global.colors.secondary,
     paddingVertical: 12,
     paddingHorizontal: 40,
     borderRadius: 25,
   },
   btnText: {
-    color: "#fff",
+    color: global.colors.background,
     fontSize: 15,
     fontWeight: "500",
   },

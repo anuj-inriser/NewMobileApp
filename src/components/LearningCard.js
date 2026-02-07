@@ -118,13 +118,13 @@ const LearningCard = ({
                         width: 35,
                         height: 35,
                         borderRadius: 20,
-                        backgroundColor: '#E6E0E9',
+                        backgroundColor: global.colors.surface,
                         alignItems: 'center',
                         justifyContent: 'center',
                         right: 15
                     }}
                     >
-                        <MaterialIcons name="arrow-forward" size={20} color="#000" />
+                        <MaterialIcons name="arrow-forward" size={20} color={global.colors.textPrimary} />
                     </View>
                 </TouchableOpacity>
             </View>
@@ -163,8 +163,7 @@ const LearningCard = ({
 
 const styles = StyleSheet.create({
     container: {
-        padding: 20,
-        // backgroundColor: '#fff',
+        paddingHorizontal: 20,
     },
     headerRow: {
         flexDirection: 'row',
@@ -175,11 +174,11 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#2D2D2D',
+        color: global.colors.textPrimary,
     },
     arrow: {
         fontSize: 24,
-        color: '#555',
+        color: global.colors.textSecondary,
     },
     mainCard: {
         height: 120,
@@ -195,12 +194,12 @@ const styles = StyleSheet.create({
         right: 10,
         height: 7,
         borderRadius: 5,
-        backgroundColor: '#eee',
+        backgroundColor: global.colors.border,
         flexDirection: 'row',
         alignItems: 'center',
     },
     progressBarFill: {
-        backgroundColor: '#31C283',
+        backgroundColor: global.colors.success,
         height: 7,
         borderRadius: 5,
     },
@@ -208,11 +207,11 @@ const styles = StyleSheet.create({
         position: 'absolute',
         right: 0.00001,
         // top: -14,
-        backgroundColor: '#31C283',
+        backgroundColor: global.colors.success,
         width: 23,
         height: 23,
         borderRadius: 14,
-        color: '#fff',
+        color: global.colors.background,
         fontWeight: '500',
         fontSize: 10,
         textAlign: 'center',
@@ -221,13 +220,12 @@ const styles = StyleSheet.create({
     },
 
     overlay: {
-        // backgroundColor: 'rgba(0,0,0,0.3)',
         padding: 13,
         borderBottomLeftRadius: 15,
         borderBottomRightRadius: 15,
     },
     headline: {
-        color: '#fff',
+        color: global.colors.background,
         fontSize: 16,
         fontWeight: '500',
     },
@@ -235,42 +233,36 @@ const styles = StyleSheet.create({
         // overflow: 'visible'
     },
     miniCard: {
-        backgroundColor: '#E6E0E9',
+        backgroundColor: global.colors.surface,
         borderRadius: 13,
         padding: 15,
-        // alignItems: 'flex-start',
         marginRight: 12,
-        // flexDirection: 'row',
-        // justifyContent: 'flex-start',
         width: 140,
-        // elevation: 6, 
-
     },
 
     miniCardCircle: {
         width: 24,
         height: 24,
         borderRadius: 16.5,
-        backgroundColor: '#210F47',
+        backgroundColor: global.colors.secondary,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 13,
         marginBottom: 7,
     },
     miniCardNumber: {
-        color: '#fff',
+        color: global.colors.background,
         fontWeight: '600',
         fontSize: 12,
     },
     miniCardTitle: {
-        color: '#2D2D2D',
+        color: global.colors.textPrimary,
         fontWeight: '500',
         fontSize: 13,
         letterSpacing: 0.7,
         flexShrink: 1,
         width: 110,
         height: 36,
-        // lineHeight: 18,
     },
 });
 
