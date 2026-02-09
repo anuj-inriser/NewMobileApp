@@ -38,7 +38,6 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem(STORAGE_KEYS.token);
-    console.log("token ", token)
     if (token) {
       config.headers.authorization = `Bearer ${token}`;
     }
@@ -62,14 +61,16 @@ axiosInstance.interceptors.response.use(
         "token",
       ]);
 
-      // OPTIONAL: navigate to login
-      // navigationRef.reset({ index: 0, routes: [{ name: "Login" }] });
     }
 
     if (status === 403) {
-      // Plan access denied
-      // Trigger upgrade modal or toast
-      console.log("Access denied: upgrade required");
+      return Promise.resolve({
+        data: {
+          success: false,
+          permissions: []
+        },
+        permissionDenied: true,
+      });
     }
 
     return Promise.reject(error);

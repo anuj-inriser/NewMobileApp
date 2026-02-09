@@ -137,7 +137,14 @@ export default function LoginScreen({ navigation }) {
         });
 
         const res = await axiosInstance.get(`/me/permissions`);
-        await setAuthData({ permissions: JSON.stringify(res.data) });
+
+        if (res?.permissionDenied || !res?.data) {
+          await setAuthData({ permissions: [] });
+        } else {
+          await setAuthData({
+            permissions: res?.data?.permissions ?? []
+          });
+        }
 
         navigation.navigate("App", { screen: "Equity" });
       } else {

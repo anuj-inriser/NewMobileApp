@@ -56,18 +56,6 @@ const RootStack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
 const AppStack = createNativeStackNavigator();
 
-const Stack = createNativeStackNavigator();
-
-function EquityStack() {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="EquityHome" component={EquityScreen} />
-      <Stack.Screen name="Stocks" component={StocksScreen} />
-      <Stack.Screen name="AdvancedChart" component={AdvancedChartScreen} />
-    </Stack.Navigator>
-  );
-}
-
 function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
@@ -94,18 +82,10 @@ function MainTabNavigator() {
         unmountOnBlur: false, // Don't unmount on blur
       }}
     >
-      <Tab.Screen
-        name="Equity"
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.navigate('Equity', { screen: 'EquityHome' }); // reset stack
-          },
-        })}
-      >
+      <Tab.Screen name="Equity">
         {() => (
           <PermissionGuard permission="VIEW_EQUITY">
-            <EquityStack />
+            <EquityScreen />
           </PermissionGuard>
         )}
       </Tab.Screen>
@@ -130,6 +110,7 @@ function MainTabNavigator() {
       <Tab.Screen name="Trade" component={TradeScreen} />
       <Tab.Screen name="OrdersScreen" component={OrdersScreen} />
       <Tab.Screen name="Profile" component={Profile} />
+      <Tab.Screen name="Stocks" component={StocksScreen} />
       <Tab.Screen name="Portfolio">
         {() => (
           <PermissionGuard permission="VIEW_PORTFOLIO">
@@ -154,6 +135,7 @@ function RootNavigator() {
         <>
           <RootStack.Screen name="App" component={AppNavigator} />
           <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
+          <RootStack.Screen name="AdvancedChart" component={AdvancedChartScreen} />
         </>
       ) : (
         <RootStack.Screen name="Auth" component={AuthNavigator} />
