@@ -36,7 +36,7 @@ const AdvancedChartScreen = () => {
   const navigation = useNavigation();
   const { symbol } = route.params || { symbol: "NASDAQ:AAPL" };
 
- 
+
 
   // Tabs State
   const [activeTab, setActiveTab] = useState(1);
@@ -49,20 +49,20 @@ const AdvancedChartScreen = () => {
   // Mock State for BottomTabBar to highlight "Trade" (Index 4 in standard array)
   // Standard Tabs: Home, News, Explore, Ideas, Trade
   const mockTabBarState = {
-    index: 4, 
+    index: 4,
     routes: [
       { name: "Equity", key: "Equity" },
       { name: "NewsScreen", key: "NewsScreen" },
       { name: "StockTimelineScreen", key: "StockTimelineScreen" },
       { name: "Trade", key: "Trade" },
-      { name: "AdvancedChart", key: "AdvancedChart" }, 
+      { name: "AdvancedChart", key: "AdvancedChart" },
       { name: "TradeOrder", key: "TradeOrder" },
     ],
   }
 
 
   return (
- <View style={styles.container}>
+    <View style={styles.container}>
       {/* 🟢 HEADER LOGIC */}
       {activeTab === 1 || activeTab === 5 ? (
         // Custom Header for Place Order & TradeOrder (Full Screen Mode)
@@ -88,9 +88,9 @@ const AdvancedChartScreen = () => {
       ) : (
         // Main App Header for Orders/Positions/Holdings
         <>
-          <FundamentalTopHeader />
+          {/* <FundamentalTopHeader /> */}
           <View style={styles.secondaryTabsContainer}>
-             <TradeOrderTabs activeTab={activeTab} onTabChange={handleTabChange} />
+            <TradeOrderTabs activeTab={activeTab} onTabChange={handleTabChange} />
           </View>
         </>
       )}
@@ -98,10 +98,10 @@ const AdvancedChartScreen = () => {
 
       {/* 🟢 CONTENT LOGIC */}
       <View style={styles.contentContainer}>
-        
+
         {/* Tab 1: Place Order (Chart + Form) - KEPT ALIVE using display: none */}
         <View style={{ flex: 1, display: activeTab === 1 ? 'flex' : 'none' }}>
-           <PlaceOrderView symbol={symbol} />
+          <PlaceOrderView symbol={symbol} />
         </View>
 
         {/* Tab 2: Orders */}
@@ -124,7 +124,7 @@ const AdvancedChartScreen = () => {
             <PortfolioScreen />
           </View>
         )}
-        
+
         {/* Tab 5: TradeOrder Screen */}
         {activeTab === 5 && (
           <View style={{ flex: 1 }}>
@@ -137,16 +137,17 @@ const AdvancedChartScreen = () => {
       {/* 🟢 FOOTER LOGIC */}
       {/* Show Bottom Bar only for Non-Chart/Non-TradeOrder Tabs */}
       {activeTab !== 1 && activeTab !== 5 && (
-        <BottomTabBar 
-          state={mockTabBarState} 
-          navigation={navigation} 
-          descriptors={{}} 
+        <BottomTabBar
+          state={mockTabBarState}
+          navigation={navigation}
+          descriptors={{}}
         />
       )}
 
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    // marginTop: 10,
     paddingLeft: 20,
     paddingTop: 10,
     paddingBottom: 10,

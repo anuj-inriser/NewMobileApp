@@ -43,6 +43,7 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
         // Map route names to tab names
         const routeToTabMap = {
             'Equity': 'Equity',
+            'EquityHome': 'Equity',
             'TradeOrderList': 'Watchlists',
             // 'TradeOrder': 'Watchlists',
             'Learning': 'Learning',

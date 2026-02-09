@@ -30,7 +30,7 @@ const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const { showSuccess, showError } = useAlert();
   const insets = useSafeAreaInsets();
-  const { authToken, clientId, clearAuth,profileImage } = useAuth();
+  const { authToken, clientId, clearAuth, profileImage } = useAuth();
   const { triggerRefresh } = useWatchlistRefresh();
   const [menuVisible, setMenuVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -43,7 +43,7 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const [loadingWatchlists, setLoadingWatchlists] = useState(false);
   const [userId, setUserId] = useState(null);
   const [addingToWishlist, setAddingToWishlist] = useState({});
- 
+
 
   const loadUserId = async () => {
     try {
