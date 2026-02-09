@@ -63,7 +63,7 @@ function EquityStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="EquityHome" component={EquityScreen} />
       <Stack.Screen name="Stocks" component={StocksScreen} />
-      <Stack.Screen name="AdvancedChart" component={AdvancedChartScreen} />
+      {/* <Stack.Screen name="AdvancedChart" component={AdvancedChartScreen} /> */}
     </Stack.Navigator>
   );
 }
@@ -128,7 +128,7 @@ function MainTabNavigator() {
         component={StockTimelineScreen}
       />
       <Tab.Screen name="Trade" component={TradeScreen} />
-      <Tab.Screen name="OrdersScreen" component={OrdersScreen} />
+      {/* <Tab.Screen name="OrdersScreen" component={OrdersScreen} /> */}
       <Tab.Screen name="Profile" component={Profile} />
       <Tab.Screen name="Portfolio">
         {() => (
@@ -138,6 +138,7 @@ function MainTabNavigator() {
         )}
       </Tab.Screen>
       {/* AdvancedChart moved to RootStack for full-screen without header/footer */}
+      <Tab.Screen name="AdvancedChart" component={AdvancedChartScreen} />
     </Tab.Navigator>
   );
 }
