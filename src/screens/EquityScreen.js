@@ -280,6 +280,21 @@ export default function EquityScreen() {
   const [allIndicesData, setAllIndicesData] = useState([]);
   const [originalAllIndicesData, setOriginalAllIndicesData] = useState([]);
 
+  // Only apply route.params if they represent an EXTERNAL navigation intent
+  useEffect(() => {
+    const { initialCategory, initialExchange } = route.params || {};
+
+    // Only update if params exist AND differ from current state
+    // AND if this is not just a re-render due to internal state change
+    if (initialCategory !== undefined && initialCategory !== selectedCategory) {
+      setSelectedCategory(initialCategory);
+      setShowPreview(false);
+    }
+    if (initialExchange !== undefined && initialExchange !== selectedExchange) {
+      setSelectedExchange(initialExchange);
+    }
+  }, [route.params]); // ✅ Remove selectedCategory/selectedExchange from deps
+
 
   const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
 
@@ -1174,7 +1189,7 @@ export default function EquityScreen() {
                   setShowPreview(false);
                 }}
               >
-                <Ionicons name="arrow-back" size={22} color={ global.colors.secondary} />
+                <Ionicons name="arrow-back" size={22} color={global.colors.secondary} />
                 <Text style={styles.backButtonText}>Back</Text>
               </TouchableOpacity>
             )}
@@ -1277,7 +1292,7 @@ const mergeWithRealtime = (list, realtimePrices) => {
 
 // ✅ Styles
 const styles = StyleSheet.create({
-  swipeWrapper: { flex: 1},
+  swipeWrapper: { flex: 1 },
   content: { flex: 1, backgroundColor: global.colors.background, },
   placeholderContainer: {
     flex: 1,
@@ -1294,7 +1309,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    color:  global.colors.error,
+    color: global.colors.error,
     fontWeight: "600",
     marginBottom: 8,
     textAlign: "center",
@@ -1345,7 +1360,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor:global.colors.background,
+    backgroundColor: global.colors.background,
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
@@ -1366,7 +1381,7 @@ const styles = StyleSheet.create({
     color: global.colors.success,
   },
   negative: {
-    color:  global.colors.error,
+    color: global.colors.error,
   },
   price: { fontSize: 15, fontWeight: "600", color: global.colors.textPrimary },
   change: { fontSize: 12, fontWeight: "600", marginTop: 4 },
@@ -1446,9 +1461,9 @@ const styles = StyleSheet.create({
     width: 120,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor:  global.colors.border,
+    borderColor: global.colors.border,
     elevation: 6,
-    shadowColor:  global.colors.secondary,
+    shadowColor: global.colors.secondary,
     shadowOpacity: 0.15,
     shadowRadius: 5,
     zIndex: 1000,
@@ -1456,7 +1471,7 @@ const styles = StyleSheet.create({
   verticalPrice: {
     fontSize: 14,
     fontWeight: "600",
-    color:  global.colors.textPrimary,
+    color: global.colors.textPrimary,
   },
   verticalChange: {
     fontSize: 11,
@@ -1476,7 +1491,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor:global.colors.background,
+    backgroundColor: global.colors.background,
     padding: 12,
     borderRadius: 14,
     elevation: 2,

@@ -174,6 +174,9 @@ export default function TradeOrderListScreen() {
       if (response.data.success) {
         // Optimistic update on enrichedStocks (not raw stocks)
         setEnrichedStocks(prev => prev.filter(s => s.symbol !== String(script_id)));
+        setOriginalStocks(prev =>
+          prev.filter(s => s.script_id !== script_id)
+        );
         symbolsRef.current = symbolsRef.current.filter(s => s !== String(script_id));
       } else {
         throw new Error(response.data.message || 'Remove failed');

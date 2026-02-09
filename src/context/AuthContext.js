@@ -66,10 +66,10 @@ export const AuthProvider = ({ children }) => {
       if (p) {
         setPermissions(JSON.parse(p));
       } else {
-        setPermissionsLoading(false);
         setPermissions(null);
       }
     } finally {
+      setPermissionsLoading(false);
       setLoading(false);
     }
   };
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }) => {
     loadTokens();
   }, []);
 
-    useEffect(() => {
+  useEffect(() => {
     if (!loading && userId) {
       refreshUserProfile();
     }

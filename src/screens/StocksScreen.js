@@ -39,9 +39,13 @@ const StocksScreen = () => {
     filterIndex,
     from,
   } = route.params || {};
-
   const [selectedExchange, setSelectedExchange] = useState(initExchange);
   const [selectedCategory, setSelectedCategory] = useState(from || "Indices");
+  useEffect(() => {
+    if (from) {
+      setSelectedCategory(from);
+    }
+  }, [from]);
   const { prices: realtimePrices } = useRealtimePrices();
   const subscribedRef = useRef(false);
 
@@ -59,19 +63,9 @@ const StocksScreen = () => {
   const fetchStocks = useCallback(async () => {
     let url = "";
 
-    // 🔍 Debug log
-    console.log(
-      "[StocksScreen] Category:",
-      selectedCategory,
-      "| Filter:",
-      filterIndex,
-      "| Exchange:",
-      selectedExchange
-    );
-
     url =
       selectedExchange === "BSE"
-       ? `${apiUrl}/api/indicesNew/bseStocks?filterIndex=${filterIndex}&category=${selectedCategory}`
+        ? `${apiUrl}/api/indicesNew/bseStocks?filterIndex=${filterIndex}&category=${selectedCategory}`
         : `${apiUrl}/api/indicesNew/nseStocks?filterIndex=${filterIndex}&category=${selectedCategory}`;
 
     try {
@@ -154,7 +148,7 @@ const StocksScreen = () => {
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
-    navigation.navigate("Equity", {
+    navigation.navigate("EquityHome", {
       initialCategory: category,
       initialExchange: selectedExchange,
     });
