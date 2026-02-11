@@ -52,13 +52,6 @@ const PositionsList = () => {
       const text = await response.text();
       const data = JSON.parse(text);
 
-      console.log("📦 PositionsList API Response:", {
-        status: response.status,
-        dataCount: data?.data?.length || 0,
-        success: data?.success,
-        firstItem: data?.data?.[0]
-      });
-
       setPositions(data?.data || []);
       setOriginalPositions(data?.data || []);
     } catch (error) {

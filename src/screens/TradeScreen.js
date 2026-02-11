@@ -113,7 +113,6 @@ const TradeScreen = () => {
         });
 
         setTradeCategories(categories);
-        console.log("categories sorted", categories);
       } catch (error) {
         console.error("Error fetching trade categories:", error);
         setTradeCategories([]);

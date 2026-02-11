@@ -132,8 +132,6 @@ const NotificationScreen = () => {
                 pendingDeleteIds.current.delete(item.id);
                 setUndoItem(null);
                 delete swipeableRefs.current[item.id];
-
-                console.log("Notification permanently deleted:", item.id);
             } catch (error) {
                 console.log("Error deleting notification:", error);
             }

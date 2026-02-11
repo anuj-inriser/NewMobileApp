@@ -58,8 +58,6 @@ const NewsReadingScreen = ({ route }) => {
 
                         {/* Image Container */}
                         <View style={styles.imageCard}>
-                            {console.log("item.image_url", item.image_url)}
-                            {/* <Image source={{ uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }} style={styles.image} /> */}
                             <Image
                                 source={
                                     item.image_url

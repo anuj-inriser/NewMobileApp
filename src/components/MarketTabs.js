@@ -15,11 +15,6 @@ const MarketTabs = ({
     initialActiveTab = null,
 }) => {
 
-    useEffect(() => {
-        console.log("selectedExchange ", selectedExchange);
-        console.log("controlledActiveTab ", controlledActiveTab);
-    }, [selectedExchange, controlledActiveTab]);
-
     const [exchange, setExchange] = useState(null);
     const [internalActiveTab, setInternalActiveTab] = useState(initialActiveTab);
     const [isReady, setIsReady] = useState(false);

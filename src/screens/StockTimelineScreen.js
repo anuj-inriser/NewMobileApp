@@ -228,7 +228,6 @@ const StockTimelineScreen = () => {
 
     newOnes.forEach((s) => subscribedRef.current.add(s));
 
-    console.log(`🟢 SUBSCRIBE (INCREMENTAL) → ${page}::${context}`, newOnes);
     subscribeSymbols(newOnes, page, context);
   };
 
@@ -250,10 +249,6 @@ const StockTimelineScreen = () => {
 
       if (newOnes.length) {
         newOnes.forEach((s) => subscribedRef.current.add(s));
-        console.log(
-          `🟢 SUBSCRIBE (INCREMENTAL) → ${page}::${context}`,
-          newOnes
-        );
         subscribeSymbols(newOnes, page, context);
       }
 

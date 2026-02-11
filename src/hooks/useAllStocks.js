@@ -29,7 +29,6 @@ export const useAllStocks = (
     }
 
     const url = `${apiUrl}/api/trading/watchlist?limit=${limit}&offset=${pageParam}`;
-    // console.log(`[useAllStocks] Fetching: ${url} (limit=${limit}, offset=${pageParam})`);
     
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);

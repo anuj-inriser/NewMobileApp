@@ -31,8 +31,6 @@ import {
 import { useWatchlistRefresh } from "../context/WatchlistContext";
 
 const mergeWithRealtime = (list, realtimePrices) => {
-  // console.log("list", list)
-  // console.log("realtimePrices in trade order list screen", realtimePrices)
   return list.map(item => {
     const rt = realtimePrices[item.token] || realtimePrices[item.script_id];
 
@@ -48,10 +46,6 @@ const mergeWithRealtime = (list, realtimePrices) => {
     // ✅ Recalculate every ,time — fresh & consistent
     const change = ltp - prevClose;
     const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
-    // console.log("ltp",ltp)
-    // console.log("prevClose",prevClose)
-    // console.log("change",change)
-    // console.log("changePercent",changePercent)
 
     return {
       ...item,

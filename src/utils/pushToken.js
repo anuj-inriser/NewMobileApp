@@ -18,8 +18,6 @@ export async function getPushToken() {
     // 🔥 REAL FCM TOKEN
     const fcmToken = await messaging().getToken();
 
-    console.log("✅ REAL FCM Token:", fcmToken);
-
     return fcmToken;
   } catch (err) {
     console.log("❌ FCM token error:", err);

@@ -142,7 +142,6 @@ export default function PasswordScreen({ navigation, route }) {
         });
       }
     } catch (err) {
-      console.log("Signup Error:", err);
       setLoading(false);
       setErrors({
         general: err.message || "Server not reachable",

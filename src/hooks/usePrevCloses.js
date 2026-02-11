@@ -3,7 +3,6 @@ import axiosInstance from "../api/axios";
 import { apiUrl } from "../utils/apiUrl";
 
 export const usePrevCloses = (symbols = []) => { 
-    console.log("symbols",symbols)
   const [prevCloses, setPrevCloses] = useState({});
   const fetchedRef = useRef(new Set());
 
@@ -12,7 +11,6 @@ export const usePrevCloses = (symbols = []) => {
 
     const fetchPrevClose = async (symbol) => {
       try {
-        console.log("📡 PREV-CLOSE API CALL →", symbol);
 
         const res = await axiosInstance.get(
           `${apiUrl}/api/market/prev-close`,
@@ -23,8 +21,6 @@ export const usePrevCloses = (symbols = []) => {
             },
           }
         );
-
-        console.log("✅ PREV-CLOSE RESPONSE:", res.data);
 
         if (res.data?.success && res.data.prevClose != null) {
           setPrevCloses((prev) => ({

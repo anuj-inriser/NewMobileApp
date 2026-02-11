@@ -48,8 +48,6 @@ const PreferencesSection = () => {
         status: false
     })
 
-    console.log("preferences", preferences);
-
 
     const fetchPreferences = async () => {
         try {

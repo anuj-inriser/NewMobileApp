@@ -494,7 +494,6 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
         },
       );
       const data = await res.json();
-      console.log("LTP API Response:", data);
 
       if (data.success) {
         const rawLtp = data.ltp || data.price || data.value || 0;

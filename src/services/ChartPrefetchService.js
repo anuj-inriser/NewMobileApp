@@ -69,13 +69,6 @@ export const ChartPrefetchService = {
       resolutionsToFetch.push(lastInterval);
     }
 
-    console.log(
-      "🚀 [ChartPrefetch] Starting prefetch for:",
-      symbolsToPrefetch.length,
-      "symbols. Res:",
-      resolutionsToFetch,
-    );
-
     for (const symbol of symbolsToPrefetch) {
       for (const resolution of resolutionsToFetch) {
         // Run in background without awaiting efficiently
@@ -93,8 +86,6 @@ export const ChartPrefetchService = {
 
       // Use the exact same API endpoint as the chart
       const url = `${apiUrl}/api/trading/ohlc?symbol=${cleanSymbol}&interval=${interval}&from=${from}&to=${to}&limit=1000`;
-
-      // console.log(`[ChartPrefetch] Fetching: ${url}`);
 
       const response = await fetch(url);
       const json = await response.json();
@@ -115,9 +106,7 @@ export const ChartPrefetchService = {
           .sort((a, b) => a.time - b.time);
 
         await AsyncStorage.setItem(cacheKey, JSON.stringify(bars));
-        console.log(
-          `[ChartPrefetch] ✅ Cached ${bars.length} bars for ${fullSymbol} (${resolution})`,
-        );
+    
       }
     } catch (e) {
       console.error(`[ChartPrefetch] Failed for ${fullSymbol}:`, e.message);

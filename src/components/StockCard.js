@@ -146,22 +146,15 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
     return words.slice(0, numWords).join(' ') + '...';
   };
 
-  // DEBUG: Monitor Index Changes
-  useEffect(() => {
-    if (stock.news_items?.length > 1) {
-      console.log(`[StockCard ${stock.symbol}] Index Changed: ${currentNewsIndex}. Item:`, stock.news_items[currentNewsIndex]?.title);
-    }
-  }, [currentNewsIndex, stock.news_items, stock.symbol]);
+
 
   const handleNextNews = useCallback(() => {
-    console.log(`[StockCard ${stock.symbol}] NEXT Clicked. Current: ${currentNewsIndex}, Total: ${stock.news_items?.length}`);
     if (stock.news_items && stock.news_items.length > 0) {
       setCurrentNewsIndex((prev) => (prev + 1) % stock.news_items.length);
     }
   }, [stock.news_items, currentNewsIndex, stock.symbol]);
 
   const handlePrevNews = useCallback(() => {
-    console.log(`[StockCard ${stock.symbol}] PREV Clicked.`);
     if (stock.news_items && stock.news_items.length > 0) {
       setCurrentNewsIndex((prev) => (prev - 1 + stock.news_items.length) % stock.news_items.length);
     }
@@ -333,7 +326,6 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
       setAttachment(null);
 
     } catch (err) {
-      console.log("❌ REPORT ERROR:", err?.response?.data || err.message);
       showError(
         "Alert",
         "Failed to submit issue: " + (err.response?.data?.message || err.message)

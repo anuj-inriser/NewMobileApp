@@ -23,13 +23,10 @@ export function subscribeSymbols(symbols, page, context) {
   if (unsubscribeTimers.has(key)) {
     clearTimeout(unsubscribeTimers.get(key));
     unsubscribeTimers.delete(key);
-    console.log(`❌ CANCEL UNSUB → ${key}`);
   }
 
   // ✅ mark symbols as active
   symbols.forEach((s) => activeSubscribedSymbols.add(s));
-
-  console.log(`🟢 SUBSCRIBE → ${key}`, symbols);
 
   sendMarketMessage({
     type: "SUBSCRIBE",
@@ -48,11 +45,7 @@ export function unsubscribeDelayed(symbols, page, context) {
   const key = keyOf(page, context);
   if (unsubscribeTimers.has(key)) return;
 
-  console.log(`🕒 UNSUBSCRIBE in 30s → ${key}`);
-
   const timer = setTimeout(() => {
-    console.log(`🔴 UNSUBSCRIBED → ${key}`);
-
     // ❌ remove symbols from active set
     symbols.forEach((s) => activeSubscribedSymbols.delete(s));
 

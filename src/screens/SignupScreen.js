@@ -217,9 +217,6 @@ export default function SignupScreen({ navigation, route }) {
 
     try {
       setEmailLoading(true);
-
-      console.log("Sending OTP to:", email);
-
       const res = await fetch(`${apiUrl}/api/signup/send-email-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -227,7 +224,6 @@ export default function SignupScreen({ navigation, route }) {
       });
 
       const data = await res.json();
-      console.log("OTP API RESPONSE:", data);
 
       if (!data.success) {
         alert(data.message || "Failed to send OTP");

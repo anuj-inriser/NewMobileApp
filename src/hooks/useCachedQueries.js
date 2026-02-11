@@ -61,21 +61,17 @@ export const useIndices = (exchange = 'NSE') => {
     const query = useQuery({
         queryKey: ['indices', exchange],
         queryFn: async () => {
-            console.log('🔵 [useIndices] Fetching from API for exchange:', exchange);
-
             // Use the same endpoint as the working Indices.js component
             const url = exchange === 'BSE'
                 ? '/indicesNew/bse'
                 : '/indicesNew/nse';
 
             const response = await axiosInstance.get(url);
-            console.log('🔵 [useIndices] Response:', response.data);
             return response.data;
         },
         staleTime: 30 * 60 * 1000, // 30 minutes (indices don't change often)
     });
 
-    console.log('🔵 [useIndices] isLoading:', query.isLoading, 'isFetching:', query.isFetching, 'data:', query.data);
     return query;
 };
 

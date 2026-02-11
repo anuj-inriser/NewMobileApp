@@ -9,7 +9,6 @@ export const WatchlistProvider = ({ children }) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const triggerRefresh = useCallback((wishlistId) => {
-    console.log('📢 WatchlistContext: Triggering refresh for wishlist:', wishlistId);
     setRefreshTrigger(prev => prev + 1);
   }, []);
 

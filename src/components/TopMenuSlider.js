@@ -61,7 +61,6 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
 
     // Function to handle tab press
     const handleTabPress = (tabName) => {
-        // console.log("tabName ", hasAccess(tabName))
 
         switch (tabName) {
             case 'Equity':

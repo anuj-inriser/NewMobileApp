@@ -59,7 +59,6 @@ const StocksScreen = () => {
 
 
   const onRefresh = async () => {
-    // console.log("Refreshing triggered");
     setRefreshing(true);
     try {
       await fetchStocks()

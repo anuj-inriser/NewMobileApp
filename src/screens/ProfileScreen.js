@@ -632,7 +632,6 @@ const ProfileScreen = () => {
     try {
       // Use cached data for instant display
       if (userData) {
-        console.log("✅ Using Cached User Data:", userData);
         setName(userData.name || "");
         setMobile(userData.phone || "");
         setEmail(userData.email || "");
@@ -797,7 +796,6 @@ const ProfileScreen = () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId: userIdStored, fcmToken: "" }),
           });
-          console.log("✅ FCM token cleared via API");
         }
         await clearAuth();
         // Reset to Auth stack
@@ -931,10 +929,6 @@ const ProfileScreen = () => {
       setKycOpen(false);
       getUserById();
     } catch (error) {
-      console.log(
-        "❌ KYC SUBMIT ERROR =>",
-        error?.response?.data || error.message,
-      );
       showError(
         "Error",
         "Failed to submit KYC."
@@ -1024,7 +1018,6 @@ const ProfileScreen = () => {
       setIssueDescription("");
       setAttachment(null);
     } catch (err) {
-      console.log("❌ REPORT ERROR:", err?.response?.data || err.message);
       showError(
         "Error",
         "Failed to submit issue"

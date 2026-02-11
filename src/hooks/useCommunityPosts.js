@@ -45,11 +45,6 @@ export function useCommunityPosts(sequenceId) {
               }
               return p;
             });
-            console.log(
-              "✅ Merged fresh stats for",
-              items.length,
-              "posts (Cached)",
-            );
           }
         } catch (statsErr) {
           console.error("❌ Failed to fetch fresh stats in query:", statsErr);

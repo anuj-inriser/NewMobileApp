@@ -287,7 +287,6 @@ export default function EquityScreen() {
 
 
   const onRefresh = async () => {
-    console.log("Refreshing triggered", selectedCategory);
     setRefreshing(true);
     try {
       if (selectedCategory === "Sectors")
@@ -350,13 +349,11 @@ export default function EquityScreen() {
 
     // Swipe left (distance > 50): Move to next tab (right to left motion)
     if (distance > 50 && currentIndex < swipeCategories.length - 1) {
-      console.log("Swiping left to:", swipeCategories[currentIndex + 1]);
       setSelectedCategory(swipeCategories[currentIndex + 1]);
       setShowPreview(false);
     }
     // Swipe right (distance < -50): Move to previous tab (left to right motion)
     else if (distance < -50 && currentIndex > 0) {
-      console.log("Swiping right to:", swipeCategories[currentIndex - 1]);
       setSelectedCategory(swipeCategories[currentIndex - 1]);
       setShowPreview(false);
     }
@@ -364,7 +361,6 @@ export default function EquityScreen() {
 
   const handleBuyFromHome = useCallback(
     (item) => {
-      console.log("item", item);
       navigation.navigate("TradeOrder", {
         symbol: item.sumbol,
         token: item.token,
@@ -528,7 +524,6 @@ export default function EquityScreen() {
   //   const page = "EquityScreen";
   //   const context = selectedCategory;
 
-  //   console.log("🚀 AUTO SUBSCRIBE (DATA READY)", symbols);
 
   //   subscribeSymbols(symbols, page, context);
   //   subscribedOnceRef.current = true;
@@ -689,7 +684,6 @@ export default function EquityScreen() {
   //     const symbols = data.map((i) => i.symbol || i.name).filter(Boolean);
   //     if (!symbols.length) return;
 
-  //     console.log("🚀 LOGIN AUTO SUBSCRIBE (INDICES)", symbols);
 
   //     subscribeSymbols(symbols, "EquityScreen", "Indices");
   //     subscribedOnceRef.current = true;
