@@ -144,28 +144,37 @@ const TradeScreen = () => {
   }, [route.params?.selectedCategoryId, tradeCategories, selectedCategory]);
 
   useEffect(() => {
-    const fetchRecommendations = async () => {
-      try {
-        const params = {};
+  // Function to fetch data
+  const fetchRecommendations = async () => {
+    try {
+      const params = {};
 
-        if (selectedCategory) {
-          params.scriptTypeId = selectedCategory.scriptTypeId;
-        }
-
-        if (selectedFilter !== "All") {
-          params.status = selectedFilter;
-        }
-        const res = await axiosInstance.get("/traderecommendation/all", {
-          params,
-        });
-        setTradeRecommendations(res?.data?.data || []);
-      } catch (error) {
-        console.log("Error fetching trade ");
+      if (selectedCategory) {
+        params.scriptTypeId = selectedCategory.scriptTypeId;
       }
-    };
 
-    fetchRecommendations();
-  }, [selectedFilter, selectedCategory]);
+      if (selectedFilter !== "All") {
+        params.status = selectedFilter;
+      }
+
+      const res = await axiosInstance.get("/traderecommendation/all", {
+        params,
+      });
+      setTradeRecommendations(res?.data?.data || []);
+    } catch (error) {
+      console.log("Error fetching trade recommendations:", error);
+    }
+  };
+
+  // Initial fetch
+  fetchRecommendations();
+
+  // Set up interval to fetch every 1 second
+  const intervalId = setInterval(fetchRecommendations, 1000);
+
+  // Cleanup: clear interval when dependencies change or component unmounts
+  return () => clearInterval(intervalId);
+}, [selectedFilter, selectedCategory]);
 
   return (
     <>

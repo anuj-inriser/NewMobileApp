@@ -44,7 +44,7 @@ const TradeCard = ({
     const symbolKey = script?.toUpperCase().trim();
     const rt = prices?.[symbolKey];
     const ltp = rt?.price;
-const prevClose = rt?.prevClose || rt?.open || entry || 0;
+    const prevClose = rt?.prevClose || rt?.open || entry || 0;
     const change = ltp !== undefined ? ltp - prevClose : 0;
     const changePercent =
         prevClose > 0 ? (change / prevClose) * 100 : 0;
@@ -127,7 +127,19 @@ const prevClose = rt?.prevClose || rt?.open || entry || 0;
                         </View>
 
                         <View style={styles.profitBadge}>
-                            <Text style={styles.profitText}>Profit Potential : {potential_profits}</Text>
+                            <Text style={styles.profitText}>
+                                Profit Potential :{' '}
+                                {potential_profits != null &&
+                                    potential_profits !== "" &&
+                                    !isNaN(potential_profits) ? (
+                                    <Text style={{
+                                        color: potential_profits < 0 ? global.colors.error : global.colors.success,
+                                        fontWeight: 'bold'
+                                    }}>
+                                        {Math.abs(potential_profits)}%
+                                    </Text>
+                                ) : null}
+                            </Text>
                         </View>
                     </View>
 
@@ -194,16 +206,16 @@ const prevClose = rt?.prevClose || rt?.open || entry || 0;
                             <View style={styles.priceBubble}>
                                 <Text style={styles.priceText}>₹{ltp.toFixed(2)}</Text>
                                 {/* <View style={styles.priceArrow} /> */}
-                                 <Text
-                                style={{
-                                    fontSize: 11,
-                                    fontWeight: "600",
-                                    color: Number(change) >= 0 ? global.colors.success : global.colors.error,
-                                }}
-                            >
-                                {Number(change).toFixed(2)} ({Number(changePercent).toFixed(2)}
-                                %)
-                            </Text>
+                                <Text
+                                    style={{
+                                        fontSize: 11,
+                                        fontWeight: "600",
+                                        color: Number(change) >= 0 ? global.colors.success : global.colors.error,
+                                    }}
+                                >
+                                    {Number(change).toFixed(2)} ({Number(changePercent).toFixed(2)}
+                                    %)
+                                </Text>
                             </View>
                         )}
 
@@ -225,8 +237,8 @@ const prevClose = rt?.prevClose || rt?.open || entry || 0;
 
                     {/* SL & TARGET (BELOW BAR) */}
                     <View style={styles.meterBottomLabels}>
-                        <Text style={styles.slText}>Stop Loss - ₹{stopLoss}</Text>
-                        <Text style={styles.targetText}>Target - ₹{target}</Text>
+                        <Text style={styles.slText}>Stop Loss : ₹{stopLoss}</Text>
+                        <Text style={styles.targetText}>Target : ₹{target}</Text>
                     </View>
 
                 </View>
@@ -322,7 +334,7 @@ const styles = StyleSheet.create({
     },
 
     profitText: {
-        color: global.colors.success,
+        color: global.colors.secondary,
         fontSize: 12,
         fontWeight: "700",
     },
