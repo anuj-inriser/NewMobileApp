@@ -257,6 +257,7 @@ const TradeScreen = () => {
                   entry={recommendation.recoPriceLow}
                   target={recommendation.targetOne}
                   stopLoss={recommendation.stopLoss}
+                  potential_profits={recommendation.potential_profits}
                   perspective={recommendation.tradeTypeName}
                   token={recommendation.token}
                   ltp={liveData?.price}

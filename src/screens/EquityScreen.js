@@ -21,7 +21,6 @@ import TopHeader from "../components/TopHeader";
 import MarketTabs from "../components/MarketTabs";
 import Indices from "../components/Indices";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
-import { apiUrl } from "../utils/apiUrl";
 import {
   subscribeSymbols,
   unsubscribeDelayed,
@@ -36,7 +35,8 @@ const LeftBuyAction = () => (
   </View>
 );
 // ✅ MarketCapList Component (inline for now)
-const MarketCapList = ({ data, exchange, category, navigation, onBuy }) => {
+const MarketCapList = ({ data, exchange, category, navigation, onBuy, refreshing,
+  onRefresh, }) => {
   const handleBuy = (item) => {
     navigation.navigate("Trade", {
       symbol: item.symbol,
@@ -122,12 +122,14 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy }) => {
       renderItem={renderItem}
       contentContainerStyle={styles.marketCapList}
       showsVerticalScrollIndicator={false}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
     />
   );
 };
 
 // ✅ SectorsList Component
-const SectorsList = ({ data, exchange, category, navigation }) => {
+const SectorsList = ({ data, exchange, category, navigation, refreshing, onRefresh }) => {
   const renderItem = ({ item }) => {
     const isPositive = item.change >= 0;
     const displayChange =
@@ -205,6 +207,8 @@ const SectorsList = ({ data, exchange, category, navigation }) => {
       renderItem={renderItem}
       contentContainerStyle={styles.marketCapList}
       showsVerticalScrollIndicator={false}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
     />
   );
 };
@@ -279,7 +283,30 @@ export default function EquityScreen() {
   const [originalSectorsData, setOriginalSectorsData] = useState([]);
   const [allIndicesData, setAllIndicesData] = useState([]);
   const [originalAllIndicesData, setOriginalAllIndicesData] = useState([]);
+ const [refreshing, setRefreshing] = useState(false);
 
+
+  const onRefresh = async () => {
+    console.log("Refreshing triggered", selectedCategory);
+    setRefreshing(true);
+    try {
+      if (selectedCategory === "Sectors")
+        await fetchSectors(selectedExchange)
+      else if (selectedCategory === "Market Cap")
+        await fetchMarketCap()
+      else if (selectedCategory === "Themes")
+        await fetchThemes()
+      else if (selectedCategory === "Indices") {
+        await indicesQuery.refetch()
+      }
+
+    } catch (error) {
+
+    } finally {
+      setRefreshing(false);
+
+    }
+  };
   // Only apply route.params if they represent an EXTERNAL navigation intent
   useEffect(() => {
     const { initialCategory, initialExchange } = route.params || {};
@@ -1000,6 +1027,8 @@ export default function EquityScreen() {
           category={selectedCategory}
           navigation={navigation}
           onBuy={handleBuyFromHome}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       );
     }
@@ -1068,6 +1097,8 @@ export default function EquityScreen() {
           exchange={selectedExchange}
           category={selectedCategory}
           navigation={navigation}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       );
     }
@@ -1146,6 +1177,8 @@ export default function EquityScreen() {
           onSwipeToChart={handleSwipeToChart}
           externalData={allIndicesData}
           maxItems={showPreview ? 5 : undefined}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       );
     }

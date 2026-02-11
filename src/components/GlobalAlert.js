@@ -9,7 +9,6 @@ import {
 } from "react-native";
 
 function GlobalAlert({ visible, type, title, message, onClose }) {
-  console.log("type", type);
   const icon =
     type === "success"
       ? require("../../assets/confirmalert.png")
@@ -75,7 +74,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 15,
     color: global.colors.textPrimary,
-    textAlign: "left",
+    textAlign: "justify",
     lineHeight: 20,
     marginBottom: 24,
   },

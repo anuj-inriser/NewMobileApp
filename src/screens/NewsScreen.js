@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View, Text, ActivityIndicator } from 'react-native';
-// import TopHeader from "../components/TopHeader";
+import { ScrollView, StyleSheet, View, Text, ActivityIndicator, RefreshControl } from 'react-native';
 import TopMenuSlider from "../components/TopMenuSlider";
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from "react-native-safe-area-context";
-// import BottomTabBar from '../components/BottomTabBar';
 import NewsCardLarge from '../components/News/NewsCardLarge';
 import NewsCardSmall from '../components/News/NewsCardSmall';
-// import axiosInstance from "../api/axios";
 import { useNews } from '../hooks/useCachedQueries';
-import TopHeader from '../components/TopHeader';
 
 const NewsScreen = () => {
 
     const navigation = useNavigation();
-    const { data: news = [], isLoading: loading } = useNews();
+    const {
+        news,
+        loading,
+        isFetching,
+        refetch
+    } = useNews();
     return (
         <>
             <SafeAreaView edges={["bottom"]} style={styles.container}>
@@ -27,6 +28,12 @@ const NewsScreen = () => {
                     <ScrollView
                         contentContainerStyle={styles.scrollContainer}
                         showsVerticalScrollIndicator={false}
+                         refreshControl={
+                            <RefreshControl
+                                refreshing={isFetching}
+                                onRefresh={refetch}
+                            />
+                        }
                     >
                         {news.length === 0 ? (
                             <Text style={styles.noData}>No News Available</Text>

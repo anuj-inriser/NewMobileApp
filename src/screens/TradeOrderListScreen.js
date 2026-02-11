@@ -73,7 +73,7 @@ export default function TradeOrderListScreen() {
 
   const { prices: realtimePrices } = useRealtimePrices();
   const { refreshTrigger } = useWatchlistRefresh();
-  const { stocks: rawStocks, loading, refetch } = useWatchlistStocks(currentWatchlistId);
+  const { stocks: rawStocks, loading, refetch, isFetching } = useWatchlistStocks(currentWatchlistId);
 
   const symbolsRef = useRef([]);
   const fetchedPrevCloseRef = useRef(false);
@@ -277,6 +277,8 @@ export default function TradeOrderListScreen() {
               })
             }
             onRemoveItem={removeStockFromWatchlist}
+             isFetching={isFetching}
+            refetch={refetch}
           />
         )}
         {/* Sort Modal */}

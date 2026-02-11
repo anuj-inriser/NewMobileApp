@@ -1,13 +1,25 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useCallback, useState } from "react";
+import GlobalAlert from "../../components/GlobalAlert";
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+} from "react-native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { formatFullPublishedDateTime } from "../../utils/dateFormat";
-import { useNavigation } from '@react-navigation/native';
+import { useRealtimePrices } from "../../hooks/useRealtimePrices";
+import LinearGradient from "react-native-linear-gradient";
+import {
+    subscribeSymbols,
+    unsubscribeDelayed,
+} from "../../ws/marketSubscriptions";
 
 const STATUS_COLORS = {
-    "Live": global.colors.error,
-    "Target Hit": global.colors.success,
+    Live: global.colors.error,
+    "Target Hit": global.colors.secondary,
     "Target Miss": global.colors.error,
-    "Closed": global.colors.textSecondary,
+    Closed: global.colors.textSecondary,
 };
 
 const TradeCard = ({
@@ -22,32 +34,167 @@ const TradeCard = ({
     stopLoss,
     perspective,
     token,
-    ltp,
-    change,
-    changePercent,
+    potential_profits
 }) => {
     const navigation = useNavigation();
+    const [showDisclaimer, setShowDisclaimer] = useState(false);
+    /* ---------------- REALTIME PRICE ---------------- */
+    const { prices } = useRealtimePrices();
 
-    const statusColor = STATUS_COLORS[status] || global.colors.textSecondary;
+    const symbolKey = script?.toUpperCase().trim();
+    const rt = prices?.[symbolKey];
+    const ltp = rt?.price;
+const prevClose = rt?.prevClose || rt?.open || entry || 0;
+    const change = ltp !== undefined ? ltp - prevClose : 0;
+    const changePercent =
+        prevClose > 0 ? (change / prevClose) * 100 : 0;
+    /* ---------------- METER CALC ---------------- */
+    const min = Number(stopLoss);
+    const max = Number(target);
+    const base = Number(entry);
 
+    const currentPrice = typeof ltp === "number" ? ltp : base;
+
+    let meterPercent = 0;
+
+    if (max > min) {
+        const safePrice = Math.min(Math.max(currentPrice, min), max);
+        meterPercent = ((safePrice - min) / (max - min)) * 100;
+    }
+
+    // Extra safety clamp (0–100 hard limit)
+    meterPercent = Math.max(0, Math.min(100, meterPercent));
+
+
+    /* ---------------- SUBSCRIBE SOCKET ---------------- */
+    useFocusEffect(
+        useCallback(() => {
+            if (!script) return;
+
+            const symbols = [script];
+            subscribeSymbols(symbols, "TradeCard", "TradeList");
+
+            return () => {
+                unsubscribeDelayed(symbols, "TradeCard", "TradeList");
+            };
+        }, [script])
+    );
+    const formatDateWithSuffix = (dateString) => {
+        if (!dateString) return "";
+
+        const date = new Date(dateString);
+
+        const day = date.getDate();
+        const month = date.toLocaleString("en-IN", { month: "short" });
+        const year = date.getFullYear();
+
+        const getSuffix = (d) => {
+            if (d >= 11 && d <= 13) return "th";
+            switch (d % 10) {
+                case 1:
+                    return "st";
+                case 2:
+                    return "nd";
+                case 3:
+                    return "rd";
+                default:
+                    return "th";
+            }
+        };
+
+        return `${day}${getSuffix(day)} ${month} ${year}`;
+    };
+
+    /* ---------------- UI ---------------- */
     return (
-        <View style={styles.card}>
-            {/* Header */}
-            <View style={styles.headerRow}>
-                <View style={styles.scriptStatusContainer}>
+        <>
+            <View style={styles.card}>
+                {/* HEADER */}
+                <View style={styles.topRow}>
+                    <View>
+                        <View style={styles.titleRow}>
+                            <Text style={styles.script}>{script}</Text>
+                            <View style={styles.liveBadge}>
+                                <Text
+                                    style={[
+                                        styles.liveText,
+                                        { color: STATUS_COLORS[status] },
+                                    ]}
+                                >
+                                    {status}
+                                </Text>
+                            </View>
+                        </View>
 
-                    <Text style={styles.script}>{script}</Text>
-                    <Text style={[styles.status, { color: statusColor }]}>
-                        {status}
-                    </Text>
+                        <View style={styles.profitBadge}>
+                            <Text style={styles.profitText}>Profit Potential : {potential_profits}</Text>
+                        </View>
+                    </View>
 
-                    {/* LTP DISPLAY */}
-                    {ltp && (
-                        <View style={{ marginLeft: 12 }}>
-                            <Text style={{ fontSize: 14, fontWeight: "700", color: global.colors.textPrimary }}>
-                                ₹{Number(ltp).toFixed(2)}
-                            </Text>
-                            <Text
+                    <TouchableOpacity
+                        onPress={() =>
+                            navigation.navigate("TradeOrder", {
+                                symbol: script,
+                                token,
+                                name: script,
+                                price: entry,
+                                quantity: 1,
+                                stoploss: stopLoss,
+                                target,
+                                internaltype: "Place",
+                                type: tradeRecommendation,
+                            })
+                        }
+                    >
+                        <View
+                            style={[
+                                styles.buyButton,
+                                tradeRecommendation?.toLowerCase() === "sell" && {
+                                    backgroundColor: "#E63946",
+                                },
+                            ]}
+                        >
+                            <Text style={styles.buyText}>{tradeRecommendation}</Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
+
+                {/* VALUES */}
+                <View style={styles.valuesRow}>
+                    <View>
+                        <Text style={styles.label}>Entry</Text>
+                        <Text style={styles.value}>{entry}</Text>
+                    </View>
+                    <View>
+                        <Text style={styles.label}>Target</Text>
+                        <Text style={styles.value}>{target}</Text>
+                    </View>
+                    <View>
+                        <Text style={styles.label}>Stop Loss</Text>
+                        <Text style={styles.value}>{stopLoss}</Text>
+                    </View>
+                    <View>
+                        <Text style={styles.label}>Perspective</Text>
+                        <Text style={styles.value}>{perspective}</Text>
+                    </View>
+                </View>
+
+                {/* PRICE METER */}
+                <View style={styles.meterWrapper}>
+
+                    {/* LTP TOOLTIP (ABOVE POINTER) */}
+                    <View
+                        style={[
+                            styles.pointerWrapper,
+                            { left: `${meterPercent}%` },
+                        ]}
+                    >
+                        {/* LTP TOOLTIP */}
+                        {typeof ltp === "number" && (
+                            <View style={styles.priceBubble}>
+                                <Text style={styles.priceText}>₹{ltp.toFixed(2)}</Text>
+                                {/* <View style={styles.priceArrow} /> */}
+                                 <Text
                                 style={{
                                     fontSize: 11,
                                     fontWeight: "600",
@@ -57,205 +204,280 @@ const TradeCard = ({
                                 {Number(change).toFixed(2)} ({Number(changePercent).toFixed(2)}
                                 %)
                             </Text>
-                        </View>
+                            </View>
+                        )}
+
+                        {/* POINTER */}
+                        <View style={styles.pointerLine} />
+                        <View style={styles.pointerDot} />
+                    </View>
+
+
+
+
+                    {/* PROGRESS BAR */}
+                    <LinearGradient
+                        colors={["#E63946", "#F4D03F", "#2ECC71"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.meterBar}
+                    />
+
+                    {/* SL & TARGET (BELOW BAR) */}
+                    <View style={styles.meterBottomLabels}>
+                        <Text style={styles.slText}>Stop Loss - ₹{stopLoss}</Text>
+                        <Text style={styles.targetText}>Target - ₹{target}</Text>
+                    </View>
+
+                </View>
+
+
+                {/* DATES */}
+                <View style={styles.datesRow}>
+                    <Text style={styles.dateText}>
+                        Entry: {formatDateWithSuffix(entryDate)}
+
+                    </Text>
+                    {exitDate && (
+                        <Text style={styles.dateText}>
+                            Exit: {formatDateWithSuffix(exitDate)}
+                        </Text>
                     )}
                 </View>
 
+                {/* DISCLAIMER */}
                 <TouchableOpacity
-                    onPress={() => {
-                        navigation.navigate("TradeOrder", {
-                            symbol: script, // Use script name (e.g. RELIANCE) instead of ID
-                            token: token,
-                            name: script,
-                            price: entry,
-                            quantity: 1,
-                            stoploss: stopLoss,
-                            target: target,
-                            internaltype: "Place",
-                            type: tradeRecommendation, // Buy or Sell
-                        });
-                    }}
-                    activeOpacity={0.7}
+                    style={styles.disclaimerBtn}
+                    onPress={() => setShowDisclaimer(true)}
                 >
-                    <View
-                        style={[
-                            tradeRecommendation === "Buy" || tradeRecommendation === "buy"
-                                ? styles.greenBadge
-                                : styles.redBadge,
-                        ]}
-                    >
-                        <Text style={styles.badgeText}>{tradeRecommendation}</Text>
-                    </View>
+                    <Text style={styles.disclaimerText}>Disclaimer</Text>
                 </TouchableOpacity>
-            </View>
 
-            {/* Dates */}
-            <View style={styles.datesRow}>
-                {exitDate ? (
-                    <>
-                        <Text style={styles.smallText}>
-                            <Text style={styles.smallBold}>Entry: </Text>
-                            {formatFullPublishedDateTime(entryDate)}
-                        </Text>
-                        <Text style={styles.smallText}>
-                            <Text style={styles.smallBold}>Exit: </Text>
-                            {formatFullPublishedDateTime(exitDate)}
-                        </Text>
-                    </>
-                ) : (
-                    // Only show entry date, no label
-                    <Text style={styles.smallText}>
-                        <Text style={styles.smallBold}>Entry: </Text>
-                        {formatFullPublishedDateTime(entryDate)}
-                    </Text>
-                )}
             </View>
-
-            {/* Data Row */}
-            <View style={styles.dataRow}>
-                <View>
-                    <Text style={styles.dataLabel}>Entry</Text>
-                    <Text style={styles.dataValue}>{entry}</Text>
-                </View>
-                <View>
-                    <Text style={styles.dataLabel}>Target</Text>
-                    <Text style={styles.dataValue}>{target}</Text>
-                </View>
-                <View>
-                    <Text style={styles.dataLabel}>Stop Loss</Text>
-                    <Text style={styles.dataValue}>{stopLoss}</Text>
-                </View>
-                <View>
-                    <Text style={styles.dataLabel}>Perspective</Text>
-                    <Text style={styles.dataValue}>{perspective}</Text>
-                </View>
-            </View>
-
-            {/* Disclaimer */}
-            <Text style={styles.disclaimer}>Disclaimer</Text>
-            <Text style={styles.disclaimerText}>lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet.</Text>
-        </View>
+            <GlobalAlert
+                visible={showDisclaimer}
+                type="error"
+                title="Disclaimer"
+                message={`All trade calls/ recommendations are provided by SEBI registered research analysts. Users are advised to consult their personal financial advisors before taking any trading or investing positions. Equitty works as a technology platform provider and holds no responsibility on any losses incurred by the users. Certification from NISM, registration with SEBI, or past performance of trading calls does not guarantee any assurance on profitable outcomes on calls/recommendations given on the platform. General Terms & Conditions, Policies and Disclaimers applies to all the content provided on the application, by using the application user confirms and provide their consent to the same.`}
+                onClose={() => setShowDisclaimer(false)}
+            />
+        </>
     );
 };
 
+export default TradeCard;
+
+/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
     card: {
-        width: '100%',
-        height: 160,
-        alignSelf: "center",
         backgroundColor: global.colors.background,
-        borderRadius: 16,
-        paddingHorizontal: 10,
-        paddingVertical: 12,
-        marginVertical: 5,
-        borderColor: global.colors.border,
+        borderRadius: 18,
+        padding: 14,
+        marginVertical: 8,
         borderWidth: 1,
-        shadowColor: global.colors.textPrimary,
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
+        borderColor: global.colors.border,
         elevation: 3,
     },
-    headerRow: {
+
+    /* ---------- HEADER ---------- */
+
+    topRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 6,
-    },
-
-    scriptStatusContainer: {
-        flexDirection: "row",
         alignItems: "flex-start",
     },
 
-    script: {
-        fontSize: 16,
-        fontWeight: "700",
-        color: global.colors.secondary,
-        marginRight: 6,
+    titleRow: {
+        flexDirection: "row",
+        alignItems: "center",
     },
 
-    status: {
-        fontSize: 12,
-        fontWeight: "600",
-        marginTop: 2, // Slight upward alignment
+    script: {
+        fontSize: 18,
+        fontWeight: "800",
+        color: global.colors.secondary,
+        marginRight: 8,
     },
-    greenBadge: {
-        backgroundColor: global.colors.success,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        borderRadius: 20,
-        width: 51,
-        height: 24,
-        textAlign: "center",
-        shadowColor: global.colors.textPrimary,
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
-        elevation: 4,
+
+    liveBadge: {
+        backgroundColor: global.colors.surface,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 10,
     },
-    redBadge: {
-        backgroundColor: global.colors.error,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        borderRadius: 20,
-        width: 51,
-        height: 24,
-        textAlign: "center",
-        shadowColor: global.colors.textPrimary,
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
-        elevation: 4,
-    },
-    badgeText: {
-        color: global.colors.background,
+
+    liveText: {
         fontSize: 11,
         fontWeight: "700",
-        textAlign: "center",
     },
+
+    profitBadge: {
+        marginTop: 6,
+        backgroundColor: global.colors.surface,
+        alignSelf: "flex-start",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+
+    profitText: {
+        color: global.colors.success,
+        fontSize: 12,
+        fontWeight: "700",
+    },
+
+    buyButton: {
+        backgroundColor: global.colors.success,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 16,
+    },
+
+    buyText: {
+        color: global.colors.background,
+        fontWeight: "800",
+        fontSize: 13,
+    },
+
+    /* ---------- VALUES ---------- */
+
+    valuesRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 14,
+    },
+
+    label: {
+        fontSize: 11,
+        color: global.colors.textSecondary,
+    },
+
+    value: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: global.colors.secondary,
+    },
+
+    /* ---------- METER ---------- */
+
+    meterWrapper: {
+        marginTop: 45,
+        // marginBottom: 22,
+        position: "relative",
+    },
+
+    meterBar: {
+        height: 8,
+        borderRadius: 8,
+    },
+
+    /* POINTER */
+    pointerWrapper: {
+        position: "absolute",
+        top: 0,
+        alignItems: "center",
+        zIndex: 5,
+        transform: [{ translateX: -5 }], // half of dot width
+    },
+
+    pointerLine: {
+        width: 2,
+        height: 12,
+        backgroundColor: global.colors.secondary,
+    },
+
+    pointerDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: global.colors.secondary,
+        marginTop: -2,
+    },
+
+    /* LTP TOOLTIP */
+    priceBubble: {
+        position: "absolute",
+        bottom: 24,        // 👈 pointer ke upar
+        backgroundColor: global.colors.background,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: global.colors.border,
+        zIndex: 10,
+        minWidth: 90,
+        alignItems: "center",
+    },
+
+    priceText: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: global.colors.secondary,
+    },
+
+    priceArrow: {
+        position: "absolute",
+        bottom: -6,
+        left: "50%",
+        marginLeft: -5,
+        width: 0,
+        height: 0,
+        borderLeftWidth: 5,
+        borderRightWidth: 5,
+        borderTopWidth: 6,
+        borderLeftColor: "transparent",
+        borderRightColor: "transparent",
+        borderTopColor: global.colors.background,
+    },
+
+    /* SL / TARGET BELOW BAR */
+
+    meterBottomLabels: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 15,
+    },
+
+    slText: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: global.colors.error,
+    },
+
+    targetText: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: global.colors.success,
+    },
+
+    /* ---------- DATES ---------- */
+
     datesRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginBottom: 12,
+        marginTop: 6,
     },
-    smallText: {
-        fontSize: 10,
-        color: global.colors.textSecondary,
-    },
-    smallBold: {
-        fontSize: 10,
-        color: global.colors.textSecondary,
-        fontWeight: "600",
-    },
-    dataRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 6,
-    },
-    dataLabel: {
-        fontSize: 12,
-        color: global.colors.textSecondary,
-        fontWeight: "400"
-    },
-    dataValue: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: global.colors.textSecondary,
-    },
-    dataValueBold: {
-        fontSize: 13,
-        fontWeight: "800",
+
+    dateText: {
+        fontSize: 11,
         color: global.colors.textPrimary,
     },
-    disclaimer: {
-        fontSize: 9,
-        color: global.colors.disabled,
+
+    /* ---------- DISCLAIMER ---------- */
+
+    disclaimerBtn: {
+        alignSelf: "flex-end",
+        marginTop: 6,
+        backgroundColor: "#1F2937",
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
     },
+
     disclaimerText: {
-        fontSize: 9,
-        color: global.colors.disabled,
-        marginBottom: 5
-    }
+        color: global.colors.background,
+        fontSize: 10,
+        fontWeight: "600",
+    },
 });
-export default TradeCard;

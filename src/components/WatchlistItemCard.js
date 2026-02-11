@@ -19,6 +19,8 @@ const WatchlistItemCard = ({
   prevCloses = {},
   onPressItem,
   onRemoveItem,
+   isFetching,
+  refetch,
 }) => {
   const swipeableRefs = useRef({});
   const undoTimerRef = useRef(null);
@@ -156,6 +158,8 @@ const WatchlistItemCard = ({
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 90 }}
+        refreshing={isFetching}
+        onRefresh={refetch}
       />
 
       {undoItem && (

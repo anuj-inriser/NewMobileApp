@@ -45,6 +45,7 @@ export const AuthProvider = ({ children }) => {
 
   const loadTokens = async () => {
     try {
+      setPermissionsLoading(true);
       const a = await AsyncStorage.getItem(TOKENS.AUTH_TOKEN);
       const f = await AsyncStorage.getItem(TOKENS.FEED_TOKEN);
       const r = await AsyncStorage.getItem(TOKENS.REFRESH_TOKEN);
@@ -137,7 +138,8 @@ export const AuthProvider = ({ children }) => {
     setClientId(null);
     setUserId(null);
     setUserData(null);
-    setPermissions([]);
+    setPermissions(null);
+    setPermissionsLoading(true);
     setToken(null);
   };
 
