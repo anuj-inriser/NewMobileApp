@@ -39,10 +39,11 @@ export const useWatchlistStocks = (wishlistId) => {
         refetchOnWindowFocus: false,
     });
 
-    return { 
-        stocks, 
-        loading, 
-        error: error?.message || null, 
-        refetch 
+    return {
+        stocks,
+        loading,
+        error: error?.message || null,
+        refetch,
+        isFetching
     };
 };

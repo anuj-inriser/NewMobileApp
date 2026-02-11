@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
@@ -72,7 +73,7 @@ const IndexVerticalCard = ({ index, onPress, onSwipeRight }) => {
 };
 
 // ✅ Main Component — Vertical Only
-const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart }) => {
+const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart, refreshing, onRefresh }) => {
   const { prices: realtimePrices } = useRealtimePrices();
 
   // ✅ Fetch from API (if no externalData)
@@ -88,8 +89,8 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart 
           ? `/indicesNew/bse`
           : `/indicesNew/nse`;
 
-     const response = await axiosInstance.get(url);
-    return Array.isArray(response.data?.data)
+      const response = await axiosInstance.get(url);
+      return Array.isArray(response.data?.data)
         ? response.data.data
         : [];
     },
@@ -128,7 +129,7 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart 
   const indicesWithRealtimeData = useMemo(() => {
     if (!indicesSource?.length) return [];
 
-   let NSE_SYMBOLS = [];
+    let NSE_SYMBOLS = [];
     let BSE_SYMBOLS = [];
 
     if (indicesSource) {
@@ -206,7 +207,16 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart 
 
   // ✅ ONLY VERTICAL LIST — NO HORIZONTAL, NO GRID
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+        />
+      }
+    >
       <View style={styles.verticalList}>
         {indicesWithRealtimeData.map((index, i) => (
           <IndexVerticalCard
@@ -226,7 +236,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: global.colors.background,
-    marginBottom:55,
+    marginBottom: 55,
   },
   verticalList: {
     paddingHorizontal: 16,

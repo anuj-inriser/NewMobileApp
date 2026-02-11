@@ -81,7 +81,7 @@ const PlaceOrderView = ({ symbol }) => {
       // Screen lost focus - cleanup WebView or stop operations
       // Note: Since we are in a tab that might be hidden, we handle this carefully
       if (webViewRef.current) {
-         // Optional: Freeze chart or stop updates
+        // Optional: Freeze chart or stop updates
       }
     });
 
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   },
   bottomSheet: {
     position: "absolute",
-    bottom: 0,
+    bottom: 75,
     left: 0,
     right: 0,
     backgroundColor: global.colors.background,

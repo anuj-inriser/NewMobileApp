@@ -55,6 +55,20 @@ const StocksScreen = () => {
   const [selectedSort, setSelectedSort] = useState("Default");
   const [displayStocks, setDisplayStocks] = useState([]);
   const [originalStocks, setOriginalStocks] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+
+  const onRefresh = async () => {
+    // console.log("Refreshing triggered");
+    setRefreshing(true);
+    try {
+      await fetchStocks()
+    } catch (error) {
+
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
   const filterOptions = ["All", "Gainers", "Losers"];
@@ -363,6 +377,8 @@ const StocksScreen = () => {
             )}
           </View>
         }
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
 
       {/* Sort Modal */}

@@ -19,6 +19,8 @@ const WatchlistItemCard = ({
   prevCloses = {},
   onPressItem,
   onRemoveItem,
+  isFetching,
+  refetch,
 }) => {
   const swipeableRefs = useRef({});
   const undoTimerRef = useRef(null);
@@ -156,6 +158,8 @@ const WatchlistItemCard = ({
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 90 }}
+        refreshing={isFetching}
+        onRefresh={refetch}
       />
 
       {undoItem && (
@@ -220,7 +224,7 @@ const styles = StyleSheet.create({
     bottom: 70,
     left: 16,
     right: 16,
-    backgroundColor:global.colors.textSecondary,
+    backgroundColor: global.colors.textSecondary,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -231,14 +235,14 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   undoText: { color: global.colors.background, fontSize: 13 },
-  undoAction: { color:global.colors.success, fontWeight: "700" },
+  undoAction: { color: global.colors.success, fontWeight: "700" },
   actionWrapper: {
     justifyContent: "center",
     alignItems: "center",
     width: 80,
     marginVertical: 6,
     borderRadius: 14,
-    backgroundColor:global.colors.surface,
+    backgroundColor: global.colors.surface,
   },
   emptyText: { color: global.colors.textSecondary },
 });

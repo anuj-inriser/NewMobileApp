@@ -31,6 +31,8 @@ import {
 import { useWatchlistRefresh } from "../context/WatchlistContext";
 
 const mergeWithRealtime = (list, realtimePrices) => {
+  // console.log("list", list)
+  // console.log("realtimePrices in trade order list screen", realtimePrices)
   return list.map(item => {
     const rt = realtimePrices[item.token] || realtimePrices[item.script_id];
 
@@ -73,7 +75,7 @@ export default function TradeOrderListScreen() {
 
   const { prices: realtimePrices } = useRealtimePrices();
   const { refreshTrigger } = useWatchlistRefresh();
-  const { stocks: rawStocks, loading, refetch } = useWatchlistStocks(currentWatchlistId);
+  const { stocks: rawStocks, loading, refetch, isFetching } = useWatchlistStocks(currentWatchlistId);
 
   const symbolsRef = useRef([]);
   const fetchedPrevCloseRef = useRef(false);
@@ -277,6 +279,8 @@ export default function TradeOrderListScreen() {
               })
             }
             onRemoveItem={removeStockFromWatchlist}
+            isFetching={isFetching}
+            refetch={refetch}
           />
         )}
         {/* Sort Modal */}
