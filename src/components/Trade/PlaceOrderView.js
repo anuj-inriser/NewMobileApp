@@ -81,7 +81,7 @@ const PlaceOrderView = ({ symbol }) => {
       // Screen lost focus - cleanup WebView or stop operations
       // Note: Since we are in a tab that might be hidden, we handle this carefully
       if (webViewRef.current) {
-         // Optional: Freeze chart or stop updates
+        // Optional: Freeze chart or stop updates
       }
     });
 

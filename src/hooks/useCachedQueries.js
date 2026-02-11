@@ -55,6 +55,7 @@ export const useNews = () => {
     };
 };
 
+
 /* -------------------- 2. INDICES -------------------- */
 export const useIndices = (exchange = 'NSE') => {
     const query = useQuery({

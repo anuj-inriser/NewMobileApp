@@ -320,7 +320,7 @@ export default function EquityScreen() {
     if (initialExchange !== undefined && initialExchange !== selectedExchange) {
       setSelectedExchange(initialExchange);
     }
-  }, [route.params]); // ✅ Remove selectedCategory/selectedExchange from deps
+  }, [route.params]);
 
 
   const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
@@ -556,6 +556,8 @@ export default function EquityScreen() {
       unsubscribeDelayed(symbols, "EquityScreen", selectedCategory);
     };
   }, [allData, selectedCategory, selectedExchange]);
+
+
 
   // ✅ Fetch Market Cap Data
   const fetchMarketCap = useCallback(async (exchange) => {
