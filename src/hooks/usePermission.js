@@ -1,11 +1,15 @@
 import { useAuth } from "../context/AuthContext";
 
 export const usePermission = (permission) => {
-    const { permissions, permissionsLoading } = useAuth();
-    if (permissionsLoading) {
+    const { permissions, permissionsReady } = useAuth();
+
+    // still loading
+    if (!permissionsReady || permissions === null) {
         return null;
     }
-    if (!permissions || permissions.length === 0) {
+
+    // loaded but empty
+    if (permissions.length === 0) {
         return false;
     }
 

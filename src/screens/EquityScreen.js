@@ -283,7 +283,7 @@ export default function EquityScreen() {
   const [originalSectorsData, setOriginalSectorsData] = useState([]);
   const [allIndicesData, setAllIndicesData] = useState([]);
   const [originalAllIndicesData, setOriginalAllIndicesData] = useState([]);
- const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
 
   const onRefresh = async () => {

@@ -27,6 +27,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
+  const [permissionsReady, setPermissionsReady] = useState(false);
+
 
   const refreshUserProfile = async () => {
     try {
@@ -64,12 +66,18 @@ export const AuthProvider = ({ children }) => {
       setClientId(c);
       setUserId(u);
       if (d) setUserData(JSON.parse(d));
-      if (p) {
+      if (p !== null) {
         setPermissions(JSON.parse(p));
+        setPermissionsReady(true);
       } else {
-        setPermissions(null);
+        setPermissions(null);     // still loading, don't mark ready
       }
-    } finally {
+
+    } catch (e) {
+      console.log("loadTokens error", e);
+      setPermissions(null); // fail-safe
+    }
+    finally {
       setPermissionsLoading(false);
       setLoading(false);
     }
@@ -85,7 +93,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [loading, userId]);
 
-  const setAuthData = async ({ authToken, feedToken, refreshToken, clientId, userId, userData, permissions, token }) => {
+  const setAuthData = async ({ authToken, feedToken, refreshToken, clientId, userId, userData, permissions, token, role }) => {
     if (authToken) {
       await AsyncStorage.setItem(TOKENS.AUTH_TOKEN, authToken.toString());
       setAuthToken(authToken.toString());
@@ -106,15 +114,24 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem("userId", userId.toString());
       setUserId(userId.toString());
     }
+    if (role) {
+      await AsyncStorage.setItem("role", role.toString());
+      setUserId(role.toString());
+    }
     if (userData) {
       await AsyncStorage.setItem("userData", JSON.stringify(userData));
       setUserData(userData);
     }
-    if (permissions) {
+    if (permissions !== undefined) {
+      setPermissionsReady(false);
+
       await AsyncStorage.setItem("permissions", JSON.stringify(permissions));
+
       setPermissions(permissions);
-      setPermissionsLoading(false);
+
+      setPermissionsReady(true);   // mark ready only after real permissions set
     }
+
     if (token) {
       await AsyncStorage.setItem(STORAGE_KEYS.token, token);
       setToken(token);
@@ -160,6 +177,7 @@ export const AuthProvider = ({ children }) => {
         profileImage,
         refreshUserProfile,
         permissionsLoading,
+        permissionsReady
       }}
     >
       {children}

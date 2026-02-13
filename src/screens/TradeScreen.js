@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   StyleSheet,
   View,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   AppState,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 // import TopHeader from "../components/TopHeader";
 import TopMenuSlider from "../components/TopMenuSlider";
 import { useRoute } from '@react-navigation/native';
@@ -23,6 +24,9 @@ import {
   unsubscribeDelayed
 } from "../ws/marketSubscriptions";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
+import GlobalSubTabMenu from "../components/GlobalSubTabMenu";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "../context/AuthContext";
 
 const filterOptions = [
   "All",
@@ -35,13 +39,43 @@ const filterOptions = [
 const TradeScreen = () => {
   const { prices } = useRealtimePrices();
   const route = useRoute();
+  const { role } = useAuth();
   const didSubscribeRef = useRef(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [tradeRecommendations, setTradeRecommendations] = useState([]);
-  const [tradeCategories, setTradeCategories] = useState([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [selectedType, setSelectedType] = useState(null)
+  // const [tradeRecommendations, setTradeRecommendations] = useState([]);
+  // const [tradeCategories, setTradeCategories] = useState([]);
+  // const [loadingCategories, setLoadingCategories] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("All");
+
+  const mergeWithRealtime = (list, realtimePrices) => {
+    return list.map(item => {
+      const rt = realtimePrices[item.token] || realtimePrices[item.script_id];
+
+      // ✅ LTP: realtime > item.ltp > 0
+      const ltp = rt?.price != null
+        ? Number(rt.price)
+        : Number(item.ltp || item.value || 0);
+      // ✅ Prev Close: realtime > item.prev_close > ltp (no change fallback)
+      const prevClose = rt?.prevClose != null
+        ? Number(rt.prevClose)
+        : Number(item.prev_close || item.prevClose || ltp);
+
+      // ✅ Recalculate every ,time — fresh & consistent
+      const change = ltp - prevClose;
+      const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
+
+      return {
+        ...item,
+        value: ltp,
+        prevClose,
+        change,
+        changePercent,
+        timestamp: rt?.timestamp || item.timestamp || new Date().toISOString(),
+      };
+    });
+  };
 
   const handleFilterSelect = (option) => {
     setSelectedFilter(option);
@@ -84,48 +118,51 @@ const TradeScreen = () => {
     }, [tradeRecommendations, selectedCategory]),
   );
 
-  useEffect(() => {
-    const fetchTradeCategories = async () => {
-      try {
-        const res = await axiosInstance.get("/scripttype");
-        let categories = res?.data?.data || [];
+  const {
+    data: tradeTypes = [],
+  } = useQuery({
+    queryKey: ["tradeTypes"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/tradetype");
+      return res.data.data || [];
+    },
+    // staleTime: 1000 * 60 * 60,
+  });
 
-        // 🟢 Custom Sort: Equity First, then F&O
-        categories.sort((a, b) => {
-          const nameA = (a.scriptTypeName || a.name || "").toLowerCase();
-          const nameB = (b.scriptTypeName || b.name || "").toLowerCase();
 
-          const isEquityA = nameA.includes("equity");
-          const isEquityB = nameB.includes("equity");
+  const {
+    data: tradeCategories = [],
+    isLoading: loadingCategories,
+  } = useQuery({
+    queryKey: ["tradeCategories"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/scripttype");
+      let categories = res?.data?.data || [];
 
-          const isFnoA = nameA.includes("f&o") || nameA.includes("fno");
-          const isFnoB = nameB.includes("f&o") || nameB.includes("fno");
+      // your sorting logic
+      categories.sort((a, b) => {
+        const nameA = (a.scriptTypeName || "").toLowerCase();
+        const nameB = (b.scriptTypeName || "").toLowerCase();
 
-          // 1. Equity First
-          if (isEquityA && !isEquityB) return -1;
-          if (!isEquityA && isEquityB) return 1;
+        if (nameA.includes("equity") && !nameB.includes("equity")) return -1;
+        if (!nameA.includes("equity") && nameB.includes("equity")) return 1;
 
-          // 2. F&O Second
-          if (isFnoA && !isFnoB) return -1;
-          if (!isFnoA && isFnoB) return 1;
+        if (nameA.includes("f&o") && !nameB.includes("f&o")) return -1;
+        if (!nameA.includes("f&o") && nameB.includes("f&o")) return 1;
 
-          return 0;
-        });
+        return 0;
+      });
 
-        setTradeCategories(categories);
-      } catch (error) {
-        console.error("Error fetching trade categories:", error);
-        setTradeCategories([]);
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
-    fetchTradeCategories();
-  }, []);
+      return categories;
+    },
+
+    // staleTime: 1000 * 60 * 60, 
+  });
+
+
 
   useEffect(() => {
     if (!tradeCategories.length) return;
-
     if (route.params?.selectedCategoryId) {
       const found = tradeCategories.find(
         (c) => c.id === route.params.selectedCategoryId,
@@ -143,12 +180,27 @@ const TradeScreen = () => {
   }, [route.params?.selectedCategoryId, tradeCategories, selectedCategory]);
 
   useEffect(() => {
-  // Function to fetch data
-  const fetchRecommendations = async () => {
-    try {
+    if (tradeTypes.length && !selectedType) {
+      setSelectedType(tradeTypes);
+    }
+  }, [tradeTypes]);
+
+
+  const {
+    data: tradeRecommendations = [],
+    isLoading: loadingRecommendations,
+  } = useQuery({
+    queryKey: [
+      "tradeRecommendations",
+      selectedCategory?.scriptTypeId,
+      selectedFilter,
+      selectedType?.tradeTypeId
+    ],
+
+    queryFn: async () => {
       const params = {};
 
-      if (selectedCategory) {
+      if (selectedCategory?.scriptTypeId) {
         params.scriptTypeId = selectedCategory.scriptTypeId;
       }
 
@@ -156,24 +208,30 @@ const TradeScreen = () => {
         params.status = selectedFilter;
       }
 
+      if (selectedType?.tradeTypeId) {
+        params.type = selectedType.tradeTypeId
+      }
+
       const res = await axiosInstance.get("/traderecommendation/all", {
         params,
       });
-      setTradeRecommendations(res?.data?.data || []);
-    } catch (error) {
-      console.log("Error fetching trade recommendations:", error);
-    }
-  };
 
-  // Initial fetch
-  fetchRecommendations();
+      return res?.data?.data || [];
+    },
 
-  // Set up interval to fetch every 1 second
-  const intervalId = setInterval(fetchRecommendations, 1000);
+    enabled: !!selectedCategory,
 
-  // Cleanup: clear interval when dependencies change or component unmounts
-  return () => clearInterval(intervalId);
-}, [selectedFilter, selectedCategory]);
+    // replaces your setInterval
+    refetchInterval: 1000,
+
+    refetchIntervalInBackground: true,
+  });
+
+
+  const displayStocks = useMemo(() => {
+    return mergeWithRealtime(tradeRecommendations, prices);
+  }, [tradeRecommendations, prices]);
+
 
   return (
     <>
@@ -187,6 +245,11 @@ const TradeScreen = () => {
           filterOptions={filterOptions}
           selectedFilter={selectedFilter}
           onFilterChange={handleFilterSelect}
+        />
+        <GlobalSubTabMenu
+          tabs={tradeTypes}
+          activeTab={selectedType}
+          onTabChange={setSelectedType}
         />
         {/* <View style={styles.topSliders}>
           <View style={styles.tradeContainer}>
@@ -249,7 +312,7 @@ const TradeScreen = () => {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContainer}
           >
-            {tradeRecommendations.map((recommendation) => {
+            {displayStocks.map((recommendation) => {
               const liveData = prices[recommendation.token];
               return (
                 <TradeCard
@@ -268,9 +331,12 @@ const TradeScreen = () => {
                   potential_profits={recommendation.potential_profits}
                   perspective={recommendation.tradeTypeName}
                   token={recommendation.token}
-                  ltp={liveData?.price}
-                  change={liveData?.change}
-                  changePercent={liveData?.changePercent}
+                  ltp={Number(recommendation.ltp)}
+                  prev_close={recommendation.prev_close}
+                  exitTypeId={recommendation.exitTypeId}
+                  exitPriceLow={recommendation.exitPriceLow}
+                  recoPriceLow={recommendation.recoPriceLow}
+                  isLocked={Number(role) === 1}
                 />
               );
             })}

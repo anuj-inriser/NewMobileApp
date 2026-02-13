@@ -5,6 +5,7 @@ import { ActivityIndicator } from "react-native";
 
 export default function PermissionGuard({ permission, children }) {
     const allowed = usePermission(permission);
+    console.log("allowed ", allowed)
 
     if (allowed === null) {
         return (
@@ -14,7 +15,7 @@ export default function PermissionGuard({ permission, children }) {
         );
     }
 
-    if (allowed === false) {
+    if (!allowed) {
         return (
             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
                 <Text style={{

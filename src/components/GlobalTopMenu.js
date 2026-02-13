@@ -150,22 +150,22 @@ const styles = StyleSheet.create({
     topSliders: {
         backgroundColor: global.colors.background,
         zIndex: 2,
-        paddingVertical: 6,
+        paddingTop: 6,
         paddingHorizontal: 12,
         // iOS shadow (Android ignores)
         shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.1,
         shadowRadius: 3,
-        borderBottomWidth: 1,
-        borderBottomColor: global.colors.overlayLow,
+        // borderBottomWidth: 1,
+        // borderBottomColor: global.colors.overlayLow,
     },
     noShadow: {
         elevation: 0,
         shadowOpacity: 0,
         borderBottomWidth: 0,
     },
-   bottomShadow: {
+    bottomShadow: {
         position: "absolute",
         left: 0,
         right: 0,

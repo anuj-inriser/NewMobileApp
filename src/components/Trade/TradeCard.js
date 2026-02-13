@@ -14,6 +14,8 @@ import {
     subscribeSymbols,
     unsubscribeDelayed,
 } from "../../ws/marketSubscriptions";
+import Icon from "react-native-vector-icons/Ionicons";
+
 
 const STATUS_COLORS = {
     Live: global.colors.error,
@@ -34,17 +36,35 @@ const TradeCard = ({
     stopLoss,
     perspective,
     token,
-    potential_profits
+    potential_profits,
+    ltp: fixedltp,
+    prev_close,
+    exitTypeId,
+    recoPriceLow,
+    exitPriceLow,
+    isLocked,
 }) => {
+
     const navigation = useNavigation();
     const [showDisclaimer, setShowDisclaimer] = useState(false);
     /* ---------------- REALTIME PRICE ---------------- */
     const { prices } = useRealtimePrices();
+    const [meterWidth, setMeterWidth] = useState(0);
+    const [bubbleWidth, setBubbleWidth] = useState(0);
 
     const symbolKey = script?.toUpperCase().trim();
     const rt = prices?.[symbolKey];
-    const ltp = rt?.price;
-    const prevClose = rt?.prevClose || rt?.open || entry || 0;
+    // console.log("rt ", rt)
+    // const ltp = rt?.price ?? fixedltp;
+    let ltp;
+    if (status === "Live") {
+        ltp = rt?.price ?? fixedltp;
+    }
+    else {
+        ltp = fixedltp;
+    }
+    const isDisable = status !== "Live"
+    const prevClose = rt?.prevClose || rt?.open || prev_close || 0;
     const change = ltp !== undefined ? ltp - prevClose : 0;
     const changePercent =
         prevClose > 0 ? (change / prevClose) * 100 : 0;
@@ -52,8 +72,121 @@ const TradeCard = ({
     const min = Number(stopLoss);
     const max = Number(target);
     const base = Number(entry);
+    const exitPrice = Number(exitPriceLow)
+    const entryPrice = Number(recoPriceLow)
 
     const currentPrice = typeof ltp === "number" ? ltp : base;
+
+    let chipName = 'Profit Potential';
+    let chipAmount = null;
+    let chipPercent = potential_profits;
+    if (tradeRecommendation.toLowerCase() === "buy" && exitTypeId === 1) {
+        if (exitPrice > entryPrice) {
+            chipName = 'Profit Booked';
+            chipAmount = exitPrice - entryPrice
+            chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100
+        } else if (exitPrice < entryPrice) {
+            chipName = 'Exited';
+        }
+    } else if (tradeRecommendation.toLowerCase() === "buy" && status === "Stoploss Hit") {
+        if (exitPrice < entryPrice) {
+            chipName = 'Stop Loss Triggered'
+        }
+    } else if (tradeRecommendation.toLowerCase() === "buy" && status === "Target Hit") {
+        if (exitPrice > entryPrice) {
+            chipName = 'Profit Booked'
+            chipAmount = exitPrice - entryPrice
+            chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100
+        }
+    } else if (tradeRecommendation.toLowerCase() === "sell" && exitTypeId === 1) {
+        if (exitPrice < entryPrice) {
+            chipName = 'Profit Booked';
+            chipAmount = exitPrice - entryPrice
+            chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100
+        } else if (exitPrice > entryPrice) {
+            chipName = 'Exited';
+        }
+    } else if (tradeRecommendation.toLowerCase() === "sell" && status === "Stoploss Hit") {
+        if (exitPrice > entryPrice) {
+            chipName = 'Stop Loss Triggered'
+        }
+    } else if (tradeRecommendation.toLowerCase() === "sell" && status === "Target Hit") {
+        if (exitPrice < entryPrice) {
+            chipName = 'Profit Booked'
+            chipAmount = exitPrice - entryPrice
+            chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100
+        }
+    } else {
+        chipName = 'Profit Potential'
+        chipPercent = potential_profits
+    }
+
+
+    // // Default fallback
+    // let chipName = 'Profit Potential';
+    // let chipAmount = null;
+    // let chipPercent = potential_profits;
+
+    // if (tradeRecommendation.toLowerCase() === "buy") {
+
+    //     if (exitTypeId === 1) {
+
+    //         if (exitPrice > entryPrice) {
+    //             chipName = 'Profit Booked';
+    //             chipAmount = exitPrice - entryPrice;
+    //             chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100;
+
+    //         } else if (exitPrice < entryPrice) {
+    //             chipName = 'Exited';
+    //         }
+
+    //     } else if (status === "Stoploss Hit") {
+
+    //         if (exitPrice < entryPrice) {
+    //             chipName = 'Stop Loss Triggered';
+    //         }
+
+    //     } else if (status === "Target Hit") {
+
+    //         if (exitPrice > entryPrice) {
+    //             chipName = 'Profit Booked';
+    //             chipAmount = exitPrice - entryPrice;
+    //             chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100;
+    //         }
+
+    //     }
+
+    // } else if (tradeRecommendation.toLowerCase() === "sell") {
+
+    //     if (exitTypeId === 1) {
+
+    //         if (exitPrice < entryPrice) {
+    //             chipName = 'Profit Booked';
+    //             chipAmount = entryPrice - exitPrice;
+    //             chipPercent = ((entryPrice - exitPrice) / entryPrice) * 100;
+
+    //         } else if (exitPrice > entryPrice) {
+    //             chipName = 'Exited';
+    //         }
+
+    //     } else if (status === "Stoploss Hit") {
+
+    //         if (exitPrice > entryPrice) {
+    //             chipName = 'Stop Loss Triggered';
+    //         }
+
+    //     } else if (status === "Target Hit") {
+
+    //         if (exitPrice < entryPrice) {
+    //             chipName = 'Profit Booked';
+    //             chipAmount = entryPrice - exitPrice;
+    //             chipPercent = ((entryPrice - exitPrice) / entryPrice) * 100;
+    //         }
+
+    //     }
+
+    // }
+
 
     let meterPercent = 0;
 
@@ -64,6 +197,37 @@ const TradeCard = ({
 
     // Extra safety clamp (0–100 hard limit)
     meterPercent = Math.max(0, Math.min(100, meterPercent));
+    /* ---------------- PROFIT DISPLAY FORMAT ---------------- */
+
+    const getProfitColor = () => {
+        const value = chipAmount ?? chipPercent;
+
+        if (value === undefined || value === null) {
+            return global.colors.textSecondary;
+        }
+
+        return Number(value) < 0
+            ? global.colors.error     // red
+            : global.colors.success;  // green
+    };
+
+    const formatProfitText = () => {
+
+        if (chipAmount != null && chipPercent != null) {
+            return `₹${Math.abs(chipAmount).toFixed(2)}(${Math.abs(chipPercent).toFixed(2)}%)`;
+        }
+
+        if (chipPercent != null) {
+            return `${Math.abs(Number(chipPercent)).toFixed(2)}%`;
+        }
+
+        if (chipAmount != null) {
+            return `₹${Math.abs(chipAmount).toFixed(2)}`;
+        }
+
+        return "";
+    };
+
 
 
     /* ---------------- SUBSCRIBE SOCKET ---------------- */
@@ -104,6 +268,17 @@ const TradeCard = ({
 
         return `${day}${getSuffix(day)} ${month} ${year}`;
     };
+    const pointerX = (meterPercent / 100) * meterWidth;
+
+    let bubbleShift = 0;
+
+    if (pointerX - bubbleWidth / 2 < 0) {
+        // Left edge pe cut ho raha hai
+        bubbleShift = -(pointerX - bubbleWidth / 2);
+    } else if (pointerX + bubbleWidth / 2 > meterWidth) {
+        // Right edge pe cut ho raha hai
+        bubbleShift = meterWidth - (pointerX + bubbleWidth / 2);
+    }
 
     /* ---------------- UI ---------------- */
     return (
@@ -113,7 +288,21 @@ const TradeCard = ({
                 <View style={styles.topRow}>
                     <View>
                         <View style={styles.titleRow}>
-                            <Text style={styles.script}>{script}</Text>
+                            <View style={styles.scriptWrapper}>
+                                <Text style={styles.script}>{isLocked ? "••••••••••••" : script}</Text>
+                                {isLocked && (
+                                    <View style={styles.scriptBlurOverlay}>
+                                        <View style={[
+                                            StyleSheet.absoluteFillObject,
+                                            { backgroundColor: "rgba(255,255,255,0.9)" }
+                                        ]} />
+
+                                        <View style={styles.lockCircleSmall}>
+                                            <Icon name="lock-closed" size={14} color="#fff" />
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
                             <View style={styles.liveBadge}>
                                 <Text
                                     style={[
@@ -128,23 +317,20 @@ const TradeCard = ({
 
                         <View style={styles.profitBadge}>
                             <Text style={styles.profitText}>
-                                Profit Potential :{' '}
-                                {potential_profits != null &&
-                                    potential_profits !== "" &&
-                                    !isNaN(potential_profits) ? (
-                                    <Text style={{
-                                        color: potential_profits < 0 ? global.colors.error : global.colors.success,
-                                        fontWeight: 'bold'
-                                    }}>
-                                        {Math.abs(potential_profits)}%
-                                    </Text>
-                                ) : null}
+                                {chipName} :{" "}
+                                <Text style={{ color: getProfitColor() }}>
+                                    {formatProfitText()}
+                                </Text>
                             </Text>
                         </View>
+
+
                     </View>
 
                     <TouchableOpacity
-                        onPress={() =>
+                        disabled={isDisable}
+                        onPress={() => {
+                            if (isDisable) return;
                             navigation.navigate("TradeOrder", {
                                 symbol: script,
                                 token,
@@ -157,12 +343,13 @@ const TradeCard = ({
                                 type: tradeRecommendation,
                             })
                         }
+                        }
                     >
                         <View
                             style={[
                                 styles.buyButton,
                                 tradeRecommendation?.toLowerCase() === "sell" && {
-                                    backgroundColor: "#E63946",
+                                    backgroundColor: global.colors.error,
                                 },
                             ]}
                         >
@@ -192,18 +379,27 @@ const TradeCard = ({
                 </View>
 
                 {/* PRICE METER */}
-                <View style={styles.meterWrapper}>
+                <View
+                    style={styles.meterWrapper}
+                    onLayout={(e) => setMeterWidth(e.nativeEvent.layout.width)}
+                >
 
                     {/* LTP TOOLTIP (ABOVE POINTER) */}
                     <View
                         style={[
                             styles.pointerWrapper,
-                            { left: `${meterPercent}%` },
+                            { left: `${meterPercent}%` }  // 🔥 unchanged
                         ]}
                     >
                         {/* LTP TOOLTIP */}
                         {typeof ltp === "number" && (
-                            <View style={styles.priceBubble}>
+                            <View
+                                style={[
+                                    styles.priceBubble,
+                                    { transform: [{ translateX: bubbleShift }] }
+                                ]}
+                                onLayout={(e) => setBubbleWidth(e.nativeEvent.layout.width)}
+                            >
                                 <Text style={styles.priceText}>₹{ltp.toFixed(2)}</Text>
                                 {/* <View style={styles.priceArrow} /> */}
                                 <Text
@@ -213,7 +409,7 @@ const TradeCard = ({
                                         color: Number(change) >= 0 ? global.colors.success : global.colors.error,
                                     }}
                                 >
-                                    {Number(change).toFixed(2)} ({Number(changePercent).toFixed(2)}
+                                    {Math.abs(Number(change)).toFixed(2)} ({Math.abs(Number(changePercent)).toFixed(2)}
                                     %)
                                 </Text>
                             </View>
@@ -229,7 +425,7 @@ const TradeCard = ({
 
                     {/* PROGRESS BAR */}
                     <LinearGradient
-                        colors={["#E63946", "#F4D03F", "#2ECC71"]}
+                        colors={[global.colors.error, global.colors.warning, global.colors.success,]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.meterBar}
@@ -418,7 +614,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: global.colors.border,
         zIndex: 10,
-        minWidth: 90,
+        minWidth: 100,
         alignItems: "center",
     },
 
@@ -481,7 +677,7 @@ const styles = StyleSheet.create({
     disclaimerBtn: {
         alignSelf: "flex-end",
         marginTop: 6,
-        backgroundColor: "#1F2937",
+        backgroundColor: global.colors.secondary,
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 12,
@@ -491,5 +687,38 @@ const styles = StyleSheet.create({
         color: global.colors.background,
         fontSize: 10,
         fontWeight: "600",
+    },
+    scriptWrapper: {
+        position: "relative",
+        marginRight: 8,
+        alignSelf: "flex-start",   // 🔥 Important
+    },
+    scriptBlurOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: "center",
+        alignItems: "center",
+        borderRadius: 6,
+        overflow: "hidden",
+    },
+
+    scriptBlurOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: "center",
+        alignItems: "center",
+        borderRadius: 6,
+        overflow: "hidden",
+    },
+
+    lockCircleSmall: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: "rgba(0,0,0,0.7)",
+        justifyContent: "center",
+        alignItems: "center",
     },
 });
