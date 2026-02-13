@@ -127,13 +127,14 @@ export default function LoginScreen({ navigation }) {
 
       if (result.status && result.data?.userId) {
         ChartPrefetchService.prefetchWatchlist();
-        const { userId, name, email, phone, userimage, token } = result.data;
-
+        const { userId, name, email, phone, userimage, token, permission } = result.data;
+        console.log("Test1234567890", result.data);
         await setAuthData({
           userId: String(userId),
           userData: { name, email, phone, userimage },
           token,
           fcmToken,
+          role:permission
         });
 
         const res = await axiosInstance.get(`/me/permissions`);

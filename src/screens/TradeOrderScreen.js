@@ -626,11 +626,6 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
           </View>
 
           <View style={styles.menuContainer}>
-            {/* <OrderTopMenu
-            items={menuItems}
-            defaultSelected="Intraday"
-            onSelect={handleSegmentChange}
-          /> */}
             <OrderTopMenu
               items={menuItems}
               defaultSelected={selectedMenu} // ⭐ now fully controlled
