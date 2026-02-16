@@ -9,6 +9,7 @@ import {
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { formatFullPublishedDateTime } from "../../utils/dateFormat";
 import { useRealtimePrices } from "../../hooks/useRealtimePrices";
+import Slider from "@react-native-community/slider";
 import LinearGradient from "react-native-linear-gradient";
 import {
     subscribeSymbols,
@@ -47,6 +48,7 @@ const TradeCard = ({
 
     const navigation = useNavigation();
     const [showDisclaimer, setShowDisclaimer] = useState(false);
+    const [slidermeterPercent, setSliderMeterPercent] = useState(50);
     /* ---------------- REALTIME PRICE ---------------- */
     const { prices } = useRealtimePrices();
     const [meterWidth, setMeterWidth] = useState(0);
@@ -80,112 +82,22 @@ const TradeCard = ({
     let chipName = 'Profit Potential';
     let chipAmount = null;
     let chipPercent = potential_profits;
-    if (tradeRecommendation.toLowerCase() === "buy" && exitTypeId === 1) {
-        if (exitPrice > entryPrice) {
-            chipName = 'Profit Booked';
-            chipAmount = exitPrice - entryPrice
-            chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100
-        } else if (exitPrice < entryPrice) {
-            chipName = 'Exited';
-        }
-    } else if (tradeRecommendation.toLowerCase() === "buy" && status === "Stoploss Hit") {
-        if (exitPrice < entryPrice) {
-            chipName = 'Stop Loss Triggered'
-        }
-    } else if (tradeRecommendation.toLowerCase() === "buy" && status === "Target Hit") {
-        if (exitPrice > entryPrice) {
-            chipName = 'Profit Booked'
-            chipAmount = exitPrice - entryPrice
-            chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100
-        }
-    } else if (tradeRecommendation.toLowerCase() === "sell" && exitTypeId === 1) {
-        if (exitPrice < entryPrice) {
-            chipName = 'Profit Booked';
-            chipAmount = exitPrice - entryPrice
-            chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100
-        } else if (exitPrice > entryPrice) {
-            chipName = 'Exited';
-        }
-    } else if (tradeRecommendation.toLowerCase() === "sell" && status === "Stoploss Hit") {
-        if (exitPrice > entryPrice) {
-            chipName = 'Stop Loss Triggered'
-        }
-    } else if (tradeRecommendation.toLowerCase() === "sell" && status === "Target Hit") {
-        if (exitPrice < entryPrice) {
-            chipName = 'Profit Booked'
-            chipAmount = exitPrice - entryPrice
-            chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100
-        }
+
+    let tradestatus = "Live";
+    let profit = 0;
+
+    // Trigger logic
+    if (tradeRecommendation.toLowerCase() === "buy") {
+        if (slidermeterPercent >= target) tradestatus = "Target Hit";
+        if (slidermeterPercent <= Number(stopLoss)) tradestatus = "Stop Loss Hit";
+        profit = slidermeterPercent - entry;
     } else {
-        chipName = 'Profit Potential'
-        chipPercent = potential_profits
+        if (slidermeterPercent <= target) tradestatus = "Target Hit";
+        if (slidermeterPercent >= Number(stopLoss)) tradestatus = "Stop Loss Hit";
+        profit = entry - slidermeterPercent;
     }
 
-
-    // // Default fallback
-    // let chipName = 'Profit Potential';
-    // let chipAmount = null;
-    // let chipPercent = potential_profits;
-
-    // if (tradeRecommendation.toLowerCase() === "buy") {
-
-    //     if (exitTypeId === 1) {
-
-    //         if (exitPrice > entryPrice) {
-    //             chipName = 'Profit Booked';
-    //             chipAmount = exitPrice - entryPrice;
-    //             chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100;
-
-    //         } else if (exitPrice < entryPrice) {
-    //             chipName = 'Exited';
-    //         }
-
-    //     } else if (status === "Stoploss Hit") {
-
-    //         if (exitPrice < entryPrice) {
-    //             chipName = 'Stop Loss Triggered';
-    //         }
-
-    //     } else if (status === "Target Hit") {
-
-    //         if (exitPrice > entryPrice) {
-    //             chipName = 'Profit Booked';
-    //             chipAmount = exitPrice - entryPrice;
-    //             chipPercent = ((exitPrice - entryPrice) / entryPrice) * 100;
-    //         }
-
-    //     }
-
-    // } else if (tradeRecommendation.toLowerCase() === "sell") {
-
-    //     if (exitTypeId === 1) {
-
-    //         if (exitPrice < entryPrice) {
-    //             chipName = 'Profit Booked';
-    //             chipAmount = entryPrice - exitPrice;
-    //             chipPercent = ((entryPrice - exitPrice) / entryPrice) * 100;
-
-    //         } else if (exitPrice > entryPrice) {
-    //             chipName = 'Exited';
-    //         }
-
-    //     } else if (status === "Stoploss Hit") {
-
-    //         if (exitPrice > entryPrice) {
-    //             chipName = 'Stop Loss Triggered';
-    //         }
-
-    //     } else if (status === "Target Hit") {
-
-    //         if (exitPrice < entryPrice) {
-    //             chipName = 'Profit Booked';
-    //             chipAmount = entryPrice - exitPrice;
-    //             chipPercent = ((entryPrice - exitPrice) / entryPrice) * 100;
-    //         }
-
-    //     }
-
-    // }
+    let tradepercent = ((profit / entry) * 100).toFixed(2);
 
 
     let meterPercent = 0;
@@ -200,7 +112,7 @@ const TradeCard = ({
     /* ---------------- PROFIT DISPLAY FORMAT ---------------- */
 
     const getProfitColor = () => {
-        const value = chipAmount ?? chipPercent;
+        const value = tradepercent;
 
         if (value === undefined || value === null) {
             return global.colors.textSecondary;
@@ -280,6 +192,13 @@ const TradeCard = ({
         bubbleShift = meterWidth - (pointerX + bubbleWidth / 2);
     }
 
+
+    const MIN = 10;
+    const MAX = 200;
+
+    const percent =
+        ((slidermeterPercent - MIN) / (MAX - MIN)) * 100;
+
     /* ---------------- UI ---------------- */
     return (
         <>
@@ -310,7 +229,7 @@ const TradeCard = ({
                                         { color: STATUS_COLORS[status] },
                                     ]}
                                 >
-                                    {status}
+                                    {tradestatus}
                                 </Text>
                             </View>
                         </View>
@@ -319,7 +238,7 @@ const TradeCard = ({
                             <Text style={styles.profitText}>
                                 {chipName} :{" "}
                                 <Text style={{ color: getProfitColor() }}>
-                                    {formatProfitText()}
+                                    ₹{Math.abs(profit.toFixed(2))}
                                 </Text>
                             </Text>
                         </View>
@@ -379,6 +298,66 @@ const TradeCard = ({
                 </View>
 
                 {/* PRICE METER */}
+                {/* <View
+                    style={styles.meterWrapper}
+                    onLayout={(e) => setMeterWidth(e.nativeEvent.layout.width)}
+                >
+
+                    LTP TOOLTIP (ABOVE POINTER)
+                    <View
+                        style={[
+                            styles.pointerWrapper,
+                            { left: `${meterPercent}%` }  // 🔥 unchanged
+                        ]}
+                    >
+                        LTP TOOLTIP
+                        {typeof ltp === "number" && (
+                            <View
+                                style={[
+                                    styles.priceBubble,
+                                    { transform: [{ translateX: bubbleShift }] }
+                                ]}
+                                onLayout={(e) => setBubbleWidth(e.nativeEvent.layout.width)}
+                            >
+                                <Text style={styles.priceText}>₹{ltp.toFixed(2)}</Text>
+                                <View style={styles.priceArrow} />
+                                <Text
+                                    style={{
+                                        fontSize: 11,
+                                        fontWeight: "600",
+                                        color: Number(change) >= 0 ? global.colors.success : global.colors.error,
+                                    }}
+                                >
+                                    {Math.abs(Number(change)).toFixed(2)} ({Math.abs(Number(changePercent)).toFixed(2)}
+                                    %)
+                                </Text>
+                            </View>
+                        )}
+
+                        POINTER
+                        <View style={styles.pointerLine} />
+                        <View style={styles.pointerDot} />
+                    </View>
+
+
+
+
+                    PROGRESS BAR
+                    <LinearGradient
+                        colors={[global.colors.error, global.colors.warning, global.colors.success,]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.meterBar}
+                    />
+
+                    SL & TARGET (BELOW BAR)
+                    <View style={styles.meterBottomLabels}>
+                        <Text style={styles.slText}>Stop Loss : ₹{stopLoss}</Text>
+                        <Text style={styles.targetText}>Target : ₹{target}</Text>
+                    </View>
+
+                </View> */}
+
                 <View
                     style={styles.meterWrapper}
                     onLayout={(e) => setMeterWidth(e.nativeEvent.layout.width)}
@@ -388,7 +367,7 @@ const TradeCard = ({
                     <View
                         style={[
                             styles.pointerWrapper,
-                            { left: `${meterPercent}%` }  // 🔥 unchanged
+                            { left: `${percent}%` }  // 🔥 unchanged
                         ]}
                     >
                         {/* LTP TOOLTIP */}
@@ -400,17 +379,14 @@ const TradeCard = ({
                                 ]}
                                 onLayout={(e) => setBubbleWidth(e.nativeEvent.layout.width)}
                             >
-                                <Text style={styles.priceText}>₹{ltp.toFixed(2)}</Text>
+                                <Text style={styles.priceText}>₹{slidermeterPercent.toFixed(2)}</Text>
                                 {/* <View style={styles.priceArrow} /> */}
                                 <Text
-                                    style={{
-                                        fontSize: 11,
-                                        fontWeight: "600",
-                                        color: Number(change) >= 0 ? global.colors.success : global.colors.error,
-                                    }}
+                                    style={[
+                                        tradepercent > 0 ? styles.profit : styles.loss
+                                    ]}
                                 >
-                                    {Math.abs(Number(change)).toFixed(2)} ({Math.abs(Number(changePercent)).toFixed(2)}
-                                    %)
+                                    ({Math.abs(tradepercent)}%)
                                 </Text>
                             </View>
                         )}
@@ -431,17 +407,10 @@ const TradeCard = ({
                         style={styles.meterBar}
                     />
 
-                    {/* SL & TARGET (BELOW BAR) */}
-                    <View style={styles.meterBottomLabels}>
-                        <Text style={styles.slText}>Stop Loss : ₹{stopLoss}</Text>
-                        <Text style={styles.targetText}>Target : ₹{target}</Text>
-                    </View>
-
                 </View>
 
-
                 {/* DATES */}
-                <View style={styles.datesRow}>
+                {/* <View style={styles.datesRow}>
                     <Text style={styles.dateText}>
                         Entry: {formatDateWithSuffix(entryDate)}
 
@@ -451,7 +420,7 @@ const TradeCard = ({
                             Exit: {formatDateWithSuffix(exitDate)}
                         </Text>
                     )}
-                </View>
+                </View> */}
 
                 {/* DISCLAIMER */}
                 <TouchableOpacity
@@ -460,6 +429,30 @@ const TradeCard = ({
                 >
                     <Text style={styles.disclaimerText}>Disclaimer</Text>
                 </TouchableOpacity>
+                {/* <Text>
+                    Potential P/L:{" "}
+                    <Text
+                        style={[
+                            tradepercent > 0 ? styles.profit : styles.loss
+                        ]}
+                    >
+                        {profit.toFixed(2)}
+                    </Text>
+
+                </Text> */}
+
+                <Slider
+                    style={{ width: "100%", height: 40 }}
+                    minimumValue={10}
+                    maximumValue={200}
+                    step={1}
+                    value={slidermeterPercent}
+                    onValueChange={(value) => setSliderMeterPercent(value)}
+                    minimumTrackTintColor={global.colors.success}
+                    maximumTrackTintColor="#ccc"
+                    thumbTintColor={global.colors.primary}
+                />
+
 
             </View>
             <GlobalAlert
@@ -554,6 +547,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         marginTop: 14,
+        marginBottom: 5
     },
 
     label: {
@@ -676,7 +670,7 @@ const styles = StyleSheet.create({
 
     disclaimerBtn: {
         alignSelf: "flex-end",
-        marginTop: 6,
+        marginTop: 15,
         backgroundColor: global.colors.secondary,
         paddingHorizontal: 10,
         paddingVertical: 4,
@@ -721,4 +715,10 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
+    profit: {
+        color: 'green',
+    },
+    loss: {
+        color: 'red'
+    }
 });
