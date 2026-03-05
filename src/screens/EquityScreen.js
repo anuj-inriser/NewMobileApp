@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useNavigation } from "@react-navigation/native";
 import {
   View,
@@ -28,6 +28,33 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import axiosInstance from "../api/axios";
 import Swipeable from "react-native-gesture-handler/Swipeable";
+import { useDrawer } from "../context/DrawerContext";
+import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
+import SparklineChart from "../components/Sparkline";
+
+const Sparkline = ({ color, isPositive }) => {
+  // A simple smooth curve that either goes up or down
+  const curveD = isPositive
+    ? "M 0 35 C 20 35, 30 25, 45 25 S 60 5, 80 0 L 80 40 L 0 40 Z"
+    : "M 0 5 C 20 5, 30 15, 45 15 S 60 35, 80 40 L 80 40 L 0 40 Z";
+
+  const lineD = isPositive
+    ? "M 0 35 C 20 35, 30 25, 45 25 S 60 5, 80 0"
+    : "M 0 5 C 20 5, 30 15, 45 15 S 60 35, 80 40";
+
+  return (
+    <Svg width="80" height="40" viewBox="0 0 80 40">
+      <Defs>
+        <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={color} stopOpacity="0.3" />
+          <Stop offset="1" stopColor={color} stopOpacity="0.0" />
+        </SvgLinearGradient>
+      </Defs>
+      <Path d={curveD} fill="url(#grad)" />
+      <Path d={lineD} fill="none" stroke={color} strokeWidth="2" />
+    </Svg>
+  );
+};
 
 const LeftBuyAction = () => (
   <View style={styles.leftAction}>
@@ -37,79 +64,40 @@ const LeftBuyAction = () => (
 // ✅ MarketCapList Component (inline for now)
 const MarketCapList = ({ data, exchange, category, navigation, onBuy, refreshing,
   onRefresh, }) => {
-  const handleBuy = (item) => {
-    navigation.navigate("Trade", {
-      symbol: item.symbol,
-      exchange,
-      side: "BUY",
-    });
-  };
   const renderItem = ({ item }) => {
     const isPositive = item.change >= 0;
-    const displayChange =
-      typeof item.change === "number"
-        ? Math.abs(item.change).toFixed(2)
-        : "0.00";
-
-    const displayPercent =
-      typeof item.changePercent === "number"
-        ? Math.abs(item.changePercent).toFixed(2)
-        : "0.00";
-
-    // Right swipe action - "View Chart"
-    const renderRightActions = () => (
-      <View style={styles.rightAction}>
-        <Ionicons name="bar-chart-outline" size={20} color={global.colors.background} />
-        <Text style={styles.actionText}>Chart</Text>
-      </View>
-    );
+    const color = isPositive ? global.colors.success : global.colors.error;
 
     return (
-      <Swipeable
-        renderRightActions={renderRightActions}
-        onSwipeableRightOpen={() =>
-          navigation.navigate("AdvancedChart", {
-            symbol: item.symbol,
+      <TouchableOpacity
+        style={styles.marketCapItem}
+        onPress={() =>
+          navigation.navigate("Stocks", {
+            exchange,
+            from: "Market Cap",
+            filterIndex: item.name,
+            headerData: item,
+            headerCategory: "Market Cap"
           })
         }
-        overshootRight={false}
       >
-        <View style={styles.cardWrapper}>
-          <TouchableOpacity style={styles.card} activeOpacity={0.9}
-            onPress={() =>
-              navigation.navigate("Stocks", {
-                exchange,
-                from: "Market Cap",
-                filterIndex: item.name,
-              })
-            }
-          >
-            <View style={styles.infoContainer}>
-              <Text style={styles.companyName}>
-                {item.symbol}
-              </Text>
-              <Text style={styles.symbol}>{item.group_name || item.name}</Text>
-            </View>
-
-            <View style={styles.verticalCardRight}>
-              <Text style={[
-                styles.verticalPrice
-              ]}>
-                ₹{item.value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </Text>
-
-              <Text
-                style={[
-                  styles.verticalChange,
-                  isPositive ? styles.positive : styles.negative,
-                ]}
-              >
-                ₹{displayChange} ({displayPercent}%)
-              </Text>
-            </View>
-          </TouchableOpacity>
+        <View style={styles.infoContainer}>
+          <Text style={styles.marketCapName}>{item.name}</Text>
+          <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
         </View>
-      </Swipeable>
+        <SparklineChart symbol={item.symbol} color={color} />
+        <View style={styles.priceContainer}>
+          <Text style={styles.price}>
+            ₹{Number(item.value || 0).toLocaleString("en-IN", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </Text>
+          <Text style={[styles.change, { color }]}>
+            {isPositive ? "+" : ""}{item.change?.toFixed(2)} ({isPositive ? "+" : ""}{item.changePercent?.toFixed(2)}%)
+          </Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -132,69 +120,38 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy, refreshing
 const SectorsList = ({ data, exchange, category, navigation, refreshing, onRefresh }) => {
   const renderItem = ({ item }) => {
     const isPositive = item.change >= 0;
-    const displayChange =
-      typeof item.change === "number"
-        ? Math.abs(item.change).toFixed(2)
-        : "0.00";
-
-    const displayPercent =
-      typeof item.changePercent === "number"
-        ? Math.abs(item.changePercent).toFixed(2)
-        : "0.00";
-
-    // Right swipe action - "View Chart"
-    const renderRightActions = () => (
-      <View style={styles.rightAction}>
-        <Ionicons name="bar-chart-outline" size={24} color={global.colors.background} />
-        <Text style={styles.actionText}>Chart</Text>
-      </View>
-    );
+    const color = isPositive ? global.colors.success : global.colors.error;
 
     return (
-      <Swipeable
-        renderRightActions={renderRightActions}
-        onSwipeableRightOpen={() =>
-          navigation.navigate("AdvancedChart", {
-            symbol: item.symbol,
+      <TouchableOpacity
+        style={styles.marketCapItem}
+        onPress={() =>
+          navigation.navigate("Stocks", {
+            exchange,
+            from: "Sectors",
+            filterIndex: item.name,
+            headerData: item,
+            headerCategory: "Sectors"
           })
         }
-        overshootRight={false}
       >
-        <View style={styles.cardWrapper}>
-          <TouchableOpacity
-            s style={styles.card} activeOpacity={0.9}
-            onPress={() =>
-              navigation.navigate("Stocks", {
-                exchange,
-                from: "Sectors",
-                filterIndex: item.name, // e.g., "IT"
-              })
-            }
-          >
-            <View style={styles.infoContainer}>
-              <Text style={styles.companyName}>
-                {item.symbol}
-              </Text>
-              <Text style={styles.symbol}>{item.group_name || item.name}</Text>
-            </View>
-
-            <View style={styles.verticalCardRight}>
-              <Text style={styles.verticalPrice}>
-                ₹{item.value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </Text>
-
-              <Text
-                style={[
-                  styles.verticalChange,
-                  isPositive ? styles.positive : styles.negative,
-                ]}
-              >
-                ₹{displayChange} ({displayPercent}%)
-              </Text>
-            </View>
-          </TouchableOpacity>
+        <View style={styles.infoContainer}>
+          <Text style={styles.marketCapName}>{item.name}</Text>
+          <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
         </View>
-      </Swipeable>
+        <SparklineChart symbol={item.symbol} color={color} />
+        <View style={styles.priceContainer}>
+          <Text style={styles.price}>
+            ₹{Number(item.value || 0).toLocaleString("en-IN", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </Text>
+          <Text style={[styles.change, { color }]}>
+            {isPositive ? "+" : ""}{item.change?.toFixed(2)} ({isPositive ? "+" : ""}{item.changePercent?.toFixed(2)}%)
+          </Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -205,7 +162,7 @@ const SectorsList = ({ data, exchange, category, navigation, refreshing, onRefre
         `${exchange}-${category}-${item.group_name}-${index}`
       }
       renderItem={renderItem}
-      contentContainerStyle={styles.marketCapList}
+      contentContainerStyle={[styles.marketCapList, { paddingBottom: 80 }]}
       showsVerticalScrollIndicator={false}
       refreshing={refreshing}
       onRefresh={onRefresh}
@@ -240,7 +197,7 @@ const ThemesList = ({ data, exchange, category, navigation }) => {
         `${exchange}-${category}-${item.group_name}-${index}`
       }
       renderItem={renderItem}
-      contentContainerStyle={styles.marketCapList}
+      contentContainerStyle={[styles.marketCapList, { paddingBottom: 80 }]}
       showsVerticalScrollIndicator={false}
     />
   );
@@ -319,7 +276,8 @@ export default function EquityScreen() {
     if (initialExchange !== undefined && initialExchange !== selectedExchange) {
       setSelectedExchange(initialExchange);
     }
-  }, [route.params]);
+  // ✅ Use primitive values from route.params, not the object itself
+  }, [route.params?.initialCategory, route.params?.initialExchange]);
 
 
   const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
@@ -327,7 +285,7 @@ export default function EquityScreen() {
   // Get filter options based on selected category
   const getFilterOptions = () => {
     if (selectedCategory === "Market Cap" || selectedCategory === "Indices" || selectedCategory === "Sectors") {
-      return ["All", "High Gainers", "High Losers"];
+      return ["All", "Gainers", "Losers"];
     }
     return ["All"];
   };
@@ -698,7 +656,8 @@ export default function EquityScreen() {
     refetchOnMount: "always",     // 🔥 ALWAYS fire
     refetchOnWindowFocus: false,
   });
-  const allData = indicesQuery.data || [];
+  // ✅ Stable reference: useMemo prevents new [] on every render (infinite loop fix)
+  const allData = useMemo(() => indicesQuery.data ?? [], [indicesQuery.data]);
   const loading = indicesQuery.isLoading;
   useEffect(() => {
     if (allData && allData.length > 0) {
@@ -784,8 +743,8 @@ export default function EquityScreen() {
     if (selectedCategory === "Market Cap") {
       let filtered = [...originalMarketCapData];
 
-      if (filterType === "High Gainers") {
-        // Filter market caps with positive change (high gainers)
+      if (filterType === "Gainers") {
+        // Filter market caps with positive change (gainers)
         filtered = filtered.filter((item) => {
           const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
           const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
@@ -804,8 +763,8 @@ export default function EquityScreen() {
 
           return changeB - changeA;
         });
-      } else if (filterType === "High Losers") {
-        // Filter market caps with negative change (high losers)
+      } else if (filterType === "Losers") {
+        // Filter market caps with negative change (losers)
         filtered = filtered.filter((item) => {
           const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
           const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
@@ -833,8 +792,8 @@ export default function EquityScreen() {
     } else if (selectedCategory === "Indices") {
       let filtered = [...originalAllIndicesData];
 
-      if (filterType === "High Gainers") {
-        // Filter indices with positive change (high gainers)
+      if (filterType === "Gainers") {
+        // Filter indices with positive change (gainers)
         filtered = filtered.filter((item) => {
           const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
           const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
@@ -853,8 +812,8 @@ export default function EquityScreen() {
 
           return changeB - changeA;
         });
-      } else if (filterType === "High Losers") {
-        // Filter indices with negative change (high losers)
+      } else if (filterType === "Losers") {
+        // Filter indices with negative change (losers)
         filtered = filtered.filter((item) => {
           const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
           const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
@@ -882,8 +841,8 @@ export default function EquityScreen() {
     } else if (selectedCategory === "Sectors") {
       let filtered = [...originalSectorsData];
 
-      if (filterType === "High Gainers") {
-        // Filter sectors with positive change (high gainers)
+      if (filterType === "Gainers") {
+        // Filter sectors with positive change (gainers)
         filtered = filtered.filter((item) => {
           const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
           const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
@@ -902,8 +861,8 @@ export default function EquityScreen() {
 
           return changeB - changeA;
         });
-      } else if (filterType === "High Losers") {
-        // Filter sectors with negative change (high losers)
+      } else if (filterType === "Losers") {
+        // Filter sectors with negative change (losers)
         filtered = filtered.filter((item) => {
           const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
           const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
@@ -936,19 +895,21 @@ export default function EquityScreen() {
     setShowPreview(false);
   };
 
+  const { openStockInfoDrawer } = useDrawer();
+
   const handleIndexPress = (index) => {
     navigation.navigate("Stocks", {
       exchange: selectedExchange,
       from: "Indices",
       filterIndex: index.name,
+      headerData: index,
+      headerCategory: "Indices"
     });
   };
 
   // ✅ Swipe right → View chart directly
   const handleSwipeToChart = (index) => {
-    navigation.navigate("AdvancedChart", {
-      symbol: index.symbol,
-    });
+    openStockInfoDrawer(index.symbol);
   };
 
   // const getDataForCategory = () => {
@@ -1010,7 +971,8 @@ export default function EquityScreen() {
             prevClose,
             change,
             changePercent,
-            timestamp: new Date().toISOString(),
+            timestamp: item.timestamp || item.exchange_timestamp,
+            exchange_timestamp: item.exchange_timestamp,
           };
         }),
         realtimePrices
@@ -1081,7 +1043,8 @@ export default function EquityScreen() {
             prevClose,
             change,
             changePercent,
-            timestamp: new Date().toISOString(),
+            timestamp: item.timestamp || item.exchange_timestamp,
+            exchange_timestamp: item.exchange_timestamp,
           };
         }),
         realtimePrices
@@ -1170,7 +1133,7 @@ export default function EquityScreen() {
           viewMode={showPreview ? "horizontal" : "vertical"}
           onViewAllPress={handleViewAllIndices}
           onIndexPress={handleIndexPress}
-          onSwipeToChart={handleSwipeToChart}
+          // onSwipeToChart={handleSwipeToChart}
           externalData={allIndicesData}
           maxItems={showPreview ? 5 : undefined}
           refreshing={refreshing}
@@ -1209,19 +1172,6 @@ export default function EquityScreen() {
         {/* Sort & Filter Bar for Market Cap, Sectors, and Indices */}
         {(selectedCategory === "Market Cap" || selectedCategory === "Sectors" || selectedCategory === "Indices") && (
           <View style={styles.sortFilterBar}>
-            {/* Back Button for Market Cap and Sectors - LEFT */}
-            {selectedCategory !== "Indices" && (
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => {
-                  setSelectedCategory("Indices");
-                  setShowPreview(false);
-                }}
-              >
-                <Ionicons name="arrow-back" size={22} color={global.colors.secondary} />
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
-            )}
 
             {/* Sort & Filter - RIGHT (Always visible) */}
             <View style={styles.sortFilterButtonsContainer}>
@@ -1314,7 +1264,8 @@ const mergeWithRealtime = (list, realtimePrices) => {
       value: rt.price,
       change,
       changePercent,
-      timestamp: rt.timestamp,
+      timestamp: rt.timestamp || rt.exchange_timestamp || item.timestamp || item.exchange_timestamp,
+      exchange_timestamp: rt.exchange_timestamp || item.exchange_timestamp,
     };
   });
 };
@@ -1393,11 +1344,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
+    elevation: 5,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   marketCapName: { fontSize: 14, fontWeight: "600" },
   marketCapSymbol: { fontSize: 11, color: global.colors.textSecondary },
@@ -1424,6 +1375,79 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: global.colors.secondary,
   },
+  
+  // New Advanced Card Styles
+  card_verticalCard: {
+    backgroundColor: global.colors.background,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: global.colors.border,
+  },
+  card_topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "stretch",
+  },
+  card_topLeft: {
+    flex: 1,
+    justifyContent: "flex-start",
+  },
+  card_topMiddle: {
+    justifyContent: "flex-end", // Align sparkline to bottom
+    paddingHorizontal: 8,
+  },
+  card_topRight: {
+    flex: 1,
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
+  },
+  card_companyName: { fontSize: 16, fontWeight: "700", color: global.colors.textPrimary },
+  card_verticalTime: {
+    fontSize: 12,
+    color: global.colors.textSecondary,
+    marginTop: 4,
+  },
+  card_verticalPrice: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: global.colors.textPrimary,
+  },
+  card_verticalChange: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  card_bottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  card_badge: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    marginHorizontal: 3,
+  },
+  card_badgeGainers: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)", // light green
+  },
+  card_badgeLosers: {
+    backgroundColor: "rgba(239, 68, 68, 0.15)", // light red
+  },
+  card_badgeNeutral: {
+    backgroundColor: "rgba(107, 114, 128, 0.2)", // light gray
+  },
+  card_badgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: global.colors.textPrimary,
+  },
 
   // Sort & Filter Bar
   sortFilterBar: {
@@ -1431,7 +1455,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   backButton: {
     flexDirection: "row",
@@ -1448,7 +1472,7 @@ const styles = StyleSheet.create({
   sortFilterButtonsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 2,
     flex: 1,
     justifyContent: "flex-end",
   },
@@ -1456,13 +1480,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 2,
   },
   filterButton: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 2,
   },
   sortFilterText: {
     marginLeft: 6,
@@ -1474,7 +1498,7 @@ const styles = StyleSheet.create({
   // Overlay and Dropdown
   overlay: {
     flex: 1,
-    backgroundColor: global.colors.overlay,
+    // backgroundColor: global.colors.overlay,
     justifyContent: "flex-start",
     alignItems: "flex-end",
     top: 90,
@@ -1523,7 +1547,13 @@ const styles = StyleSheet.create({
     backgroundColor: global.colors.background,
     padding: 12,
     borderRadius: 14,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: global.colors.border,
+    shadowColor: global.colors.textPrimary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   infoContainer: { flex: 1 },
   companyName: { fontSize: 14, fontWeight: "600" },

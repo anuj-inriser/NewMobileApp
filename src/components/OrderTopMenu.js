@@ -62,22 +62,21 @@ const styles = StyleSheet.create({
     backgroundColor: global.colors.background,
   },
 
-  shadowWrapper: {
-    backgroundColor: global.colors.background,
-    paddingTop: 1,
-    shadowColor: global.colors.textPrimary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 5,
-    width: "100%",
-    borderBottomWidth: 0,
-  },
+  // shadowWrapper: {
+  //   paddingTop: 1,
+  //   shadowColor: global.colors.textPrimary,
+  //   shadowOffset: { width: 0, height: 3 },
+  //   shadowOpacity: 0.15,
+  //   shadowRadius: 4,
+  //   elevation: 5,
+  //   width: "100%",
+  //   borderBottomWidth: 0,
+  // },
 
   scrollContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 30,
+    alignItems: "left",
+    justifyContent: "left",
     paddingVertical: 8,
   },
 

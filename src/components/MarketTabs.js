@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, UIManager, LayoutAnimation } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+
+if (
+    Platform.OS === 'android' &&
+    UIManager.setLayoutAnimationEnabledExperimental
+) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const EXCHANGE_KEY = 'MARKET_SELECTED_EXCHANGE';
 
@@ -15,7 +22,7 @@ const MarketTabs = ({
     initialActiveTab = null,
 }) => {
 
-    const [exchange, setExchange] = useState(null);
+    const [exchange, setExchange] = useState(selectedExchange || 'NSE');
     const [internalActiveTab, setInternalActiveTab] = useState(initialActiveTab);
     const [isReady, setIsReady] = useState(false);
 
@@ -25,18 +32,12 @@ const MarketTabs = ({
             try {
                 const savedExchange = await AsyncStorage.getItem(EXCHANGE_KEY);
 
-                if (savedExchange) {
+                if (savedExchange && savedExchange !== exchange) {
                     setExchange(savedExchange);
                     onExchangeChange && onExchangeChange(savedExchange);
-                } else {
-                    const fallback = selectedExchange || 'NSE';
-                    setExchange(fallback);
-                    onExchangeChange && onExchangeChange(fallback);
                 }
             } catch {
-                const fallback = selectedExchange || 'NSE';
-                setExchange(fallback);
-                onExchangeChange && onExchangeChange(fallback);
+                // Keep initial state
             } finally {
                 setIsReady(true);
             }
@@ -57,6 +58,7 @@ const MarketTabs = ({
 
     // 🔥 Toggle Exchange + persist
     const handleExchangeToggle = async (exch) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setExchange(exch);
         onExchangeChange && onExchangeChange(exch);
         try {
@@ -65,14 +67,12 @@ const MarketTabs = ({
     };
 
     const handleTabPress = (tab) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         if (controlledActiveTab === undefined) {
             setInternalActiveTab(tab);
         }
         onCategoryChange && onCategoryChange(tab);
     };
-
-    // ⛔ Prevent render until exchange is resolved
-    if (!isReady || !exchange) return null;
 
     return (
         <View style={styles.wrapper}>
@@ -128,7 +128,7 @@ const MarketTabs = ({
 const styles = StyleSheet.create({
     wrapper: {
         position: "relative",
-        marginBottom: 10,
+        marginBottom: 4,
     },
     container: {
         flexDirection: 'row',
@@ -140,19 +140,19 @@ const styles = StyleSheet.create({
         shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.08,
-        shadowRadius: 2,
+        shadowRadius: 3,
     },
     bottomShadow: {
         position: "absolute",
         left: 0,
         right: 0,
         bottom: -5,
-        height: 1,
+        height: 3,
         zIndex: 1,
     },
     toggleContainer: {
         flexDirection: 'row',
-        backgroundColor: global.colors.surface,
+        backgroundColor: global.colors.primary,
         borderRadius: 20,
         padding: 2,
         marginRight: 16,
@@ -180,30 +180,32 @@ const styles = StyleSheet.create({
     },
     tabsScroll: {
         alignItems: 'center',
+        paddingHorizontal: 3,
+        paddingVertical: 6,
     },
     tabItem: {
         marginRight: 20,
         paddingVertical: 6,
     },
     activeTabItem: {
-        backgroundColor: global.colors.surface,
+        backgroundColor: global.colors.primary,
         borderRadius: 20,
         paddingVertical: 6,
         paddingHorizontal: 16,
-        elevation: 4,
-        shadowColor: global.colors.textPrimary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 1,
-        shadowRadius: 3,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
     },
     tabText: {
-        fontSize: 14,
+        fontSize: 12,
         color: global.colors.textSecondary,
         fontWeight: '500',
     },
     activeTabText: {
         color: global.colors.textPrimary,
-        fontWeight: '700',
+        fontWeight: '500',
     },
 });
 

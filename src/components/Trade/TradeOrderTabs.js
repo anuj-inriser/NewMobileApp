@@ -21,11 +21,10 @@ import BottomTabBar from "../BottomTabBar";
 const API = `${apiUrl}/api/wishlistcontrol`;
 
 const orderTabs = [
-  { id: 1, name: "Chart" },
+  { id: 1, name: "Holdings" },
   { id: 2, name: "Orders" },
   { id: 3, name: "Positions" },
-  { id: 4, name: "Holdings" },
-  { id: 5, name: "PlaceOrder" },
+  { id: 4, name: "Account" },
 ];
 
 const TradeOrderTabs = ({ onTabChange, activeTab }) => {
@@ -70,7 +69,6 @@ const TradeOrderTabs = ({ onTabChange, activeTab }) => {
               </TouchableOpacity>
             ))}
           </View>
-
         </ScrollView>
         {/* <TouchableOpacity onPress={() => setShowPopup(true)}>
           <Entypo
@@ -81,7 +79,6 @@ const TradeOrderTabs = ({ onTabChange, activeTab }) => {
           />
         </TouchableOpacity> */}
       </View>
-
     </>
   );
 };
@@ -98,7 +95,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 5,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
   },
   pageBtn: {
     backgroundColor: global.colors.background,

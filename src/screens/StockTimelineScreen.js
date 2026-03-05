@@ -324,18 +324,17 @@ const StockTimelineScreen = () => {
       <SafeAreaView style={styles.container}>
         <View>{/* <TopHeader /> */}</View>
 
-        <GlobalTopMenu
+        {/* <GlobalTopMenu
           tabs={[
             { id: "Timeline", name: "Timeline" },
             { id: "Sequence", name: "Scanner" },
-            { id: "Learning", name: "Learning" },
           ]}
           activeTab={{ id: topTab }}
           onTabChange={(tab) => setTopTab(tab.id)}
           showFilter={false}
-          hideShadow={topTab === "Learning" || topTab === "Sequence"}
+          hideShadow={topTab === "Sequence"}
           onLayout={(e) => setTabMenuHeight(e.nativeEvent.layout.height)}
-        />
+        /> */}
 
         {/* 🔥 MAIN CONTENT AREA */}
         <View 
@@ -544,8 +543,6 @@ const StockTimelineScreen = () => {
                 }}
               />
             )
-          ) : topTab === "Learning" ? (
-            <Learning isEmbedded={true} />
           ) : topTab === "News" ? (
             <View
               style={{

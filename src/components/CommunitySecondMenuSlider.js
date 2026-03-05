@@ -6,7 +6,7 @@ const CommunitySecondMenuSlider = ({ activeFilter, onTabChange }) => {
     const tabs = [
         { id: "Timeline", name: "Timeline" },
         { id: "Sequence", name: "Scanner" },
-        { id: "Learning", name: "Learning" },
+        // { id: "Learning", name: "Learning" },
         // { id: "Watchlist", name: "Watchlist" },
     ];
 
@@ -52,20 +52,30 @@ const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: global.colors.background,
         borderRadius: 40,
-        paddingVertical: 4,
+        paddingVertical: 7,
         paddingHorizontal: 16,
         marginRight: 8,
-        elevation: 2,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
     },
 
     tabText: {
         color: global.colors.secondary,
         fontSize: 12,
+        fontFamily: "Poppins-Medium",
         fontWeight: "500",
     },
 
     activeTab: {
         backgroundColor: global.colors.secondary,
+        elevation: 7,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
     },
 
     activeTabText: {

@@ -109,10 +109,8 @@ export default function LoginScreen({ navigation }) {
 
     try {
       const fcmToken = await getPushToken();
-      const deviceId = Device.osBuildId ||
-        Device.modelId ||
-        Device.deviceName ||
-        "Unknown"
+      const deviceId =
+        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
       const ipAddress = await getIpAddress();
       const response = await axiosInstance.post(`/check-user/login`, {
         phone,
@@ -127,14 +125,15 @@ export default function LoginScreen({ navigation }) {
 
       if (result.status && result.data?.userId) {
         ChartPrefetchService.prefetchWatchlist();
-        const { userId, name, email, phone, userimage, token, permission } = result.data;
+        const { userId, name, email, phone, userimage, token, permission } =
+          result.data;
         console.log("Test1234567890", result.data);
         await setAuthData({
           userId: String(userId),
           userData: { name, email, phone, userimage },
           token,
           fcmToken,
-          role:permission
+          role: permission,
         });
 
         const res = await axiosInstance.get(`/me/permissions`);
@@ -143,7 +142,7 @@ export default function LoginScreen({ navigation }) {
           await setAuthData({ permissions: [] });
         } else {
           await setAuthData({
-            permissions: res?.data?.permissions ?? []
+            permissions: res?.data?.permissions ?? [],
           });
         }
 
@@ -185,10 +184,11 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.prefix}>+91</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter Phone No."
+            placeholder="Phone Number"
             keyboardType="phone-pad"
             maxLength={10}
             value={phone}
+            placeholderTextColor={global.colors.textSecondary}
             editable={screenState !== "password"}
             onChangeText={(t) => {
               setPhone(t);
@@ -233,6 +233,9 @@ export default function LoginScreen({ navigation }) {
         )}
 
         <View style={styles.tncRow}>
+          <Text style={styles.tncText}>
+            I accept the <Text style={styles.tncLink}>T&Cs</Text>
+          </Text>
           <TouchableOpacity
             activeOpacity={0.8}
             onPressIn={(e) => e.stopPropagation()}
@@ -247,20 +250,16 @@ export default function LoginScreen({ navigation }) {
             ]}
           >
             {acceptedTnc && (
-              <Ionicons name="checkmark" size={14} color={global.colors.background} />
+              <Ionicons
+                name="checkmark"
+                size={14}
+                color={global.colors.background}
+              />
             )}
           </TouchableOpacity>
-
-
-          <Text style={styles.tncText}>
-            I accept the <Text style={styles.tncLink}>T&Cs</Text>
-          </Text>
         </View>
 
-        {!!tncError && (
-          <Text style={styles.errorText1}>{tncError}</Text>
-        )}
-
+        {!!tncError && <Text style={styles.errorText1}>{tncError}</Text>}
 
         <View style={styles.topBar}>
           <TouchableOpacity
@@ -275,9 +274,7 @@ export default function LoginScreen({ navigation }) {
             onPress={handleSubmit}
             disabled={loading}
           >
-            <Text style={styles.nextText}>
-              {isInitial ? "Next" : "Login"}
-            </Text>
+            <Text style={styles.nextText}>{isInitial ? "Next" : "Login"}</Text>
           </TouchableOpacity>
         </View>
 
@@ -288,12 +285,9 @@ export default function LoginScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.disclaimer}>
+        {/* <Text style={styles.disclaimer}>
           Disclaimer: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-        </Text>
-
-
-
+        </Text> */}
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -319,10 +313,12 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   title: {
+
     fontSize: 20,
     fontWeight: "700",
     color: global.colors.secondary,
     marginVertical: 10,
+
   },
   inputContainer: {
     flexDirection: "row",
@@ -372,14 +368,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 25,
   },
-  backText: { fontSize: 16, fontWeight: "600", color: global.colors.secondary, },
+  backText: { fontSize: 16, fontWeight: "600", color: global.colors.secondary },
   nextBtn: {
     backgroundColor: global.colors.secondary,
     borderRadius: 25,
     paddingVertical: 10,
     paddingHorizontal: 25,
   },
-  nextText: { color: global.colors.background, fontWeight: "600", fontSize: 16 },
+  nextText: {
+    color: global.colors.background,
+    fontWeight: "600",
+    fontSize: 16,
+  },
   signupRow: {
     flexDirection: "row",
     marginTop: 15,
@@ -392,7 +392,12 @@ const styles = StyleSheet.create({
     marginTop: 25,
     textAlign: "center",
   },
-  tnc: { fontSize: 13, marginTop: 8, color: global.colors.textPrimary, fontWeight: "600" },
+  tnc: {
+    fontSize: 13,
+    marginTop: 8,
+    color: global.colors.textPrimary,
+    fontWeight: "600",
+  },
   topBar: {
     width: "100%",
     flexDirection: "row",
@@ -410,8 +415,8 @@ const styles = StyleSheet.create({
   },
 
   checkbox: {
-    width: 17,
-    height: 17,
+    width: 20,
+    height: 20,
     borderWidth: 1.5,
     borderColor: global.colors.textSecondary,
     borderRadius: 4,
@@ -430,8 +435,8 @@ const styles = StyleSheet.create({
   },
 
   tncText: {
-    fontSize: 13,
     color: "#000",
+    marginRight: 3,
   },
 
   tncLink: {

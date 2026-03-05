@@ -106,7 +106,7 @@ const IndicesListScreen = ({ route, navigation }) => {
             <TopHeader />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={ global.colors.secondary} />
+                    {/* <Ionicons name="arrow-back" size={24} color={ global.colors.secondary} /> */}
                 </TouchableOpacity>
                 <Text style={styles.title}>
                     {type === 'sector' ? 'Sectors' : 'Indices'} ({exchange})

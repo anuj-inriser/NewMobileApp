@@ -14,7 +14,7 @@ export const useRealtimePrices = () => {
       const data = msg.data;
       if (!data) return;
 
-      const { symbol, value: price, close: prevClose, open } = data;
+      const { symbol, value: price, close: prevClose, open, timestamp, exchange_timestamp } = data;
       if (!symbol || price == null) return;
 
       const prev = bufferRef.current[symbol] || latestPrices[symbol];
@@ -25,6 +25,8 @@ export const useRealtimePrices = () => {
         prevClose: base,
         change: price - base,
         changePercent: base ? ((price - base) / base) * 100 : 0,
+        timestamp: exchange_timestamp || timestamp,
+        exchange_timestamp: exchange_timestamp || timestamp,
         __ui_ts: Date.now(), // for flash
       };
       bufferRef.current[symbol] = newPriceData;

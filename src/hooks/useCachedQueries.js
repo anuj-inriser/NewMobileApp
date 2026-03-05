@@ -30,7 +30,7 @@ const getAuthHeaders = async (authToken) => {
 //     });
 // };
 
-export const useNews = () => {
+export const useNews = (categoryId) => {
     const {
         data: news = [],
         isLoading,
@@ -38,9 +38,11 @@ export const useNews = () => {
         error,
         refetch
     } = useQuery({
-        queryKey: ['news'],
+        queryKey: ['news', categoryId],
         queryFn: async () => {
-            const res = await axiosInstance.get("/newsfeed/published");
+            const params = {};
+            if (categoryId) params.news_category = categoryId;
+            const res = await axiosInstance.get("/newsfeed/published", { params });
             return res.data?.data || [];
         },
         staleTime: 5 * 60 * 1000,
@@ -53,6 +55,17 @@ export const useNews = () => {
         error: error?.message || null,
         refetch
     };
+};
+
+export const useNewsCategories = () => {
+    return useQuery({
+        queryKey: ['newsCategories'],
+        queryFn: async () => {
+            const res = await axiosInstance.get("/newsfeed/categories");
+            return res.data?.categories || [];
+        },
+        staleTime: 60 * 1 * 1000, // 1 minutes
+    });
 };
 
 

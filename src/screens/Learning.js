@@ -4,11 +4,11 @@ import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/nativ
 import LearningCard from '../components/LearningCard'; // relative import
 import learning_image from "../../assets/learning_image.jpg"
 import TopHeader from "../components/TopHeader";
-// import TopMenuSlider from "../components/TopMenuSlider";
+import TopMenuSlider from "../components/TopMenuSlider";
 import GlobalTopMenu from '../components/GlobalTopMenu';
 import { SafeAreaView } from "react-native-safe-area-context";
 // import BottomTabBar from '../components/BottomTabBar';
-import TopFundamentalSlider from '../components/TopFundamentalSlider';
+// import TopFundamentalSlider from '../components/TopFundamentalSlider';
 import axiosInstance from "../api/axios";
 import { apiUrl } from '../utils/apiUrl';
 
@@ -79,29 +79,11 @@ const Learning = ({ isEmbedded = false }) => {
 
     return (
         <>
-            <SafeAreaView edges={["bottom"]} style={styles.container}>
-                {!isEmbedded && <TopHeader />}
+            <SafeAreaView
+                edges={["bottom"]}
+                style={{ flex: 1, backgroundColor: global.colors.background }}>
+                <TopMenuSlider  currentRoute={"Learning"}/>
                 <View style={{ marginBottom: 10 }}>
-                    {/* <TopMenuSlider /> */}
-                    {!isEmbedded && (
-                        <GlobalTopMenu
-                            tabs={[
-                                { id: "Timeline", name: "Timeline" },
-                                { id: "Sequence", name: "Scanner" },
-                                { id: "Learning", name: "Learning" },
-                                { id: "Watchlist", name: "Watchlist" },
-                            ]}
-                            activeTab={{ id: "Learning" }}
-                            onTabChange={(tab) => {
-                                if (tab.id === "Learning") return;
-                                navigation.navigate("StockTimelineScreen", { screen: tab.id });
-                            }}
-                            showFilter={false}
-                            hideShadow={true}
-                        />
-                    )}
-
-
                     {/* Category Menu (Fundamental, Technical, etc.) */}
                     <GlobalTopMenu
                         tabs={categories}

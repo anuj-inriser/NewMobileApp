@@ -6,7 +6,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
@@ -14,66 +15,65 @@ import { useQuery } from "@tanstack/react-query";
 import { apiUrl } from "../utils/apiUrl";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import axiosInstance from "../api/axios";
+import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
+// import { UseSparkline } from "../hooks/useIntervalData";
+
+import SparklineChart from "./Sparkline";
+
 
 // ✅ Vertical Card with Swipe Gesture
-const IndexVerticalCard = ({ index, onPress, onSwipeRight }) => {
+const IndexVerticalCard = ({ index, onPress }) => {
   const isPositive = index.change >= 0;
   const color = isPositive ? global.colors.success : global.colors.error;
 
-  const displayChange =
-    typeof index.change === "number"
-      ? Math.abs(index.change).toFixed(2)
-      : "0.00";
+  // const isMarketStillOpen = isMarketOpen();
+  // const timeColor = isMarketStillOpen ? global.colors.textSecondary : "#ef4444"; // Red if closed
 
-  const displayPercent =
-    typeof index.changePercent === "number"
-      ? Math.abs(index.changePercent).toFixed(2)
-      : "0.00";
-
-  // Right swipe action - "View Chart"
-  const renderRightActions = () => (
-    <View style={styles.rightAction}>
-      <Ionicons name="bar-chart-outline" size={24} color={global.colors.background} />
-      <Text style={styles.actionText}>Chart</Text>
-    </View>
-  );
+  const timeStr = index.timestamp
+    ? new Date(index.timestamp).toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }).toLowerCase()
+    : "04:14:59 pm";
 
   return (
-    <Swipeable
-      renderRightActions={renderRightActions}
-      onSwipeableRightOpen={() => onSwipeRight && onSwipeRight(index)}
-      overshootRight={false}
+    <TouchableOpacity
+      style={styles.simpleIndexItem}
+      onPress={() => onPress && onPress(index)}
     >
-      <TouchableOpacity
-        style={styles.verticalCard}
-        onPress={() => onPress && onPress(index)}
-      >
-        <View style={styles.verticalCardLeft}>
-          <Text style={styles.companyName}>{index.symbol}</Text>
-          <Text
-            style={[styles.verticalSymbol, { color: global.colors.textSecondary, fontSize: 11 }]}
-          >{`${index.name}`}</Text>
+      <View style={styles.infoContainer}>
+        <Text style={styles.indexName}>{index.name || index.symbol}</Text>
+        <View style={styles.symbolTimeRow}>
+          <Text style={styles.indexSymbol}>{index.symbol}</Text>
+          {/* <Text style={[styles.indexTime, { color: global.colors.textSecondary }]}>{timeStr}</Text> */}
         </View>
-
-        <View style={styles.verticalCardRight}>
-          <Text style={[styles.verticalPrice]}>
-            ₹
-            {index.value.toLocaleString("en-IN", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </Text>
-          <Text style={[styles.verticalChange, { color }]}>
-            ₹{displayChange} ({displayPercent}%)
-          </Text>
-        </View>
-      </TouchableOpacity>
-    </Swipeable>
+      </View>
+      <SparklineChart symbol={index.symbol} color={color} />
+      <View style={styles.priceContainer}>
+        <Text style={styles.price}>
+          ₹{Number(index.value || 0).toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </Text>
+        <Text style={[styles.change, { color }]}>
+          {isPositive ? "+" : ""}{index.change?.toFixed(2)} ({isPositive ? "+" : ""}{index.changePercent?.toFixed(2)}%)
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 };
 
 // ✅ Main Component — Vertical Only
-const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart, refreshing, onRefresh }) => {
+const Indices = ({
+  exchange = "NSE",
+  externalData,
+  onIndexPress,
+  refreshing,
+  onRefresh,
+}) => {
   const { prices: realtimePrices } = useRealtimePrices();
 
   // ✅ Fetch from API (if no externalData)
@@ -84,15 +84,10 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart,
   } = useQuery({
     queryKey: ["indicesList", exchange],
     queryFn: async () => {
-      const url =
-        exchange === "BSE"
-          ? `/indicesNew/bse`
-          : `/indicesNew/nse`;
+      const url = exchange === "BSE" ? `/indicesNew/bse` : `/indicesNew/nse`;
 
       const response = await axiosInstance.get(url);
-      return Array.isArray(response.data?.data)
-        ? response.data.data
-        : [];
+      return Array.isArray(response.data?.data) ? response.data.data : [];
     },
     enabled: !externalData?.length,
     staleTime: 5 * 60 * 1000, // 5 mins
@@ -115,7 +110,7 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart,
         prevClose,
         change,
         changePercent,
-        timestamp: item.timestamp || new Date().toISOString(),
+        timestamp: item.timestamp || item.exchange_timestamp,
       };
     });
   }, [externalData]);
@@ -134,9 +129,9 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart,
 
     if (indicesSource) {
       if (exchange === "NSE")
-        NSE_SYMBOLS.push(...indicesSource.map(item => item.name));
+        NSE_SYMBOLS.push(...indicesSource.map((item) => item.name));
       else if (exchange === "BSE")
-        BSE_SYMBOLS.push(...indicesSource.map(item => item.name));
+        BSE_SYMBOLS.push(...indicesSource.map((item) => item.name));
     }
     const filtered = indicesSource.filter((index) => {
       const name = (index.name || index.symbol || "").toUpperCase();
@@ -164,7 +159,7 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart,
         value: rt.price,
         change,
         changePercent,
-        timestamp: rt.timestamp || new Date().toISOString(),
+        timestamp: rt.timestamp || rt.exchange_timestamp || index.timestamp || index.exchange_timestamp,
       };
     });
   }, [indicesSource, realtimePrices, exchange]);
@@ -183,12 +178,16 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart,
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color={global.colors.error} />
+        <Ionicons
+          name="alert-circle-outline"
+          size={48}
+          color={global.colors.error}
+        />
         <Text style={styles.errorText}>Failed to load indices</Text>
         <TouchableOpacity
           style={styles.retryButton}
           // onPress={() => window.location.reload()}
-          onPress={() => { }}
+          onPress={() => {}}
         >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
@@ -207,24 +206,25 @@ const Indices = ({ exchange = "NSE", externalData, onIndexPress, onSwipeToChart,
 
   // ✅ ONLY VERTICAL LIST — NO HORIZONTAL, NO GRID
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
+    <>
+    <FlatList
+      data={indicesWithRealtimeData}
+      keyExtractor={(item, i) => `${exchange}-${item.symbol}-${i}`}
+      renderItem={({ item }) => (
+        <IndexVerticalCard
+          index={item}
+          onPress={onIndexPress}
+          // onSwipeRight={onSwipeToChart}
         />
-      }>
-      <View style={styles.verticalList}>
-        {indicesWithRealtimeData.map((index, i) => (
-          <IndexVerticalCard
-            key={`${exchange}-${index.symbol}-${i}`}
-            index={index}
-            onPress={onIndexPress}
-            onSwipeRight={onSwipeToChart}
-          />
-        ))}
-      </View>
-    </ScrollView>
+      )}
+      style={styles.container}
+      contentContainerStyle={styles.verticalList}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    />
+    </>
   );
 };
 
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  verticalCard: {
+  simpleIndexItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -256,26 +256,39 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
-  verticalCardLeft: {
+  infoContainer: {
     flex: 1,
   },
-  verticalCardRight: {
+  indexName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: global.colors.textPrimary,
+  },
+  indexSymbol: {
+    fontSize: 11,
+    color: global.colors.textSecondary,
+  },
+  symbolTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  indexTime: {
+    fontSize: 11,
+    marginLeft: 8,
+  },
+  priceContainer: {
     alignItems: "flex-end",
   },
-  companyName: { fontSize: 14, fontWeight: "600" },
-  verticalSymbol: {
-    fontSize: 14,
-    color: global.colors.textPrimary,
-  },
-  verticalPrice: {
-    fontSize: 14,
+  price: {
+    fontSize: 15,
     fontWeight: "600",
     color: global.colors.textPrimary,
   },
-  verticalChange: {
-    fontSize: 11,
+  change: {
+    fontSize: 12,
     fontWeight: "600",
-    marginTop: 2,
+    marginTop: 4,
   },
 
   // Swipe Actions
@@ -349,7 +362,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     borderRadius: 14,
     backgroundColor: global.colors.primary,
-  }
+  },
 });
 
 export default Indices;

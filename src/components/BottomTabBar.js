@@ -14,7 +14,7 @@ const getActiveRouteName = (state) => {
   return route.name;
 };
 
-const BottomTabBar = ({ state, descriptors, navigation }) => {
+const BottomTabBar = ({ state, descriptors, navigation, forceShow = false }) => {
   const canViewCommunity = usePermission("VIEW_EXPLORE");
   const canViewTrade = usePermission("VIEW_TRADE");
   const canViewIdeas = usePermission("VIEW_IDEAS");
@@ -38,16 +38,22 @@ const BottomTabBar = ({ state, descriptors, navigation }) => {
     }
   }, [showUpgradeModal]);
 
-  const tabs = [
+  const tabs = React.useMemo(() => [
     { name: "Home", component: "Equity", isPermission: true, icon: require("../../assets/homemenu.png") },
-    { name: "News", component: "NewsScreen", isPermission: canViewNews, icon: require("../../assets/portfoliomenu.png") },
-    { name: "Explore", component: "StockTimelineScreen", isPermission: canViewCommunity, icon: require("../../assets/communitymenu.png") },
+    { name: "News", component: "NewsScreen", isPermission: canViewNews, icon: require("../../assets/newsmennu.png") },
+    { name: "Explore", component: "StockTimelineScreen", isPermission: canViewCommunity, icon: require("../../assets/exploremenu.png") },
     { name: "Ideas", component: "Trade", isPermission: canViewIdeas, icon: require("../../assets/ideasmenu.png"), isRootNav: false },
-    { name: "Trade", component: "AdvancedChart", isPermission: canViewTrade, icon: require("../../assets/trademenu.png"), isRootNav: true },
-  ];
+    { name: "Portfolio", component: "AdvancedChart", isPermission: canViewTrade, icon: require("../../assets/trademenu.png"), isRootNav: true },
+  ], [canViewNews, canViewCommunity, canViewIdeas, canViewTrade]);
 
   if (!state || !state.routes || typeof state.index !== 'number') {
     return null; // or empty view
+  }
+
+  // Hide bottom bar when on Trade tab (AdvancedChart screen)
+  const currentRoute = state.routes[state.index];
+  if (currentRoute.name === 'AdvancedChart' && !forceShow) {
+    return null;
   }
 
   return (
@@ -157,8 +163,8 @@ const styles = StyleSheet.create({
     backgroundColor: global.colors.background,
   },
 
-  tabItem: { alignItems: "center" },
-  iconWrapper: { position: "relative", justifyContent: "center", alignItems: "center" },
+  tabItem: { alignItems: "center", flex: 1 },
+  iconWrapper: { position: "relative", justifyContent: "center", alignItems: "center", height: 32, },
 
   iconImg: { width: 22, height: 22 },
   label: { fontSize: 12, marginTop: 3, fontWeight: "500" },
@@ -178,7 +184,7 @@ const styles = StyleSheet.create({
   badgeText: { color: global.colors.background, fontSize: 10, fontWeight: "700" },
 
   activeBackground: {
-    backgroundColor: global.colors.surface,
+    backgroundColor: global.colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,

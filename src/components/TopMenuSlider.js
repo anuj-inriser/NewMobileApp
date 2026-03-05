@@ -1,9 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Text, StyleSheet, View, ScrollView, TouchableOpacity, Modal, Pressable, Animated, Image } from "react-native";
+import { Text, StyleSheet, View, ScrollView, TouchableOpacity, Modal, Pressable, Animated, Image, Platform, UIManager, LayoutAnimation } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons"; // for the arrow icon
+import { useState, useRef, useEffect } from "react";
+
+if (
+    Platform.OS === 'android' &&
+    UIManager.setLayoutAnimationEnabledExperimental
+) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import Octicons from '@expo/vector-icons/Octicons';
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute, useNavigationState } from "@react-navigation/native";
 import { usePermission } from "../hooks/usePermission";
 
 
@@ -33,10 +40,19 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
     }, [showUpgradeModal]);
 
 
-    const currentRoute = propCurrentRoute || route.name;
+    // Automatically detect the active route from the navigation state for highlighting
+    const currentActiveRoute = useNavigationState(state => {
+        if (!state) return null;
+        let r = state.routes[state.index];
+        while (r && r.state) {
+            r = r.state.routes[r.state.index];
+        }
+        return r?.name;
+    });
+
+    const currentRoute = propCurrentRoute || currentActiveRoute || route.name;
     // Function to determine if a tab is active
     const isActiveTab = (tabName) => {
-
         if (!currentRoute) {
             return false; // Return false if curr
         }
@@ -45,44 +61,41 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
             'Equity': 'Equity',
             'EquityHome': 'Equity',
             'TradeOrderList': 'Watchlists',
-            // 'TradeOrder': 'Watchlists',
             'Learning': 'Learning',
             'LearningDetail': 'Learning',
             'ChapterScreen': 'Learning',
             'ChapterDetails': 'Learning',
             'NewsScreen': 'NewsScreen',
             'OrdersScreen': 'OrdersScreen',
-            'TradeScreen': 'TradeScreen',
-            // 'Stocks': 'Stocks',
+            'Trade': 'TradeScreen',
         };
-
         return routeToTabMap[currentRoute] === tabName;
     };
 
     // Function to handle tab press
     const handleTabPress = (tabName) => {
-
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         switch (tabName) {
             case 'Equity':
                 if (!canViewEquity) {
                     setShowUpgradeModal(true)
                     return;
                 }
-                navigation.navigate('Equity');
+                navigation.navigate('MainTabs', { screen: 'Equity' });
                 break;
             case 'Watchlists':
                 if (!canViewWatchlist) {
                     setShowUpgradeModal(true)
                     return;
                 }
-                navigation.navigate('TradeOrderList');
+                navigation.navigate('MainTabs', { screen: 'TradeOrderList' });
                 break;
             case 'Learning':
                 if (!canViewLearning) {
                     setShowUpgradeModal(true)
                     return;
                 }
-                navigation.navigate('App', {
+                navigation.navigate('MainTabs', {
                     screen: 'Learning'
                 });
                 break;
@@ -158,36 +171,35 @@ const TopMenuSlider = ({ currentRoute: propCurrentRoute }) => {
                     <TouchableOpacity
                         style={[
                             styles.tabWhite,
-                            isActiveTab('Watchlists') && styles.tabButtonActive
+                            isActiveTab('Watchlists') && styles.activeTab
                         ]}
                         onPress={() => handleTabPress('Watchlists')}
                     >
                         <Text
                             style={[
-                                styles.tabButtonText,
-                                isActiveTab('Watchlists') && styles.tabButtonTextActive
+                                styles.tabTextDark,
+                                isActiveTab('Watchlists') && styles.activeTabText
                             ]}
                         >
                             Watchlists
                         </Text>
+                    </TouchableOpacity>
 
-                        {/* Full-height divider */}
-                        {/* <View
+                    <TouchableOpacity
                         style={[
-                            styles.divider,
-                            {
-                                backgroundColor: isActiveTab('Watchlists')
-                                    ? "#fff"
-                                    : "rgba(33,15,71,0.25)"
-                            }
+                            styles.tabWhite,
+                            isActiveTab('Learning') && styles.activeTab
                         ]}
-                    /> */}
-
-                        {/* <Octicons
-                        name="triangle-right"
-                        size={15}
-                        color={isActiveTab('Watchlists') ? "#fff" : "#210F47"}
-                    /> */}
+                        onPress={() => handleTabPress('Learning')}
+                    >
+                        <Text
+                            style={[
+                                styles.tabTextDark,
+                                isActiveTab('Learning') && styles.activeTabText
+                            ]}
+                        >
+                            Learning
+                        </Text>
                     </TouchableOpacity>
                 </ScrollView>
             </SafeAreaView>
@@ -237,17 +249,20 @@ const styles = StyleSheet.create({
     },
     activeTab: {
         backgroundColor: global.colors.secondary,
-        shadowColor: global.colors.secondary,
-        shadowOpacity: 0.3,
+        elevation: 7,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
     },
     activeTabText: {
         color: global.colors.background,
-        fontWeight: '700',
+        fontWeight: '500',
     },
     scrollContainer: {
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
         paddingVertical: 6,
     },
     tabWhite: {
@@ -258,11 +273,11 @@ const styles = StyleSheet.create({
         paddingVertical: 7,
         paddingHorizontal: 16,
         marginRight: 8,
-        shadowColor: global.colors.textPrimary,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.15,
-        shadowRadius: 1.5,
-        elevation: 2,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
     },
     tabTextDark: {
         color: global.colors.secondary,
@@ -285,11 +300,11 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
         borderRadius: 40,
         marginRight: 8,
-        shadowColor: global.colors.textPrimary,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.15,
-        shadowRadius: 1.5,
-        elevation: 2,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
     },
     tabButtonActive: {
         backgroundColor: global.colors.secondary, // purple when active

@@ -20,6 +20,7 @@ import { playNotificationSound } from "./src/utils/soundPlayer";
 import { AuthProvider } from "./src/context/AuthContext";
 import { WatchlistProvider } from "./src/context/WatchlistContext";
 import { AppQueryProvider } from "./src/context/QueryClientProvider";
+import { DrawerProvider } from "./src/context/DrawerContext";
 import { connectMarketWS, onMarketMessage } from "./src/ws/marketWs";
 import { applyPriceMessage } from "./src/store/marketPrices";
 import { useAuth } from "./src/context/AuthContext";
@@ -51,6 +52,7 @@ import ChapterDetails from "./src/screens/ChapterDetails";
 import AdvancedChartScreen from "./src/screens/AdvancedChartScreen";
 import NotificationScreen from "./src/screens/NotificationScreen";
 import PermissionGuard from "./src/guards/PermissionGuard";
+import TradeOrderNativeScreen from "./src/screens/TradeOrderNativeScreen";
 
 const RootStack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
@@ -87,10 +89,11 @@ function MainTabNavigator() {
   return (
     <Tab.Navigator
       tabBar={(props) => <BottomTabBar {...props} />}
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
         // Standard tab configs
-        lazy: false, // Keep tabs mounted
+        lazy: true, // Keep tabs mounted
         unmountOnBlur: false, // Don't unmount on blur
       }}
     >
@@ -139,6 +142,14 @@ function MainTabNavigator() {
       </Tab.Screen>
       {/* AdvancedChart moved to RootStack for full-screen without header/footer */}
       <Tab.Screen name="AdvancedChart" component={AdvancedChartScreen} />
+      <Tab.Screen name="NotificationScreen" component={NotificationScreen} />
+      <Tab.Screen name="Learning">
+        {() => (
+          <PermissionGuard permission="VIEW_LEARNING">
+            <Learning />
+          </PermissionGuard>
+        )}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }
@@ -155,6 +166,14 @@ function RootNavigator() {
         <>
           <RootStack.Screen name="App" component={AppNavigator} />
           <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
+          <RootStack.Screen 
+            name="TradeOrderNative" 
+            component={TradeOrderNativeScreen} 
+            options={{ 
+              animation: "slide_from_bottom",
+              gestureEnabled: true,
+            }}
+          />
         </>
       ) : (
         <RootStack.Screen name="Auth" component={AuthNavigator} />
@@ -182,21 +201,11 @@ function AppNavigator() {
 
         <AppStack.Screen name="IndicesList" component={IndicesListScreen} />
         <AppStack.Screen name="IndicesDetail" component={IndicesDetailScreen} />
-        <AppStack.Screen name="Learning">
-          {() => (
-            <PermissionGuard permission="VIEW_LEARNING">
-              <Learning />
-            </PermissionGuard>
-          )}
-        </AppStack.Screen>
         <AppStack.Screen name="LearningDetail" component={LearningDetail} />
         <AppStack.Screen name="ChapterScreen" component={ChapterScreen} />
         <AppStack.Screen name="ChapterDetails" component={ChapterDetails} />
 
-        <AppStack.Screen
-          name="NotificationScreen"
-          component={NotificationScreen}
-        />
+
       </AppStack.Navigator>
     </MainLayout>
   );
@@ -332,23 +341,16 @@ export default function App() {
       <SafeAreaProvider>
         <AppQueryProvider>
           <AuthProvider>
-            <WatchlistProvider>
-              {/* <NavigationContainer>
-                <RootStack.Navigator screenOptions={{ headerShown: false }}>
-                  <RootStack.Screen name="Auth" component={AuthNavigator} />
-                  <RootStack.Screen name="App" component={AppNavigator} />
-                  <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
-                  <RootStack.Screen name="AdvancedChart" component={AdvancedChartScreen} />
-                </RootStack.Navigator>
-              </NavigationContainer> */}
-              <AlertProvider>
-                <NavigationContainer>
-                  <RootNavigator />
-                </NavigationContainer>
-              </AlertProvider>
-            </WatchlistProvider>
+            <DrawerProvider>
+              <WatchlistProvider>
+                <AlertProvider>
+                  <NavigationContainer>
+                    <RootNavigator />
+                  </NavigationContainer>
+                </AlertProvider>
+              </WatchlistProvider>
+            </DrawerProvider>
           </AuthProvider>
-
         </AppQueryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

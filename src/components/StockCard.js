@@ -46,6 +46,7 @@ import SequencePost from './SequencePost';
 const { width } = Dimensions.get('window');
 import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { useAlert } from "../context/AlertContext";
+import { useDrawer } from "../context/DrawerContext";
 import { Asset } from 'expo-asset';
 import { useKeyboardAvoidingShift } from '../hooks/useKeyboardAvoidingShift';
 
@@ -56,6 +57,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   const translateY = useKeyboardAvoidingShift()
   const { userId } = useAuth();
   const { showSuccess, showError } = useAlert();
+  const { openStockInfoDrawer } = useDrawer();
   const [likeCount, setLikeCount] = useState(0);
   const [dislikeCount, setDislikeCount] = useState(0);
   const [reaction, setReaction] = useState(null); // 'like', 'dislike', null
@@ -466,7 +468,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
     try {
 
       // Prepare the caption
-      const shareMessage = `Check out ${stock.name} (${stock.symbol}) on Victory App! Current Price: ₹${currentPrice.toFixed(2)}\n\nhttps://victory.inriser.com/stock/${stock.symbol}`;
+      const shareMessage = `Check out ${stock.name} (${stock.symbol}) on Equitty App! Current Price: ₹${currentPrice.toFixed(2)}\n\nhttps://equitty.one/stock/${stock.symbol}`;
 
       const result = await Share.share({
         message: shareMessage,
@@ -600,7 +602,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
             {/* Overlay Maximize Icon */}
             <TouchableOpacity
               style={{ position: 'absolute', right: 10, bottom: 10 }}
-              onPress={() => navigation.navigate('AdvancedChart', { symbol: stock.symbol })}
+              onPress={() => openStockInfoDrawer(stock.symbol)}
             >
               <Maximize2 size={20} color={global.colors.textSecondary} />
             </TouchableOpacity>
@@ -660,20 +662,13 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
         <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
           <Share2 size={17} color={global.colors.textSecondary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Bookmark size={17} color={global.colors.textSecondary} />
-        </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => setWatchlistModalVisible(true)}>
-          <IndianRupee size={17} color={global.colors.textSecondary} />
+          <Bookmark size={17} color={global.colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}
           onPress={() =>
-            navigation.navigate("TradeOrder", {
-              symbol: stock.symbol,
-              token: stock.token || stock.id,
-              name: stock.name,
-              price: currentPrice,
-              internaltype: "Place",
+            openStockInfoDrawer(stock.symbol, "placeorder", {
+              name: stock.name
             })
           }
         >

@@ -5,6 +5,7 @@ import {
   Text,
   Animated,
   Dimensions,
+  TouchableOpacity,
   TouchableWithoutFeedback,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -12,6 +13,7 @@ import { WebView } from "react-native-webview";
 import { useNavigation } from "@react-navigation/native";
 import { apiUrl } from "../../utils/apiUrl";
 import TradeOrderFormNew from "../TradeOrderFormNew";
+import { X} from 'lucide-react-native';
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const COLLAPSED_HEIGHT = 40;
@@ -77,7 +79,7 @@ const PlaceOrderView = ({ symbol }) => {
 
   // Handle Focus/Blur to pause/resume chart if needed (or cleanup)
   useEffect(() => {
-    const unsubscribeBlur = navigation.addListener('blur', () => {
+    const unsubscribeBlur = navigation.addListener("blur", () => {
       // Screen lost focus - cleanup WebView or stop operations
       // Note: Since we are in a tab that might be hidden, we handle this carefully
       if (webViewRef.current) {
@@ -124,6 +126,15 @@ const PlaceOrderView = ({ symbol }) => {
     setIsExpanded(!isExpanded);
   };
 
+  const handleClose = () => {
+    Animated.timing(animation, {
+      toValue: COLLAPSED_HEIGHT,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+    setIsExpanded(false);
+  };
+
   return (
     <View style={styles.container}>
       {isReady && chartInterval && (
@@ -143,11 +154,23 @@ const PlaceOrderView = ({ symbol }) => {
       {/* Animated Bottom Sheet */}
       <Animated.View style={[styles.bottomSheet, { height: animation }]}>
         <TouchableWithoutFeedback onPress={toggleDrawer}>
-          <View style={styles.handleContainer}>
-            <View style={styles.handle} />
-            <Text style={styles.handleText}>
-              {isExpanded ? "Hide Trade" : "Trade Order"}
+          <View style={[styles.handleContainer, { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingRight: 15 }]}>
+            <Text
+              style={{
+                fontSize: 10,
+                color: global.colors.textSecondary,
+                fontWeight: "600",
+                textTransform: "uppercase",
+                paddingLeft: 10,
+              }}
+            >
+              Place Order
             </Text>
+            {isExpanded && (
+              <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+                <X size={20} color={global.colors.textPrimary} />
+              </TouchableOpacity>
+            )}
           </View>
         </TouchableWithoutFeedback>
 
@@ -174,6 +197,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "transparent",
   },
+  closeBtn: {
+    padding: 5,
+  },
   bottomSheet: {
     position: "absolute",
     bottom: 75,
@@ -192,22 +218,14 @@ const styles = StyleSheet.create({
   handleContainer: {
     height: COLLAPSED_HEIGHT,
     width: "100%",
-    backgroundColor: global.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: global.colors.border,
+    backgroundColor: global.colors.background,
     borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: global.colors.textSecondary,
-    borderRadius: 2,
-    marginBottom: 4,
+    paddingVertical: 10,
+
+    borderTopRightRadius: 50,
   },
   handleText: {
+    textAlign: "left",
     fontSize: 10,
     color: global.colors.textSecondary,
     fontWeight: "600",

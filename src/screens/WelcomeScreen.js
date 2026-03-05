@@ -22,17 +22,16 @@ export default function WelcomeScreen({ navigation }) {
 
 
                 {/* Text Section */}
-                <Text style={styles.title}>Hi there!</Text>
+                <Text style={styles.title}>EQUITTY</Text>
                 <Text style={styles.subtitle}>
-                    Welcome to <Text style={styles.bold}>1Trade</Text>, a partner to your
-                    financial journey.
+                   Welcome to Equitty, explore markets, check news, get alerts, manage portfolios and get guidance from registered advisors. All at one place.
                 </Text>
 
-                <Text style={styles.body}>
+                {/* <Text style={styles.body}>
                     We help you manage your finances and portfolios, you can also trade
                     through different brokers. We shall share relevant market updates
                     based on your preferences, all at one place.
-                </Text>
+                </Text> */}
 
                 {/* Buttons */}
                 <View style={styles.buttonContainer}>
@@ -62,7 +61,7 @@ const styles = StyleSheet.create({
     scroll: { padding: 24, alignItems: 'center' },
     image: { width: "100%", height: 220, marginTop: 90 },
     title: { fontSize: 24, fontWeight: '700', color: global.colors.secondary, marginTop: 20 },
-    subtitle: { fontSize: 16, textAlign: 'center', marginTop: 8, color: global.colors.textPrimary },
+    subtitle: { fontSize: 14, textAlign: 'center', marginTop: 8, color: global.colors.textPrimary },
     bold: { fontWeight: '700' },
     body: {
         fontSize: 14,

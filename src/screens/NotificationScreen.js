@@ -13,9 +13,9 @@ import { MaterialIcons } from "@expo/vector-icons";
 import axiosInstance from "../api/axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const UNDO_TIMEOUT = 5000;
+const UNDO_TIMEOUT = 2000;
 
-const NotificationScreen = () => {
+const NotificationScreen = ({ isInsideSlider, closeSlider }) => {
     const [notifications, setNotifications] = useState([]);
     const swipeableRefs = useRef({});
     const undoTimerRef = useRef(null);
@@ -191,24 +191,33 @@ const NotificationScreen = () => {
     );
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.container}>
-            {undoItem && (
-                <View style={styles.undoBar}>
-                    <Text style={styles.undoText}>
-                        {undoItem.script_name} removed
-                    </Text>
-                    <TouchableOpacity onPress={handleUndo}>
-                        <Text style={styles.undoAction}>UNDO</Text>
+        <SafeAreaView edges={["bottom"]} style={[styles.container, isInsideSlider && { paddingBottom: 0 }]}>
+            <View style={{ flex: 1 , justifyContent:"space-between"}}>
+                <Text style={styles.Slidertitle}>Notifications</Text>
+                {isInsideSlider && (
+                    <TouchableOpacity style={styles.closeSliderBtnRight} onPress={closeSlider}>
+                        <MaterialIcons name="close" size={28} color={global.colors.textPrimary} />
                     </TouchableOpacity>
-                </View>
-            )}
-            <FlatList
-                data={listData}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={renderItem}
-                showsVerticalScrollIndicator={false}
-                ListEmptyComponent={<EmptyNotifications />}
-            />
+                )}
+                {undoItem && (
+                    <View style={styles.undoBar}>
+                        <Text style={styles.undoText}>
+                            {undoItem.script_name} removed
+                        </Text>
+                        <TouchableOpacity onPress={handleUndo}>
+                            <Text style={styles.undoAction}>UNDO</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+                <FlatList
+                    data={listData}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={renderItem}
+                    showsVerticalScrollIndicator={false}
+                    ListEmptyComponent={<EmptyNotifications />}
+                    contentContainerStyle={isInsideSlider ? { paddingTop: 40 } : null}
+                />
+            </View>
         </SafeAreaView>
     );
 };
@@ -219,11 +228,11 @@ export default NotificationScreen;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: global.colors.background,
+        backgroundColor: global.colors.primary,
         paddingBottom: 55,
     },
     card: {
-        backgroundColor: global.colors.background,
+        backgroundColor: global.colors.surface,
         marginHorizontal: 12,
         marginVertical: 6,
         padding: 14,
@@ -274,4 +283,25 @@ const styles = StyleSheet.create({
     },
     undoText: { color: "#fff", fontSize: 13 },
     undoAction: { color: "#4CAF50", fontWeight: "700" },
+    closeSliderBtnRight: {
+        position: "absolute",
+        right: 6,
+        top: 5,
+        zIndex: 999,
+        padding: 8,
+    },
+    Slidertitle:{
+        position: "absolute",
+        left: 6,
+        top: 5,
+        zIndex: 999,
+        padding: 8,
+        fontSize: 18,
+        fontWeight: "500",
+
+        marginBottom: 20,
+        paddingHorizontal: 16,
+        color: global.colors.textPrimary,
+        textAlign: "left",
+    }
 });

@@ -72,7 +72,7 @@ const NseBseRadioBox = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "left",
   },
   option: {
     flexDirection: "row",

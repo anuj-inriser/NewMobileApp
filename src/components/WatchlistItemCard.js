@@ -9,9 +9,10 @@ import {
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useDrawer } from "../context/DrawerContext";
 
 
-const UNDO_TIMEOUT = 5000;
+const UNDO_TIMEOUT = 2000;
 
 const WatchlistItemCard = ({
   data = [],
@@ -25,6 +26,7 @@ const WatchlistItemCard = ({
   const swipeableRefs = useRef({});
   const undoTimerRef = useRef(null);
   const pendingDeleteIds = useRef(new Set());
+  const { openStockInfoDrawer } = useDrawer();
 
   const [listData, setListData] = useState([]);
   const [undoItem, setUndoItem] = useState(null);
@@ -103,8 +105,6 @@ const WatchlistItemCard = ({
       );
     };
 
-
-
     return (
       <Swipeable
         ref={(ref) => (swipeableRefs.current[symbol] = ref)}
@@ -119,12 +119,19 @@ const WatchlistItemCard = ({
         overshootLeft={false}
         overshootRight={false}
       >
-        <View style={styles.cardWrapper}>
+        <TouchableOpacity 
+          style={styles.cardWrapper} 
+          activeOpacity={0.9}
+          onPress={() => openStockInfoDrawer(symbol, null, {
+            name: item.name,
+            price: ltp
+          })}
+        >
           <LinearGradient
             colors={isUp ? [global.colors.surface, global.colors.success] : [global.colors.error, global.colors.error]}
             style={styles.gradientWave}
           />
-          <TouchableOpacity style={styles.card} activeOpacity={0.9}>
+          <View style={styles.card}>
             <View style={styles.infoContainer}>
               <Text style={styles.companyName} numberOfLines={1}>
                 {symbol}
@@ -133,7 +140,7 @@ const WatchlistItemCard = ({
             </View>
             <View style={styles.verticalCardRight}>
               <Text
-                style={[styles.verticalPrice, { color: isUp ? global.colors.success : global.colors.error }]}
+                style={[styles.verticalPrice, { color: "#000" }]}
               >
                 ₹ {ltp > 0 ? ltp.toFixed(2) : "--"}
               </Text>
@@ -144,8 +151,8 @@ const WatchlistItemCard = ({
               </Text>
 
             </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableOpacity>
       </Swipeable>
     );
   };
@@ -195,9 +202,13 @@ const styles = StyleSheet.create({
     backgroundColor: global.colors.background,
     padding: 12,
     borderRadius: 14,
-    elevation: 2,
     borderWidth: 1,
     borderColor: global.colors.border,
+    shadowColor: global.colors.textPrimary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   infoContainer: { flex: 1 },
   companyName: { fontSize: 14, fontWeight: "600", color: global.colors.textPrimary },

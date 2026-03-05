@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Modal, Image, AppState } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Modal, Image, AppState, FlatList } from 'react-native';
 // import TopHeader from "../components/TopHeader";
 import { SafeAreaView } from "react-native-safe-area-context";
 // import BottomTabBar from '../components/BottomTabBar';
@@ -27,7 +27,7 @@ const filterOptions = [
     "Pending"
 ];
 
-const PorfolioScreen = () => {
+const PortfolioScreen = () => {
     const route = useRoute();
     const [loading, setLoading] = useState(false);
     const [orders, setOrders] = useState([]);
@@ -44,6 +44,23 @@ const PorfolioScreen = () => {
         .map(o => o.tradingsymbol)
         .filter(Boolean);
     const { prices: realtimePrices } = useRealtimePrices();
+    
+    const getRealtimeData = (symbol) => {
+        if (!symbol) return null;
+        const symEq = symbol.endsWith("-EQ") ? symbol : `${symbol}-EQ`;
+        const symNoEq = symbol.replace("-EQ", "");
+        
+        return realtimePrices[symbol] || 
+               realtimePrices[`NSE:${symbol}`] || 
+               realtimePrices[`BSE:${symbol}`] ||
+               realtimePrices[symEq] ||
+               realtimePrices[`NSE:${symEq}`] ||
+               realtimePrices[`BSE:${symEq}`] ||
+               realtimePrices[symNoEq] ||
+               realtimePrices[`NSE:${symNoEq}`] ||
+               realtimePrices[`BSE:${symNoEq}`] ||
+               null;
+    };
 
     const applyBrokerFilter = (brokerId) => {
 
@@ -80,7 +97,7 @@ const PorfolioScreen = () => {
     const portfolioTotals = orders.reduce((acc, item) => {
         const qty = Number(item.realisedquantity) || 0;
 
-        const rt = realtimePrices[item.tradingsymbol];
+        const rt = getRealtimeData(item.tradingsymbol);
         const ltp = rt?.price ?? Number(item.ltp || 0);
         const prevClose = rt?.prevClose ?? Number(item.close || 0);
         const avg = Number(item.averageprice) || 0;
@@ -152,9 +169,19 @@ const PorfolioScreen = () => {
         const fetchOrders = async () => {
             try {
                 setLoading(true);
+                const userId = await AsyncStorage.getItem("userId");
+                const deviceId = await getDeviceId();
 
                 // Use getPortfolioBalance endpoint for portfolio data (same as EquityScreen)
-                const response = await fetch(`${apiUrl}/api/portfolio/getPortfolioBalance`);
+                const response = await fetch(`${apiUrl}/api/portfolio/getPortfolioBalance`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`,
+                        "Content-Type": "application/json",
+                        "userid": userId,
+                        "device_mac": deviceId
+                    }
+                });
 
                 const json = await response.json();
 
@@ -297,6 +324,7 @@ const PorfolioScreen = () => {
                             />
                             <Text style={styles.actionText}>Sort</Text>
                         </TouchableOpacity>
+                        
 
                         {/* FILTER BUTTON */}
                         {/* <TouchableOpacity style={styles.iconRow} onPress={() => setIsFilterOpen(true)}>
@@ -402,34 +430,28 @@ const PorfolioScreen = () => {
                         <Text style={styles.loaderText}>Loading...</Text>
                     </View>
                 ) : (
-                    <ScrollView style={{ marginTop: 10 }}>
-                        {orders.map((item, index) => {
-                            const rt = realtimePrices[item.tradingsymbol];
-
+                    <FlatList
+                        data={orders}
+                        keyExtractor={(item, index) => item.symboltoken + "-" + index}
+                        renderItem={({ item }) => {
+                            const rt = getRealtimeData(item.tradingsymbol);
                             const ltp = rt?.price ?? Number(item.ltp || 0);
                             const prevClose = rt?.prevClose ?? Number(item.close || 0);
 
                             return (
                                 <PortfolioCard
-                                    key={item.symboltoken + "-" + index}
                                     name={item.tradingsymbol}
-
                                     shares={Number(item.realisedquantity || 0)}
-
                                     invested={Number(
                                         Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
                                     )}
-
                                     price={Number(
                                         Number(item.averageprice || 0).toFixed(2)
                                     )}
-
                                     currentValue={Number(
                                         Number(ltp || 0).toFixed(2)
                                     )}
-
                                     profit={(Number(ltp).toFixed(2) * item.realisedquantity).toFixed(2)}
-
                                     profitPercent={Number(
                                         (
                                             (Number(ltp || 0) * Number(item.realisedquantity || 0)) -
@@ -437,12 +459,10 @@ const PorfolioScreen = () => {
                                         ) /
                                         (Number(item.averageprice || 0) * Number(item.realisedquantity || 0)) * 100
                                     ).toFixed(2)}
-
                                     today={(
                                         (Number(ltp || 0) - Number(prevClose || 0)) *
                                         Number(item.realisedquantity || 0)
                                     )}
-
                                     todayPercent={(((
                                         (Number(ltp || 0) - Number(prevClose || 0)) *
                                         Number(item.realisedquantity || 0)
@@ -451,9 +471,10 @@ const PorfolioScreen = () => {
                                     )) * 100).toFixed(2)}
                                 />
                             );
-                        })}
-
-                    </ScrollView>
+                        }}
+                        style={{ marginTop: 10 }}
+                        showsVerticalScrollIndicator={false}
+                    />
                 )}
             </SafeAreaView>
             {/* <BottomTabBar /> */}
@@ -461,7 +482,7 @@ const PorfolioScreen = () => {
     );
 };
 
-export default PorfolioScreen;
+export default PortfolioScreen;
 
 const styles = StyleSheet.create({
     loaderBox: {
@@ -506,20 +527,24 @@ const styles = StyleSheet.create({
     },
 
     row: {
-        flexDirection: "row",
-        alignItems: "center",
+           flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     },
 
     iconRow: {
         flexDirection: "row",
-        alignItems: "center",
-        marginLeft: 18,
+    alignItems: "center",
+    marginLeft: 18,
     },
 
     actionText: {
-        marginLeft: 4,
-        fontSize: 13,
-        color: global.colors.textPrimary,
+        marginLeft: 6,
+    fontSize: 13,
+    color: "#000",
+    fontWeight: "600",
     },
 
     overlay: {

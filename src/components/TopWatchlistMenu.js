@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useAlert } from "../context/AlertContext";
+import { LinearGradient } from 'expo-linear-gradient';
 import TextInput from "../components/TextInput";
 import { Entypo, Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,7 +19,6 @@ import axios from "axios";
 import axiosInstance from "../api/axios";
 import { apiUrl } from "../utils/apiUrl";
 import { useKeyboardAvoidingShift } from "../hooks/useKeyboardAvoidingShift";
-import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from "@tanstack/react-query";
 const API = `${apiUrl}/api/wishlistcontrol`;
 
@@ -35,7 +35,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
   const [userId, setUserId] = useState(null);
   const [editIndex, setEditIndex] = useState(null);
   const [deleteIndex, setDeleteIndex] = useState(null);
-  const [showContent, setShowContent] = useState(false);
+  const [showContent, setShowContent] = useState(true);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const deleteScale = useRef(new Animated.Value(0.5)).current;
 const loadShowState = async (uid) => {
@@ -125,7 +125,6 @@ const loadShowState = async (uid) => {
     } catch (err) {
       setLists([]);
     }
-    setLoading(false);
   };
 
   const handleSave = async () => {
@@ -223,7 +222,7 @@ const loadShowState = async (uid) => {
                   key={index}
                   style={[
                     styles.pageBtn,
-                    { marginHorizontal: showContent ? 4 : 16 },
+                    { marginRight: 20 },
                     active === index + 1 && styles.activePage,
                   ]}
                   onPress={() => setActive(index + 1)}
@@ -420,34 +419,38 @@ const loadShowState = async (uid) => {
 const styles = StyleSheet.create({
   wrapper: {
     position: "relative",
-    marginBottom: 10,
+    marginBottom: 4,
   },
   paginationContainer: {
-    backgroundColor: global.colors.background,
-    display: 'flex',
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    // paddingVertical: 10,
-    zIndex: 2,
-    shadowColor: global.colors.textPrimary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
+        alignItems: 'center',
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+        backgroundColor: global.colors.background,
+        zIndex: 2,
+        shadowColor: global.colors.textPrimary,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
   },
   bottomShadow: {
         position: "absolute",
         left: 0,
         right: 0,
         bottom: -5,
-        height: 1,
+        height: 3,
         zIndex: 1,
     },
+
+
+    
   pagination: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: 15,
     backgroundColor: global.colors.background,
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
+    
   },
   pageBtn: {
     minWidth: 28,
@@ -459,16 +462,18 @@ const styles = StyleSheet.create({
   },
 
   activePage: {
-    backgroundColor: global.colors.surface,
-    paddingVertical: 4,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    elevation: 4,
-    shadowColor: global.colors.textPrimary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 3,
+        backgroundColor: global.colors.primary,
+        borderRadius: 20,
+        paddingVertical: 6,
+        paddingHorizontal: 16,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
   },
+  
+  
 
   pageText: {
     fontSize: 13,
@@ -477,7 +482,7 @@ const styles = StyleSheet.create({
 
   activeText: {
     color: global.colors.textPrimary,
-    fontWeight: "600"
+    fontWeight: "400"
   },
 
   inactiveText: {

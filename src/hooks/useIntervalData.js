@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiUrl } from '../utils/apiUrl';
-import { useCallback } from 'react';
+import { useQuery } from "@tanstack/react-query";
+import { apiUrl } from "../utils/apiUrl";
+import { useCallback } from "react";
+import axios from "axios";
 
 // Selector function defined outside to maintain referential stability
 const selectIntervalData = (candles) => {
@@ -21,9 +22,59 @@ const selectIntervalData = (candles) => {
     candles,
     ltp,
     priceChange,
-    percentChange
+    percentChange,
   };
 };
+
+// export function useIntervalData(symbol, interval, limit = 100) {
+//   const isMarketOpen = () => {
+//     const now = new Date();
+//     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+//     const ist = new Date(utc + (3600000 * 5.5)); // IST time
+
+//     const hours = ist.getHours();
+//     // const minutes = ist.getMinutes(); // Unused
+//     const day = ist.getDay(); // 0 is Sunday, 6 is Saturday
+
+//     // Check weekend
+//     if (day === 0 || day === 6) return false;
+
+//     // Market times: 09:15 to 15:30
+//     const currentMinutes = hours * 60 + ist.getMinutes();
+//     const startMinutes = 9 * 60 + 15; // 09:15
+//     const endMinutes = 15 * 60 + 30;  // 15:30
+
+//     return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+//   };
+
+//   const fetchIntervalData = useCallback(async () => {
+//     if (!symbol) return null;
+
+//     const response = await fetch(
+//       `${apiUrl}/api/trading/ohlc?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=${limit}`
+//     );
+
+//     if (!response.ok) {
+//       throw new Error(`Error fetching data: ${response.statusText}`);
+//     }
+
+//     const result = await response.json();
+//     return result.data || [];
+//   }, [symbol, interval, limit]);
+
+//   const { data, isLoading, error } = useQuery({
+//     queryKey: ['intervalData', symbol, interval, limit],
+//     queryFn: fetchIntervalData,
+//     enabled: !!symbol,
+//     refetchInterval: isMarketOpen() ? 60000 : false, // Poll every minute if market is open
+//     staleTime: 60000, // Data is fresh for 1 minute
+//     gcTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours (renamed from cacheTime in v5)
+//     select: selectIntervalData, // Stable reference
+//     keepPreviousData: true, // Show previous data while fetching new to prevent flickering
+//   });
+
+//   return { data, loading: isLoading, error: error ? error.message : null };
+// }
 
 export function useIntervalData(symbol, interval, limit = 100) {
   const isMarketOpen = () => {
@@ -76,6 +127,31 @@ export function useIntervalData(symbol, interval, limit = 100) {
 
   return { data, loading: isLoading, error: error ? error.message : null };
 }
+
+export async function UseSparkline(symbol) {
+  const { data } = await axios.get(`${apiUrl}/api/sparklinedata/${symbol}`);
+  // If the API returns { data: [...] }, return that array
+  return Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+}
+
+export function useSparkline(symbol) {
+  return useQuery({
+    queryKey: ["sparkline", symbol],
+    queryFn: () => UseSparkline(symbol),
+    enabled: !!symbol,
+    staleTime: 5 * 60 * 1000, // 5 mins
+    select: (data) => {
+      if (!Array.isArray(data)) return [];
+      // Extract numeric Close values if mapped as objects
+      if (data.length > 0 && typeof data[0] === 'object' && data[0] !== null && 'Close' in data[0]) {
+        return data.map(item => parseFloat(item.Close));
+      }
+      return data;
+    }
+  });
+}
+
+
 
 export function useAllIntervalsData(symbol) {
   const fetchAllIntervals = useCallback(async () => {

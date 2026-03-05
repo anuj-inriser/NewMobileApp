@@ -13,6 +13,8 @@ import { useAlert } from "../context/AlertContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
+import { useRealtimePrices } from "../hooks/useRealtimePrices";
+import { subscribeSymbols, unsubscribeDelayed } from "../ws/marketSubscriptions";
 
 import { apiUrl } from "../utils/apiUrl";
 import { getDeviceId } from "../utils/deviceId";
@@ -31,6 +33,7 @@ export default function TradeOrderFormNew({
   const navigation = useNavigation();
   const { authToken } = useAuth();
   const { showSuccess, showError } = useAlert();
+  const { prices } = useRealtimePrices();
   // -- State --
   const [selected, setSelected] = useState(exchange); // NSE/BSE
   const [segment, setSegment] = useState("INTRADAY");
@@ -112,7 +115,7 @@ export default function TradeOrderFormNew({
         else setBseLtp(`₹${ltp}`);
 
         if (!isUserTypedPrice || price === "0") {
-          // Auto-fill logic could go here if desired
+          setPrice(ltp);
         }
       }
     } catch (err) {
@@ -125,6 +128,38 @@ export default function TradeOrderFormNew({
     const t = setInterval(fetchLtp, 3000);
     return () => clearInterval(t);
   }, [selected, symbol, isUserTypedPrice]);
+
+  // Subscribe this symbol to WS on mount so we receive price ticks
+  useEffect(() => {
+    if (!token && !symbol) return;
+    const sym = token || symbol;
+    subscribeSymbols([sym], 'TradeOrderForm', symbol);
+    return () => unsubscribeDelayed([sym], 'TradeOrderForm', symbol);
+  }, [symbol, token]);
+
+  // Sync WS price into LTP display + auto-fill price
+  useEffect(() => {
+    const key = symbol?.toUpperCase().trim();
+    // Try all possible key variants the WS might use
+    const rtData =
+      prices?.[key] ||
+      prices?.[key + '-EQ'] ||
+      prices?.[`${selected}:${key}`] ||
+      prices?.[`${selected}:${key}-EQ`] ||
+      {};
+    const rtPrice = rtData?.price;
+    if (!rtPrice || rtPrice <= 0) return;
+
+    const ltpStr = parseFloat(rtPrice).toFixed(2);
+    if (selected === 'NSE') setNseLtp(`₹${ltpStr}`);
+    else setBseLtp(`₹${ltpStr}`);
+
+    const userTypedRecently =
+      isUserTypedPrice && userTypedTime && Date.now() - userTypedTime < 60000;
+    if (!userTypedRecently) {
+      setPrice(ltpStr);
+    }
+  }, [prices, symbol, selected]);
 
   // 2. Fetch Funds
   const fetchFunds = async (segmentType) => {
@@ -506,6 +541,7 @@ export default function TradeOrderFormNew({
           </View>
         </View>
       </Modal>
+      
     </View>
   );
 }

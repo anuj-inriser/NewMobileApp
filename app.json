@@ -49,6 +49,19 @@
           "color": "#210F47",
           "sounds": []
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to select profile photo",
+          "cameraPermission": "Allow access to take profile photo"
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
       ]
     ],
 

@@ -6,7 +6,7 @@ const PortfolioHoldingsCard = ({
   totalInvested = 0,
   profit = 0,
   profitPercent = 0,
-  compactMode = false
+  compactMode = false,
 }) => {
   const formatAmount = (num) => {
     if (num >= 10000000) return (num / 10000000).toFixed(2) + " Cr";
@@ -19,9 +19,13 @@ const PortfolioHoldingsCard = ({
   // const profitDisplay = profit >= 0 ? `₹${formatAmount(Math.abs(profit))}` : `₹${formatAmount(Math.abs(profit))}`;
   // const percentDisplay = profitPercent >= 0 ? `${profitPercent.toFixed(2)}%` : `${profitPercent.toFixed(2)}%`;
 
+    const totalProfit = totalCurrent - totalInvested;
+    const totalProfitDisplay = `₹${Math.abs(totalProfit).toFixed(2)}`;
+  const totalProfitPercent =
+    totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
+    const totalProfitPercentDisplay = `${Math.abs(totalProfitPercent).toFixed(2)}%`;
 
-  const profitColor =
-    profit >= 0 ? global.colors.success : global.colors.error;
+  const profitColor = profit >= 0 ? global.colors.success : global.colors.error;
 
   const profitDisplay = `₹${Math.abs(profit).toFixed(2)}`;
 
@@ -33,7 +37,9 @@ const PortfolioHoldingsCard = ({
         <View style={styles.topRow}>
           <View>
             <Text style={styles.label}>Portfolio Value</Text>
-            <Text style={styles.portfolioValue}>₹ {Math.abs(totalCurrent).toFixed(2)}</Text>
+            <Text style={styles.portfolioValue}>
+              ₹ {Math.abs(totalCurrent).toFixed(2)}
+            </Text>
           </View>
           <View style={styles.gainSection}>
             <Text style={styles.gainLabel}>Today's Gain/Loss</Text>
@@ -42,8 +48,21 @@ const PortfolioHoldingsCard = ({
                 {profitDisplay}
               </Text>
               <Text style={[styles.gainPercent, { color: profitColor }]}>
-                {" "}({percentDisplay})
+                {" "}
+                ({percentDisplay})
               </Text>
+            </View>
+            <View style={styles.gainSection}>
+              <Text style={styles.gainLabel}>Total Gain/Loss</Text>
+              <View style={styles.gainRow}>
+                <Text style={[styles.gainAmount, { color: profitColor }]}>
+                  {totalProfitDisplay}
+                </Text>
+                <Text style={[styles.gainPercent, { color: profitColor }]}>
+                  {" "}
+                  ({totalProfitPercentDisplay})
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -53,7 +72,9 @@ const PortfolioHoldingsCard = ({
         <View style={styles.holdingsRow}>
           <View style={styles.dot} />
           <Text style={styles.holdingsLabel}>Equity Holdings</Text>
-          <Text style={styles.holdingsAmount}>₹ {Math.abs(totalInvested).toFixed(2)}</Text>
+          <Text style={styles.holdingsAmount}>
+            ₹ {Math.abs(totalInvested).toFixed(2)}
+          </Text>
         </View>
       </View>
     </View>
@@ -87,7 +108,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   portfolioValue: {
-    fontSize: 23,
+    fontSize: 20,
     fontWeight: "700",
     // color: global.colors.secondary,
     marginBottom: 16,
@@ -100,7 +121,7 @@ const styles = StyleSheet.create({
   },
   gainSection: {
     alignItems: "flex-end",
-    // marginBottom: 16,
+    marginTop: 10,
   },
   gainLabel: {
     fontSize: 12,
@@ -114,11 +135,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   gainAmount: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "500",
   },
   gainPercent: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
   },
   divider: {

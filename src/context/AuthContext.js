@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
   const [permissionsReady, setPermissionsReady] = useState(false);
+  const [backendToken, setBackendToken] = useState(null);
 
 
   const refreshUserProfile = async () => {
@@ -55,6 +56,7 @@ export const AuthProvider = ({ children }) => {
       const u = await AsyncStorage.getItem("userId");
       const d = await AsyncStorage.getItem("userData");
       const p = await AsyncStorage.getItem("permissions");
+      const t = await AsyncStorage.getItem("token");
       const storedToken = await AsyncStorage.getItem(STORAGE_KEYS.token);
       if (storedToken) {
         setToken(storedToken);
@@ -69,7 +71,11 @@ export const AuthProvider = ({ children }) => {
       if (p !== null) {
         setPermissions(JSON.parse(p));
         setPermissionsReady(true);
-      } else {
+      }
+      if (t) {
+        setBackendToken(t);
+      }
+       else {
         setPermissions(null);     // still loading, don't mark ready
       }
 
@@ -135,6 +141,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       await AsyncStorage.setItem(STORAGE_KEYS.token, token);
       setToken(token);
+      setBackendToken(token);
     }
   };
 
@@ -158,6 +165,19 @@ export const AuthProvider = ({ children }) => {
     setPermissions(null);
     setPermissionsLoading(true);
     setToken(null);
+    setBackendToken(null);
+  };
+
+  const disconnectBroker = async () => {
+    await AsyncStorage.removeItem(TOKENS.AUTH_TOKEN);
+    await AsyncStorage.removeItem(TOKENS.FEED_TOKEN);
+    await AsyncStorage.removeItem(TOKENS.REFRESH_TOKEN);
+    await AsyncStorage.removeItem(TOKENS.CLIENT_ID);
+
+    setAuthToken(null);
+    setFeedToken(null);
+    setRefreshToken(null);
+    setClientId(null);
   };
 
   return (
@@ -172,12 +192,14 @@ export const AuthProvider = ({ children }) => {
         loading,
         setAuthData,
         clearAuth,
+        disconnectBroker,
         permissions,
         token,
         profileImage,
         refreshUserProfile,
         permissionsLoading,
-        permissionsReady
+        permissionsReady,
+        backendToken
       }}
     >
       {children}

@@ -245,8 +245,8 @@ const OrdersList = () => {
           <Text style={styles.loaderText}>Loading...</Text>
         </View>
       ) : orders.length === 0 ? (
-        <View style={{ marginTop: 60, alignItems: "center" }}>
-          <Text style={styles.noDataText}>No Data Found</Text>
+        <View style={{ justifyContent:"center", alignItems: "center", flex:1 }}>
+          <Text style={styles.noDataText}>No Orders Found</Text>
         </View>
       ) : (
         <ScrollView style={{ marginTop: 10 }}>
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     backgroundColor: global.colors.background,
   },
   loaderBox: {
-    marginTop: 40,
+    flex:1,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     color: global.colors.textSecondary,
   },
   noDataText: {
-    marginTop: 10,
+
     fontSize: 16,
     fontWeight: "600",
     color: global.colors.textSecondary,
@@ -344,7 +344,10 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   iconRow: {
     flexDirection: "row",
@@ -352,9 +355,10 @@ const styles = StyleSheet.create({
     marginLeft: 18,
   },
   actionText: {
-    marginLeft: 4,
+ marginLeft: 6,
     fontSize: 13,
-    color: global.colors.textPrimary,
+    color: "#000",
+    fontWeight: "600",
   },
   overlay: {
     flex: 1,

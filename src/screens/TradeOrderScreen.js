@@ -7,7 +7,8 @@ import {
   Text,
   TouchableOpacity,
   Modal,
-  BackHandler, Platform
+  BackHandler,
+  Platform,
 } from "react-native";
 import { useAlert } from "../context/AlertContext";
 import { WebView } from "react-native-webview";
@@ -23,15 +24,31 @@ import OrderInputBox from "../components/OrderInputBox";
 // import OrderDropdownBox from "../components/OrderDropdownBox";
 import { getDeviceId } from "../utils/deviceId";
 import { useAuth } from "../context/AuthContext";
+import { useRealtimePrices } from "../hooks/useRealtimePrices";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-export default function TradeOrderScreen({ navigation, hideHeader: propHideHeader }) {
+import OrderInputNew from "../components/OrderInputNew";
+// import DublearrowRight from "../../assets/dublearrowright.png";
+export default function TradeOrderScreen({
+  navigation,
+  hideHeader: propHideHeader,
+  symbol: propSymbol,
+  token: propToken,
+  name: propName,
+  price: propPrice,
+  quantity: propQuantity,
+  stoploss: propStoploss,
+  target: propTarget,
+  producttype: propProductType,
+  internaltype: propInternalType,
+  orderid: propOrderId,
+}) {
   const route = useRoute();
   const hideHeader = propHideHeader || route.params?.hideHeader;
 
   const { showSuccess, showError } = useAlert();
-  const { authToken } = useAuth();
-  const { setAuthData } = useAuth();
+  const { authToken, setAuthData } = useAuth();
+  const { prices } = useRealtimePrices();
   const [validationErrors, setValidationErrors] = useState([]);
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -115,10 +132,7 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
 
         // Force refresh of page → triggers new token usage
         setSwipeKey(Date.now());
-        showSuccess(
-          "Success",
-          "Angel One login successfully."
-        );
+        showSuccess("Success", "Angel One login successfully.");
       } catch (e) {
         console.log("Token parse error:", e);
       }
@@ -127,7 +141,8 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
 
   const [showAngelOneModal, setShowAngelOneModal] = useState(false);
 
-  const angelOneUrl = "https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=tradepage";
+  const angelOneUrl =
+    "https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=tradepage";
 
   const handleUserPriceInput = (val) => {
     setIsUserTypedPrice(true);
@@ -153,21 +168,21 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
   };
 
   // const route = useRoute();
-  const {
-    symbol: passedSymbol,
-    token: passedToken,
-    name: passedName,
-    price: passedPrice,
-    quantity: passedQuantity,
-    stoploss: passedStopLoss,
-    target: passedTarget,
-    producttype: passedProductType,
-    internaltype = internaltype,
-    orderid: passedOrderId,
-  } = route.params || {};
+  const params = route.params || {};
+
+  const passedSymbol = propSymbol || params.symbol;
+  const passedToken = propToken || params.token;
+  const passedName = propName || params.name;
+  const passedPrice = propPrice || params.price;
+  const passedQuantity = propQuantity || params.quantity;
+  const passedStopLoss = propStoploss || params.stoploss;
+  const passedTarget = propTarget || params.target;
+  const passedProductType = propProductType || params.producttype;
+  const internaltype = propInternalType || params.internaltype;
+  const passedOrderId = propOrderId || params.orderid;
   const swipeRef = useRef(null);
   const [selectedMenu, setSelectedMenu] = useState("Intraday");
-
+  const [transactionType, setTransactionType] = useState("BUY"); // BUY or SELL
   const [selected, setSelected] = useState("NSE");
   const [segment, setSegment] = useState("INTRADAY");
 
@@ -176,6 +191,9 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
   const [bseLtp, setBseLtp] = useState("0.00");
   const format2 = (num) => {
     return parseFloat(num || 0).toFixed(2);
+  };
+  const format0 = (num) => {
+    return parseFloat(num || 0).toFixed(0);
   };
   const format4 = (num) => {
     return parseFloat(num || 0).toFixed(4);
@@ -198,6 +216,8 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
   const [target, setTarget] = useState("0");
   const [stopLoss, setStopLoss] = useState("0");
   const [swipeKey, setSwipeKey] = useState(Date.now());
+
+  const [selectedExchange, setSelectedExchange] = useState("NSE");
 
   const symbol = passedSymbol || "WELENT-EQ";
   const fetchBrokerage = async () => {
@@ -239,8 +259,8 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
   useEffect(() => {
     let backHandler;
 
-    if (showAngelOneModal && Platform.OS === 'android') {
-      backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+    if (showAngelOneModal && Platform.OS === "android") {
+      backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
         setShowAngelOneModal(false);
         return true; // Prevent default back behavior
       });
@@ -350,25 +370,16 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
       const data = await res.json();
 
       if (data.success) {
-        showSuccess(
-          "Success",
-          "Order Modified Successfully."
-        );
+        showSuccess("Success", "Order Modified Successfully.");
         navigation.navigate("App", {
           screen: "MainTabs",
           params: { screen: "OrdersScreen", params: { defaultTab: 2 } },
         });
       } else {
-        showError(
-          "Error",
-          data.message || "Failed to modify order"
-        );
+        showError("Error", data.message || "Failed to modify order");
       }
     } catch (err) {
-      showError(
-        "Error",
-        err.message
-      );
+      showError("Error", err.message);
     }
   };
 
@@ -417,25 +428,16 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
       const data = await res.json();
 
       if (data.angelResponse?.message === "SUCCESS") {
-        showSuccess(
-          "Success",
-          "Order Placed Successfully."
-        );
+        showSuccess("Success", "Order Placed Successfully.");
         navigation.navigate("App", {
           screen: "MainTabs",
           params: { screen: "OrdersScreen", params: { defaultTab: 2 } },
         });
       } else {
-        showError(
-          "Error",
-          JSON.stringify(data)
-        );
+        showError("Error", JSON.stringify(data));
       }
     } catch (err) {
-      showError(
-        "Error",
-        err.message
-      );
+      showError("Error", err.message);
     }
   };
 
@@ -604,190 +606,259 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
   ]);
 
   const isModifyMode = internaltype?.toLowerCase() === "modify";
+
+  // Realtime data for stock card
+  const rtData = prices?.[symbol] || prices?.[symbol + "-EQ"] || {};
+  const changeVal = rtData.change || 0;
+  const changePct = rtData.changePercent || 0;
+  const isPositive = changeVal >= 0;
+  const currentPriceDisplay = selected === "NSE" ? nseLtp : bseLtp;
+
+  // Swipe button dynamic values
+  const swipeTitle = isModifyMode
+    ? "Swipe to Modify"
+    : transactionType === "BUY"
+      ? "Swipe to Buy"
+      : "Swipe to Sell";
+
+  const swipeColor =
+    transactionType === "BUY" ? global.colors.success : global.colors.error;
+
   const content = (
-    <>
-      {!hideHeader && (
-        <TopOrderHeader title={symbol} onBack={() => navigation.goBack()} />
-      )}
-      <KeyboardAwareScrollView
-        extraHeight={300}
-        enableOnAndroid={true}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.scroll}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.radioContainer}>
-            <NseBseRadioBox
-              selected={selected}
-              nseLtp={nseLtp}
-              bseLtp={bseLtp}
-              onSelect={setSelected}
-            />
+    <View style={{ flex: 1 }}>
+      {/* Header */}
+      {/* {!hideHeader && (
+        <View style={styles.premiumHeader}>
+          <Text style={styles.premiumHeaderTitle}>{isModifyMode ? "Modify Order" : "Place Order"}</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.premiumCloseBtn}>
+            <Ionicons name="close" size={24} color={global.colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+      )} */}
+
+      <View style={styles.premiumScrollContent}>
+        {/* Stock Info Card */}
+        {/* <View style={styles.premiumStockCard}>
+          <View style={styles.stockInfoLeft}>
+            <Text style={styles.premiumStockName}>{passedName || symbol}</Text>
+            <Text style={styles.premiumStockSymbol}>{symbol}</Text>
+          </View>
+          <View style={styles.stockInfoRight}>
+            <Text style={styles.premiumCurrentPrice}>{currentPriceDisplay}</Text>
+            <Text style={[styles.premiumPriceChange, { color: isPositive ? global.colors.success : global.colors.error }]}>
+              {isPositive ? "+" : ""}₹{format2(changeVal)} ({format2(changePct)}%)
+            </Text>
+          </View>
+        </View> */}
+
+        {/* Buy/Sell Toggles & Exchange */}
+        <View style={styles.actionRowPremium}>
+          <View style={styles.toggleContainerPremium}>
+            <TouchableOpacity
+              style={[
+                styles.toggleBtnPremium,
+                transactionType === "BUY" && styles.buyActivePremium,
+              ]}
+              onPress={() => setTransactionType("BUY")}
+            >
+              <Text
+                style={[
+                  styles.toggleTextPremium,
+                  transactionType === "BUY" && styles.activeTextPremium,
+                ]}
+              >
+                Buy
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.toggleBtnPremium,
+                transactionType === "SELL" && styles.sellActivePremium,
+              ]}
+              onPress={() => setTransactionType("SELL")}
+            >
+              <Text
+                style={[
+                  styles.toggleTextPremium,
+                  transactionType === "SELL" && styles.activeTextPremium,
+                ]}
+              >
+                Sell
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.menuContainer}>
-            <OrderTopMenu
-              items={menuItems}
-              defaultSelected={selectedMenu} // ⭐ now fully controlled
-              onSelect={(name) => {
-                setSelectedMenu(name); // UI highlight
-                handleSegmentChange(name); // backend / logic mapping
+          <TouchableOpacity
+            style={styles.exchangeSelectorPremium}
+            onPress={() => setSelected(selected === "NSE" ? "BSE" : "NSE")}
+          >
+            <Text style={styles.exchangeTextPremium}>{selected}</Text>
+            <Ionicons
+              name="chevron-down"
+              size={16}
+              color={global.colors.textPrimary}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Product Type Tabs */}
+        <View style={styles.premiumTabContainer}>
+          {["Intraday", "Margin", "Delivery"].map((name) => (
+            <TouchableOpacity
+              key={name}
+              style={[
+                styles.premiumTab,
+                selectedMenu === name && styles.premiumActiveTab,
+              ]}
+              onPress={() => {
+                setSelectedMenu(name);
+                handleSegmentChange(name);
               }}
-            />
-          </View>
+            >
+              <Text
+                style={[
+                  styles.premiumTabText,
+                  selectedMenu === name && styles.premiumActiveTabText,
+                ]}
+              >
+                {name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-          <View style={styles.inputsWrapper}>
-            <OrderInputBox
-              label="Price"
-              value={price}
-              onChange={(v) => handleNumericInput(v, setPrice)}
-              isValid={isPriceValid}
-              onWarningPress={() => setShowTooltip(true)}
-            />
-
-            <OrderInputBox
-              label="Quantity"
-              value={qty}
-              onChange={(v) => handleNumericInput(v, setQty)}
-              isValid={isQtyValid}
-              onWarningPress={() => setShowTooltip(true)}
-            />
-            <OrderInputBox
-              label="Target"
-              value={target}
-              onChange={(v) => handleNumericInput(v, setTarget)}
-              isValid={isTargetValid}
-              onWarningPress={() => setShowTooltip(true)}
-            />
-
-            <OrderInputBox
-              label="Stop Loss"
-              value={stopLoss}
-              onChange={(v) => handleNumericInput(v, setStopLoss)}
-              isValid={isStopLossValid}
-              onWarningPress={() => setShowTooltip(true)}
-            />
-
-            {/* <Text>{internaltype}</Text> */}
-
-            {/* <OrderDropdownBox
-            label="Order Type"
-            options={["Market", "Limit", "SL_Limit", "SL_Market"]}
-            zIndex={3000}
-            zIndexInverse={2000}
+        {/* Inputs Grid */}
+        <View style={styles.premiumInputGrid}>
+          <OrderInputNew
+            label="Price"
+            value={price}
+            onChange={(v) => handleNumericInput(v, setPrice)}
+            style={styles.premiumGridInput}
           />
-
-          <OrderDropdownBox
-            label="Variety"
-            options={["Normal", "StopLoss", "Robo"]}
-            zIndex={2000}
-            zIndexInverse={1000}
-          /> */}
-          </View>
-        </ScrollView>
-      </KeyboardAwareScrollView>
-      <View style={styles.bottomContainer}>
-        <View style={styles.summaryContainer}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Balance available</Text>
-            <Text style={styles.value}>₹{format4(balance)}</Text>
-          </View>
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Order value</Text>
-            <Text style={styles.value}>₹{format2(orderValue)}</Text>
-          </View>
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Brokerage</Text>
-            <Text style={styles.value}>₹{format2(brokerage)}</Text>
-          </View>
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Charges</Text>
-            <Text style={styles.value}>₹{format2(combinedCharges)}</Text>
-          </View>
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Closing balance</Text>
-            <Text style={styles.value}>₹{format2(closingBalance)}</Text>
-          </View>
-          <Ionicons
-            name="refresh"
-            size={20}
-            color={global.colors.secondary}
-            style={styles.refreshIcon}
-            onPress={() => {
-              fetchFunds(selectedSegmentType);
-              fetchLtp();
-              fetchBrokerage();
-            }}
+          <OrderInputNew
+            label="Quantity"
+            value={qty}
+            onChange={(v) => handleNumericInput(v, setQty)}
+            style={styles.premiumGridInput}
+          />
+          <OrderInputNew
+            label="Target"
+            value={target}
+            onChange={(v) => handleNumericInput(v, setTarget)}
+            style={styles.premiumGridInput}
+          />
+          <OrderInputNew
+            label="Stop Loss"
+            value={stopLoss}
+            onChange={(v) => handleNumericInput(v, setStopLoss)}
+            style={styles.premiumGridInput}
           />
         </View>
-        {/* SWIPE BUTTON */}
-        <View style={{ position: "relative", width: "100%" }}>
+
+        {/* Financial Summary */}
+        <View style={styles.premiumSummarySection}>
+          <View style={styles.premiumSummaryRow}>
+            <View style={styles.premiumSummaryCol}>
+              <Text style={styles.premiumSummaryLabel}>Balance available</Text>
+              <Text style={styles.premiumSummaryValue}>
+                ₹{format0 ? format0(balance) : format2(balance)}
+              </Text>
+            </View>
+            <View style={styles.premiumSummaryCol}>
+              <Text style={styles.premiumSummaryLabel}>Order value</Text>
+              <Text style={styles.premiumSummaryValue}>
+                ₹{format0 ? format0(orderValue) : format2(orderValue)}
+              </Text>
+            </View>
+            <View style={styles.premiumSummaryCol}>
+              <Text style={styles.premiumSummaryLabel}>Brokerage</Text>
+              <Text style={styles.premiumSummaryValue}>
+                ₹{format0 ? format0(brokerage) : format2(brokerage)}
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.premiumSummaryRow, { marginTop: 20 }]}>
+            <View style={styles.premiumSummaryCol}>
+              <Text style={styles.premiumSummaryLabel}>Charges</Text>
+              <Text style={styles.premiumSummaryValue}>
+                ₹{format0 ? format0(combinedCharges) : format2(combinedCharges)}
+              </Text>
+            </View>
+            <View style={styles.premiumSummaryCol}>
+              <Text style={styles.premiumSummaryLabel}>Closing balance</Text>
+              <Text style={styles.premiumSummaryValue}>
+                ₹{format0 ? format0(closingBalance) : format2(closingBalance)}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.premiumRefreshBtn}
+              onPress={() => {
+                fetchFunds(segment);
+                fetchLtp();
+                fetchBrokerage();
+              }}
+            >
+              <Ionicons
+                name="refresh"
+                size={24}
+                color={global.colors.textPrimary}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* Footer */}
+      <View style={styles.premiumFooter}>
+        <View style={styles.swipeWrapper}>
           <SwipeButton
-            key={swipeKey}
-            disabled={false}
-            title="Swipe right to buy >>"
-            titleColor={global.colors.secondary}
-            titleFontSize={14}
-            railBackgroundColor={global.colors.background}
-            railFillBackgroundColor={global.colors.background}
-            thumbIconBackgroundColor={global.colors.success}
-            thumbIconBorderColor="transparent"
-            railFillBorderColor="transparent"
-            disabledThumbIconBackgroundColor={global.colors.success}
-            disabledRailBackgroundColor={global.colors.background}
-            containerStyles={{
-              borderRadius: 25,
-              height: 52,
-              width: "100%",
-              backgroundColor: global.colors.background,
+            containerStyle={{
+              ...styles.premiumActiveTab2,
+              borderWidth: 0,
+              borderColor: "transparent",
             }}
-            thumbIconComponent={() => (
-              <Text style={{ color: global.colors.background, fontWeight: "700" }}>Buy</Text>
-            )}
+            railStyles={{
+              borderWidth: 0,
+              borderColor: "transparent",
+            }}
+            railBackgroundColor={global.colors.primary}
+            railFillBackgroundColor={global.colors.primary}
+            thumbIconBackgroundColor={global.colors.secondary}
+            title={"Order"}
+            titleStyles={styles.premiumSwipeTitle}
+            thumbIconImageSource={require("../../assets/rightdoublearrow.png")}
+            thumbIconStyles={{
+              borderWidth: 0,
+              borderRadius: 24,
+              elevation: 0, // Android shadow
+            }}
+            railFillBorderColor="transparent"
+            railBorderColor="transparent"
             onSwipeSuccess={() => {
               if (!authToken) {
                 setShowAngelOneModal(true);
-                setSwipeKey(Date.now());
                 return;
               }
               if (!isOrderValid) {
                 setShowTooltip(true);
-                setSwipeKey(Date.now());
                 return;
               }
-
-
-              if (internaltype?.toLowerCase() === "modify") {
+              if (isModifyMode) {
                 modifyOrder();
               } else {
                 placeOrder();
               }
-              setSwipeKey(Date.now());
             }}
+            shouldResetAfterSwipe={true}
+            resetAfterSwipeAnimDuration={500}
           />
-
-          <TouchableOpacity
-            onPress={() => setShowAngelOneModal(true)}
-            style={{
-              position: "absolute",
-              right: 12,
-              top: 14,
-              zIndex: 10,
-            }}
-          >
-            <Image
-              source={require("../../assets/angelone.png")}
-              style={{
-                width: 35,
-                height: 35,
-                resizeMode: "contain",
-              }}
-            />
-          </TouchableOpacity>
+        </View>
+        <View style={styles.premiumAngelContainer}>
+          <Image
+            source={require("../../assets/angelone.png")}
+            style={styles.premiumAngelLogo}
+          />
         </View>
       </View>
 
@@ -813,14 +884,25 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
               padding: 20,
             }}
           >
-            <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 10, color: global.colors.textPrimary }}>
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "700",
+                marginBottom: 10,
+                color: global.colors.textPrimary,
+              }}
+            >
               ⚠ Order Issues
             </Text>
 
             {validationErrors.map((e, i) => (
               <Text
                 key={i}
-                style={{ fontSize: 14, marginBottom: 6, color: global.colors.textSecondary }}
+                style={{
+                  fontSize: 14,
+                  marginBottom: 6,
+                  color: global.colors.textSecondary,
+                }}
               >
                 • {e}
               </Text>
@@ -836,7 +918,11 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
               }}
             >
               <Text
-                style={{ color: global.colors.background, textAlign: "center", fontSize: 16 }}
+                style={{
+                  color: global.colors.background,
+                  textAlign: "center",
+                  fontSize: 16,
+                }}
               >
                 OK
               </Text>
@@ -845,7 +931,12 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
         </View>
       </Modal>
       {/* ANGEL ONE OVERLAY - REPLACES MODAL */}
-      {showAngelOneModal && (
+      <Modal
+        visible={showAngelOneModal}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowAngelOneModal(false)}
+      >
         <View style={styles.angelOneOverlay}>
           <TouchableOpacity
             style={styles.angelOneCloseButton}
@@ -861,19 +952,17 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
             domStorageEnabled={true}
             useWebKit={true}
             onNavigationStateChange={handleAngelOneNavigation}
-
             // 🔑 CRITICAL ANDROID FIXES:
-            androidLayerType="hardware"        // Prevents WebView disappearing on keyboard open
-            nestedScrollEnabled={true}         // Allows proper scrolling with keyboard
-            thirdPartyCookiesEnabled={true}    // Required for Angel One auth
-            originWhitelist={['*']}            // Allows OAuth redirects
-
+            androidLayerType="hardware" // Prevents WebView disappearing on keyboard open
+            nestedScrollEnabled={true} // Allows proper scrolling with keyboard
+            thirdPartyCookiesEnabled={true} // Required for Angel One auth
+            originWhitelist={["*"]} // Allows OAuth redirects
             style={styles.webView}
             // Prevent keyboard from shrinking WebView
             contentInsetAdjustmentBehavior="automatic"
           />
         </View>
-      )}
+      </Modal>
       {/* <Modal
         visible={showAngelOneModal}
         animationType="slide"
@@ -910,15 +999,11 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
           />
         </View>
       </Modal> */}
-    </>
+    </View>
   );
 
   if (hideHeader) {
-    return (
-      <View style={styles.container}>
-        {content}
-      </View>
-    );
+    return <View style={styles.container}>{content}</View>;
   }
 
   return (
@@ -929,8 +1014,8 @@ export default function TradeOrderScreen({ navigation, hideHeader: propHideHeade
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1,  backgroundColor: global.colors.background },
-  scrollContent: { alignItems: "center", paddingBottom: 160 },
+  container: { flex: 1, backgroundColor: global.colors.background },
+  scrollContent: { alignItems: "center" },
   radioContainer: { marginTop: 10 },
   menuContainer: { width: "100%", marginTop: 10 },
   inputsWrapper: { marginTop: 10 },
@@ -938,7 +1023,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     width: "100%",
-   backgroundColor: global.colors.background,
+    backgroundColor: global.colors.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     elevation: 10,
@@ -958,7 +1043,7 @@ const styles = StyleSheet.create({
   refreshIcon: { marginLeft: "auto" },
   // ADD THESE TO YOUR styles OBJECT
   angelOneOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -967,25 +1052,298 @@ const styles = StyleSheet.create({
     zIndex: 9999, // Must be highest to cover all UI
   },
   angelOneCloseButton: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40, // Adjust for iOS status bar
+    position: "absolute",
+    top: Platform.OS === "ios" ? 60 : 40, // Adjust for iOS status bar
     right: 20,
     zIndex: 10000,
-    backgroundColor: '#eee',
+    backgroundColor: "#eee",
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 5,
   },
   angelOneCloseText: {
     fontSize: 24,
-    fontWeight: '300',
-    color: '#333',
+    fontWeight: "300",
+    color: "#333",
   },
   webView: {
     flex: 1,
-    marginTop: Platform.OS === 'ios' ? 80 : 60, // Space for close button + status bar
+    marginTop: Platform.OS === "ios" ? 80 : 60, // Space for close button + status bar
+  },
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    marginTop: 15,
+  },
+  toggleContainer: {
+    flexDirection: "row",
+    backgroundColor: "#222",
+    borderRadius: 20,
+    padding: 2,
+  },
+  toggleBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 18,
+    minWidth: 70,
+    alignItems: "center",
+  },
+  buyActive: { backgroundColor: "#107c10" },
+  sellActive: { backgroundColor: "#d13438" },
+  toggleText: {
+    color: global.colors.textSecondary,
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  activeText: { color: "#fff" },
+  exchangeSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#222",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  exchangeText: {
+    color: global.colors.textPrimary,
+  },
+  premiumCloseBtn: {
+    padding: 5,
+  },
+  premiumScrollContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  premiumStockCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    marginBottom: 20,
+  },
+  premiumStockName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: global.colors.textPrimary,
+  },
+  premiumStockSymbol: {
+    fontSize: 12,
+    color: global.colors.textSecondary,
+    marginTop: 4,
+    textTransform: "uppercase",
+  },
+  premiumCurrentPrice: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: global.colors.textPrimary,
+    textAlign: "right",
+  },
+  premiumPriceChange: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 4,
+    textAlign: "right",
+  },
+  actionRowPremium: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  toggleContainerPremium: {
+    flexDirection: "row",
+    backgroundColor: "#F5F5F5",
+    borderRadius: 10,
+    padding: 4,
+    flex: 1,
+    marginRight: 15,
+    width: "55%",
+  },
+  toggleBtnPremium: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  buyActivePremium: {
+    backgroundColor: global.colors.success,
+  },
+  sellActivePremium: {
+    backgroundColor: global.colors.error,
+  },
+  toggleTextPremium: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: global.colors.textSecondary,
+  },
+  activeTextPremium: {
+    color: "#FFF",
+  },
+  exchangeSelectorPremium: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: global.colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: "#FFF",
+    width: "30%",
+  },
+  exchangeTextPremium: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: global.colors.textPrimary,
+    marginRight: 5,
+  },
+  premiumTabContainer: {
+    flexDirection: "row",
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: global.colors.border,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+  },
+  premiumTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 10,
+  },
+  premiumActiveTab: {
+    backgroundColor: global.colors.primary,
+  },
+  premiumTabText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: global.colors.textSecondary,
+  },
+  premiumActiveTabText: {
+    color: global.colors.textPrimary,
+    fontWeight: "700",
+  },
+  premiumInputGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  premiumGridInput: {
+    width: "48%",
+  },
+  premiumSummarySection: {
+    marginTop: 10,
+    paddingVertical: 10,
+  },
+  premiumSummaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  premiumSummaryCol: {
+    flex: 1,
+  },
+  premiumSummaryLabel: {
+    fontSize: 12,
+    color: global.colors.textSecondary,
+    marginBottom: 6,
+  },
+  premiumSummaryValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: global.colors.textPrimary,
+  },
+  premiumRefreshBtn: {
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 5,
+  },
+  premiumFooter: {
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 20,
+    paddingTop: 15,
+    paddingBottom: Platform.OS === "ios" ? 40 : 25,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  premiumSwipeContainer: {
+    flex: 1,
+    height: 50,
+    marginRight: 15,
+    borderRadius: 25,
+    borderWidth: 0,
+    backgroundColor: global.colors.primary,
+  },
+  premiumSwipeTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: global.colors.secondary,
+  },
+  premiumAngelContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: global.colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: global.colors.background,
+  },
+  premiumAngelLogo: {
+    width: 35,
+    height: 35,
+    resizeMode: "contain",
+  },
+  stockInfoLeft: {
+    flex: 1,
+  },
+  stockInfoRight: {
+    alignItems: "flex-end",
+  },
+  premiumOrderBtnIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: "contain",
+    color: global.colors.background,
+  },
+  premiumActiveTab2: {
+    flex: 1,
+    height: 54,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 20,
+    borderRadius: 27,
+    overflow: "hidden",
+  },
+  swipeWrapper: {
+    flex: 1,
+    height: 50,
+    marginRight: 15,
+    borderRadius: 24,
+    borderWidth: 0,
+    borderColor: "transparent",
+
+    // backgroundColor: global.colors.secondary,
+  },
+  premiumSwipeTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFF",
   },
 });

@@ -6,9 +6,19 @@ import {
     TouchableOpacity,
     Modal,
     ScrollView,
+    Platform,
+    UIManager,
+    LayoutAnimation
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+
+if (
+    Platform.OS === 'android' &&
+    UIManager.setLayoutAnimationEnabledExperimental
+) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 /**
  * GlobalTopMenu - A reusable header slider with optional filter dropdown.
@@ -72,7 +82,10 @@ const GlobalTopMenu = ({
                                             ? (type === "primary" ? styles.activePrimaryTab : styles.activeSecondaryTab)
                                             : (type === "primary" ? styles.inactivePrimaryTab : null)
                                     ]}
-                                    onPress={() => onTabChange?.(tab)}
+                                    onPress={() => {
+                                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                        onTabChange?.(tab);
+                                    }}
                                 >
                                     <Text style={[
                                         styles.tabText,
@@ -104,12 +117,12 @@ const GlobalTopMenu = ({
                     )}
                 </View>
             </View>
-            {/* {!hideShadow && (
+            {!hideShadow && (
                 <LinearGradient
                     colors={[global.colors.overlayLow, 'transparent']}
                     style={styles.bottomShadow}
                 />
-            )} */}
+            )}
 
             {/* FILTER MODAL */}
             <Modal
@@ -151,7 +164,7 @@ const styles = StyleSheet.create({
         backgroundColor: global.colors.background,
         zIndex: 2,
         paddingTop: 6,
-        paddingHorizontal: 12,
+        paddingHorizontal: 0,
         // iOS shadow (Android ignores)
         shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 3 },
@@ -169,53 +182,50 @@ const styles = StyleSheet.create({
         position: "absolute",
         left: 0,
         right: 0,
-        bottom: -5,
-        height: 1,
+        bottom: -15,
+        height: 3,
         zIndex: 1,
     },
     mainContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingLeft: 16,
     },
     tabScroll: {
         flex: 1,
     },
     tabScrollContent: {
+        paddingLeft: 16,
         paddingRight: 16,
         paddingVertical: 5,
         alignItems: 'center',
     },
     tabItem: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
+        paddingVertical: 7,
+        paddingHorizontal: 16,
+        borderRadius: 40,
         marginRight: 8,
     },
     activePrimaryTab: {
         backgroundColor: global.colors.secondary,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
-        elevation: 4,
-        shadowColor: global.colors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
+        elevation: 7,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
     },
     inactivePrimaryTab: {
         backgroundColor: global.colors.background,
-        elevation: 2,
-        shadowColor: global.colors.textPrimary,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
     },
     activeSecondaryTab: {
-        backgroundColor: global.colors.surface,
+        backgroundColor: global.colors.primary  ,
         paddingVertical: 6,
         paddingHorizontal: 12,
-        borderRadius: 20,
+        borderRadius: 18,
         elevation: 3,
         shadowColor: global.colors.textPrimary,
         shadowOffset: { width: 0, height: 2 },
@@ -223,20 +233,21 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
     },
     tabText: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '500',
-        color: global.colors.textPrimary, // Default for sub-menus
+        fontFamily: "Poppins-Medium",
+        color: global.colors.textSecondary,
     },
     activePrimaryTabText: {
         color: global.colors.background,
-        fontWeight: "700",
+        fontWeight: "500",
     },
     inactivePrimaryTabText: {
-        color: global.colors.secondary, // Purple for main menu unselected
+        color: global.colors.secondary,
     },
     activeSecondaryTabText: {
         color: global.colors.textPrimary,
-        fontWeight: "700",
+        fontWeight: "500",
     },
     filterContainer: {
         flexDirection: 'row',

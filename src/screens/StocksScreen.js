@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect,useMemo } from "react";
 import {
   View,
   Text,
@@ -30,6 +30,90 @@ import {
 } from "../ws/marketSubscriptions";
 import axiosInstance from "../api/axios";
 import { Ionicons } from "@expo/vector-icons";
+import { useDrawer } from "../context/DrawerContext";
+import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
+import SparklineChart from "../components/Sparkline";
+
+// const Sparkline = ({ color, isPositive }) => {
+//   const curveD = isPositive
+//     ? "M 0 35 C 20 35, 30 25, 45 25 S 60 5, 80 0 L 80 40 L 0 40 Z"
+//     : "M 0 5 C 20 5, 30 15, 45 15 S 60 35, 80 40 L 80 40 L 0 40 Z";
+
+//   const lineD = isPositive
+//     ? "M 0 35 C 20 35, 30 25, 45 25 S 60 5, 80 0"
+//     : "M 0 5 C 20 5, 30 15, 45 15 S 60 35, 80 40";
+
+//   return (
+//     <Svg width="80" height="40" viewBox="0 0 80 40">
+//       <Defs>
+//         <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+//           <Stop offset="0" stopColor={color} stopOpacity="0.3" />
+//           <Stop offset="1" stopColor={color} stopOpacity="0.0" />
+//         </SvgLinearGradient>
+//       </Defs>
+//       <Path d={curveD} fill="url(#grad)" />
+//       <Path d={lineD} fill="none" stroke={color} strokeWidth="2" />
+//     </Svg>
+//   );
+// };
+
+const AdvancedHeaderCard = ({ item, realtime, counts }) => {
+  const isPositive = (realtime?.price || item?.value) >= (realtime?.prevClose || item?.prevClose);
+  const color = isPositive ? global.colors.success : global.colors.error;
+
+  const price = realtime?.price || item?.value || 0;
+  const prevClose = realtime?.prevClose || item?.prevClose || price;
+  const change = price - prevClose;
+  const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
+
+  // const isMarketStillOpen = isMarketOpen();
+  // const timeColor = isMarketStillOpen ? global.colors.textSecondary : "#ef4444"; // Redis/Red if closed
+
+  const timeStr = realtime?.timestamp 
+    ? new Date(realtime.timestamp).toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }).toLowerCase()
+    : "04:14:59 pm";
+
+  return (
+    <View style={styles.card_verticalCard}>
+      <View style={styles.card_topRow}>
+        <View style={styles.card_topLeft}>
+          <Text style={styles.card_companyName}>{item.name || item.symbol}</Text>
+          <Text style={[styles.card_verticalTime, { color: global.colors.textSecondary }]}>{timeStr}</Text>
+        </View>
+
+        <View style={styles.card_topMiddle}>
+          <SparklineChart symbol={item.symbol} color={color} />
+        </View>
+
+        <View style={styles.card_topRight}>
+          <Text style={styles.card_verticalPrice}>
+            ₹{Number(price).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </Text>
+          <Text style={[styles.card_verticalChange, { color }]}>
+            {change >= 0 ? "+" : ""}{change.toFixed(2)} ({change >= 0 ? "+" : ""}{changePercent.toFixed(2)}%)
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.card_bottomRow}>
+        <View style={[styles.card_badge, styles.card_badgeGainers]}>
+          <Text style={styles.card_badgeText}>Gainers {counts.gainers}</Text>
+        </View>
+        <View style={[styles.card_badge, styles.card_badgeLosers]}>
+          <Text style={styles.card_badgeText}>Losers {counts.losers}</Text>
+        </View>
+        <View style={[styles.card_badge, styles.card_badgeNeutral]}>
+          <Text style={styles.card_badgeText}>Neutral {counts.neutral}</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
 
 const StocksScreen = () => {
   const navigation = useNavigation();
@@ -38,6 +122,8 @@ const StocksScreen = () => {
     exchange: initExchange = "NSE",
     filterIndex,
     from,
+    headerData,
+    headerCategory
   } = route.params || {};
   const [selectedExchange, setSelectedExchange] = useState(initExchange);
   const [selectedCategory, setSelectedCategory] = useState(from || "Indices");
@@ -48,6 +134,7 @@ const StocksScreen = () => {
   }, [from]);
   const { prices: realtimePrices } = useRealtimePrices();
   const subscribedRef = useRef(false);
+  const { openStockInfoDrawer } = useDrawer();
 
   // ✅ Sort and Filter States
   const [sortOpen, setSortOpen] = useState(false);
@@ -233,6 +320,23 @@ const StocksScreen = () => {
     refetch();
   }, [selectedExchange, selectedCategory, filterIndex, refetch]);
 
+  const counts = useMemo(() => {
+    let g = 0, l = 0, n = 0;
+    displayStocks.forEach((stock) => {
+      const price = Number(
+        realtimePrices[stock.symbol]?.price || stock.ltp || 0
+      );
+      const prevClose = Number(
+        realtimePrices[stock.symbol]?.prevClose || stock.prev_close || price
+      );
+      const change = price - prevClose;
+      if (change > 0) g++;
+      else if (change < 0) l++;
+      else n++;
+    });
+    return { gainers: g, losers: l, neutral: n };
+  }, [displayStocks, realtimePrices]);
+
   // Update display stocks when stocksData changes
   useEffect(() => {
     setOriginalStocks(stocksData);
@@ -273,18 +377,11 @@ const StocksScreen = () => {
     );
   }
 
-  // 🔙 Back label resolver
-  const getBackLabel = () => {
-    if (filterIndex) return filterIndex;
-    if (from === "Market Cap") return "Market Cap";
-    if (from === "Sectors") return "Sectors";
-    if (from === "Themes") return "Themes";
-    return from || "Back";
-  };
+
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
-      {/* <TopHeader /> */}
+      {/* ... existing header code ... */}
       <TopMenuSlider currentRoute="Equity" />
 
       {/* ✅ MarketTabs */}
@@ -303,7 +400,6 @@ const StocksScreen = () => {
             style={styles.backButton}
           >
             <Ionicons name="arrow-back" size={22} color={global.colors.secondary} />
-            <Text style={styles.backText}>({getBackLabel()})</Text>
           </TouchableOpacity>
 
           {/* Sort & Filter Bar - RIGHT SIDE */}
@@ -326,36 +422,32 @@ const StocksScreen = () => {
         </View>
       )}
 
-      {/* Sort & Filter Bar - Only when no back button */}
-      {!from && originalStocks.length > 0 && (
-        <View style={styles.sortFilterBar}>
-          <TouchableOpacity style={styles.sortButton} onPress={() => setSortOpen(true)}>
-            <Image
-              source={require("../../assets/sorticon.png")}
-              style={{ width: 18, height: 18, resizeMode: "contain" }}
-            />
-            <Text style={styles.sortFilterText}>Sort</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterOpen(true)}>
-            <Ionicons name="funnel-outline" size={16} color={global.colors.textPrimary} />
-            <Text style={styles.sortFilterText}>Filter</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* 📊 Stock List */}
       <FlatList
+        ListHeaderComponent={
+          <>
+            {/* ✅ Advanced Header Card */}
+            {headerData && (
+              <View style={{ paddingHorizontal: 8, marginTop: 12, marginBottom: 10 }}>
+                <AdvancedHeaderCard 
+                  item={headerData} 
+                  realtime={realtimePrices[headerData.symbol] || realtimePrices[headerData.name]} 
+                  counts={counts}
+                />
+              </View>
+            )}
+          </>
+        }
         data={displayStocks}
         renderItem={({ item }) => (
           <StockListCard
             stock={item}
             realtime={realtimePrices[item.symbol]}
-            onPress={() =>
-              navigation.navigate("AdvancedChart", {
-                symbol: item.symbol,
-              })
-            }
+            onPress={() => openStockInfoDrawer(item.symbol, null, {
+              name: item.name || item.symbol,
+              price: Number(realtimePrices[item.symbol]?.price || item.ltp || 0)
+            })}
           />
         )}
         keyExtractor={(item, index) => `${item.symbol || item.token}-${index}`}
@@ -500,19 +592,9 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
+    padding: 4,
   },
-  backIcon: {
-    fontSize: 25,
-    fontWeight: "bold",
-    color: global.colors.textPrimary,
-    marginRight: 10,
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: global.colors.textPrimary,
-    marginLeft: 7,
-  },
+
   sortFilterButtonsContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -550,7 +632,7 @@ const styles = StyleSheet.create({
   // Overlay and Dropdown
   overlay: {
     flex: 1,
-    backgroundColor: global.colors.overlay,
+    backgroundColor: "transparent",
     justifyContent: "flex-start",
     alignItems: "flex-end",
   },
@@ -577,6 +659,78 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: global.colors.textPrimary,
     fontWeight: "500",
+  },
+
+
+  // Advanced Card Styles
+  card_verticalCard: {
+    backgroundColor: global.colors.primary,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 0,
+  },
+  card_topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "stretch",
+  },
+  card_topLeft: {
+    flex: 1,
+    justifyContent: "flex-start",
+  },
+  card_topMiddle: {
+    justifyContent: "flex-end", 
+    paddingHorizontal: 8,
+  },
+  card_topRight: {
+    flex: 1,
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
+  },
+  card_companyName: { fontSize: 16, fontWeight: "700", color: global.colors.textPrimary },
+  card_verticalTime: {
+    fontSize: 12,
+    color: global.colors.textSecondary,
+    marginTop: 4,
+  },
+  card_verticalPrice: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: global.colors.textPrimary,
+  },
+  card_verticalChange: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  card_bottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  card_badge: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    marginHorizontal: 3,
+  },
+  card_badgeGainers: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)", // light green
+  },
+  card_badgeLosers: {
+    backgroundColor: "rgba(239, 68, 68, 0.15)", // light red
+  },
+  card_badgeNeutral: {
+    backgroundColor: "rgba(107, 114, 128, 0.2)", // light gray
+  },
+  card_badgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: global.colors.textPrimary,
   },
 });
 

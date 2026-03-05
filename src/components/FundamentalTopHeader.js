@@ -11,9 +11,11 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import TextInput from "../components/TextInput";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, ClearIcon } from "@expo/vector-icons";
+import CancelIcon from "../../assets/cancelicon.png";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -21,15 +23,19 @@ import axiosInstance from "../api/axios";
 import { apiUrl } from "../utils/apiUrl";
 import { useAuth } from "../context/AuthContext";
 import { useWatchlistRefresh } from "../context/WatchlistContext";
-import rupeeIcon from "../../assets/dropdownrupees.png";
-import { useFocusEffect } from '@react-navigation/native';
-// import watchlistIcon from "../../assets/dropdownwatchlist.png";
+import { useDrawer } from "../context/DrawerContext";
+import rupeeIcon from "../../assets/trademenu.png";
+import watchlistIcon from "../../assets/dropdownwatchlist.png";
+import { useFocusEffect } from "@react-navigation/native";
 import Profile from "../../assets/Profile.png";
 import { useAlert } from "../context/AlertContext";
+import { openDrawer } from "../context/DrawerContext";
+
 const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const { showSuccess, showError } = useAlert();
   const insets = useSafeAreaInsets();
+  const { openProfileDrawer, openNotificationDrawer } = useDrawer();
   const { authToken, clientId, clearAuth, profileImage } = useAuth();
   const { triggerRefresh } = useWatchlistRefresh();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -43,7 +49,9 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const [loadingWatchlists, setLoadingWatchlists] = useState(false);
   const [userId, setUserId] = useState(null);
   const [addingToWishlist, setAddingToWishlist] = useState({});
+  const [searchText, setSearchText] = useState("");
 
+  const { openStockInfoDrawer } = useDrawer();
 
   const loadUserId = async () => {
     try {
@@ -103,9 +111,11 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
   useFocusEffect(
     React.useCallback(() => {
       getUserById();
-    }, [])
+    }, []),
   );
+
   const searchFilter = (text) => {
+    setSearchText(text);
     if (!text.trim()) {
       setFiltered([]);
       return;
@@ -127,7 +137,6 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const handleSuggestionSelect = (item) => {
     setSelectedItem(item);
     setFiltered([]);
-    setWatchlistModalVisible(true);
   };
 
   const showMenu = () => {
@@ -204,7 +213,7 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
           id: item.wishlist_id,
           name: item.wishlist_name,
           user: item.user_id,
-        }))
+        })),
       );
     } catch (err) {
       console.log("Watchlist fetch error:", err);
@@ -234,7 +243,7 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
     try {
       const response = await axiosInstance.post(
         `${apiUrl}/api/wishlistcontrol/add`,
-        payload
+        payload,
       );
 
       if (
@@ -249,24 +258,15 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
           onWatchlistAdded?.(parseInt(wishlist.id, 10));
           // alert(`✅ ${msg}`);
         } else {
-          showError(
-            "Error",
-            msg
-          );
+          showError("Error", msg);
         }
         closeWatchlistModal();
       } else {
-        showError(
-          "Error",
-          (response.data.message || "Failed")
-        );
+        showError("Error", response.data.message || "Failed");
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Failed to add";
-      showError(
-        "Error",
-        msg
-      );
+      showError("Error", msg);
     } finally {
       setAddingToWishlist((prev) => ({ ...prev, [wishlist.id]: false }));
     }
@@ -281,16 +281,17 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={global.colors.primary} barStyle="light-content" />
+      <StatusBar
+        backgroundColor={global.colors.primary}
+        barStyle="light-content"
+      />
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 10) }]}>
         {/* <TouchableOpacity onPress={() => navigation.navigate("ProfileScreen")}>
           <Image source={getImageSource(profileImage)} style={styles.avatar} />
         </TouchableOpacity> */}
         {/* Avatar (only if NOT showing back button) */}
         {!showBackButton && (
-          <TouchableOpacity
-            onPress={() => navigation.navigate("App", { screen: "MainTabs", params: { screen: "Profile" } })}
-          >
+          <TouchableOpacity onPress={openProfileDrawer}>
             <Image
               source={getImageSource(profileImage)}
               style={styles.avatar}
@@ -304,7 +305,11 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={22} color={global.colors.background} />
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color={global.colors.background}
+            />
           </TouchableOpacity>
         )}
 
@@ -320,8 +325,24 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
             placeholder="Search"
             placeholderTextColor={global.colors.textSecondary}
             style={styles.searchInput}
+            value={searchText}
             onChangeText={searchFilter}
           />
+          {(filtered.length > 0 || searchText.length > 0) && (
+            <TouchableOpacity
+              onPress={() => {
+                setFiltered([]);
+                setSearchText("");
+                Keyboard.dismiss();
+              }}
+            >
+              <Image
+                source={CancelIcon}
+                style={[styles.iconImage]}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Suggestions dropdown */}
@@ -350,36 +371,52 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
                 <TouchableOpacity
                   key={item.script_id}
                   style={styles.dropdownRow}
-                  onPress={() => handleSuggestionSelect(item)}
                 >
                   {/* LEFT: Script Name */}
-                  <Text style={styles.dropdownText} numberOfLines={1}>
-                    {item.script_name}
-                    {item.script_id ? ` (${item.script_id})` : ""}
+
+                  <Text
+                    onPress={() => openStockInfoDrawer(item.script_id, null, {
+                      name: item.script_name
+                    })}
+                    style={styles.dropdownText}
+                    numberOfLines={1}
+                  >
+                    {item.exchange}
+                    {item.script_id ? ` : ${item.script_id}` : ""}
                   </Text>
 
                   {/* RIGHT: TWO ICONS */}
                   <View style={styles.rightIcons}>
-                    {/* <Image
-                      source={watchlistIcon}
-                      style={styles.iconImage}
-                      resizeMode="contain"
-                    /> */}
-
                     <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        setFiltered([]);
-                        navigation.navigate("TradeOrder", {
-                          stockSymbol: item.script_id,
-                          stockName: item.script_name,
-                          token: item.token,
-                        });
+                      onPress={() => {
+                        setSelectedItem(item);
+                        setWatchlistModalVisible(true);
                       }}
                     >
                       <Image
+                        source={watchlistIcon}
+                        
+                        style={styles.iconImage2}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        openStockInfoDrawer(item.script_id, "placeorder", {
+                          name: item.script_name
+                        });
+                      }}
+                      // navigation.navigate("TradeOrder", {
+                      //   stockSymbol: item.script_id,
+                      //   stockName: item.script_name,
+                      //   token: item.token,
+                      // });
+                    >
+                      <Image
                         source={rupeeIcon}
-                        style={[styles.iconImage, { marginLeft: 18 }]}
+                        style={[styles.iconImage]}
                         resizeMode="contain"
                       />
                     </TouchableOpacity>
@@ -391,8 +428,15 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
         )}
 
         {/* Notification Button */}
-        <TouchableOpacity style={styles.circleButton} onPress={() => navigation.navigate("App", { screen: "NotificationScreen" })}>
-          <Ionicons name="notifications-outline" size={20} color={global.colors.background} />
+        <TouchableOpacity
+          style={styles.circleButton}
+          onPress={openNotificationDrawer}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={20}
+            color={global.colors.background}
+          />
           {/* <View style={styles.badge} /> */}
         </TouchableOpacity>
 
@@ -450,7 +494,10 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
 
             {loadingWatchlists ? (
               <View style={{ padding: 20, alignItems: "center" }}>
-                <ActivityIndicator size="small" color={global.colors.secondary} />
+                <ActivityIndicator
+                  size="small"
+                  color={global.colors.secondary}
+                />
               </View>
             ) : watchlists.length > 0 ? (
               <ScrollView style={{ maxHeight: 300 }}>
@@ -479,7 +526,12 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
               </ScrollView>
             ) : (
               <View style={{ padding: 20, alignItems: "center" }}>
-                <Text style={{ color: global.colors.textSecondary, textAlign: "center" }}>
+                <Text
+                  style={{
+                    color: global.colors.textSecondary,
+                    textAlign: "center",
+                  }}
+                >
                   No watchlists found. Please create one from your profile.
                 </Text>
               </View>
@@ -663,10 +715,16 @@ const styles = StyleSheet.create({
   rightIcons: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 25,
   },
   iconImage: {
-    width: 22,
-    height: 22,
+    width: 20,
+    height: 20,
+  },
+  iconImage2: {
+    width: 20,
+    height: 20,
+    marginRight: 20,
   },
   backButton: {
     width: 34,

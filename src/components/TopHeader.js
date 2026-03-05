@@ -21,9 +21,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axiosInstance from "../api/axios";
 import { apiUrl } from '../utils/apiUrl';
 import { useAuth } from '../context/AuthContext';
-import rupeeIcon from "../../assets/dropdownrupees.png";
-// import watchlistIcon from "../../assets/dropdownwatchlist.png";
+import rupeeIcon from "../../assets/trademenu.png";
+import watchlistIcon from "../../assets/dropdownwatchlist.png";
 import Profile from "../../assets/Profile.png";
+import { useDrawer } from "../context/DrawerContext";
 
 const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
@@ -32,6 +33,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const { authToken, clientId, clearAuth } = useAuth();
   const [menuVisible, setMenuVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const { openProfileDrawer, openNotificationDrawer } = useDrawer();
   const navigation = useNavigation();
   const [masterData, setMasterData] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -42,6 +44,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const [userId, setUserId] = useState(null);
   const [addingToWishlist, setAddingToWishlist] = useState({});
   const [profileImage, setProfileImage] = useState(null);
+  const { openStockInfoDrawer } = useDrawer();
   useEffect(() => {
     fetchMaster();
     loadUserId();
@@ -277,7 +280,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
         </TouchableOpacity> */}
         {/* Avatar (only if NOT showing back button) */}
         {!showBackButton && (
-          <TouchableOpacity onPress={() => navigation.navigate("App", { screen: "Profile" })}>
+          <TouchableOpacity onPress={openProfileDrawer}>
             <Image source={getImageSource(profileImage)} style={styles.avatar} />
           </TouchableOpacity>
         )}
@@ -303,6 +306,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
             style={styles.searchInput}
             onChangeText={searchFilter}
           />
+
         </View>
 
         {/* Suggestions dropdown */}
@@ -331,10 +335,15 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
                 <TouchableOpacity
                   key={item.script_id}
                   style={styles.dropdownRow}
-                  onPress={() => handleSuggestionSelect(item)}
                 >
                   {/* LEFT: Script Name */}
-                  <Text style={styles.dropdownText} numberOfLines={1}>
+                  <Text
+                    style={styles.dropdownText}
+                    numberOfLines={1}
+                    onPress={() => openStockInfoDrawer(item.script_id, null, {
+                      name: item.script_name
+                    })}
+                  >
                     {item.script_name}
                     {item.script_id ? ` (${item.script_id})` : ""}
                   </Text>
@@ -345,13 +354,13 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
                       source={watchlistIcon}
                       style={styles.iconImage}
                       resizeMode="contain"
-                    /> */}
+                    />
 
                     <Image
                       source={rupeeIcon}
                       style={[styles.iconImage, { marginLeft: 18 }]}
                       resizeMode="contain"
-                    />
+                    /> */}
                   </View>
                 </TouchableOpacity>
               ))}
@@ -361,7 +370,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
 
 
         {/* Notification Button */}
-        <TouchableOpacity style={styles.circleButton}>
+        <TouchableOpacity style={styles.circleButton} onPress={openNotificationDrawer}>
           <Ionicons name="notifications-outline" size={20} color={global.colors.background} />
           <View style={styles.badge} />
         </TouchableOpacity>
@@ -455,6 +464,8 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
             )}
           </Pressable>
         </Pressable>
+
+        
       </Modal>
     </View >
   );
@@ -469,7 +480,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 10,
   },
@@ -634,8 +645,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconImage: {
-    width: 22,
-    height: 22,
+    width: 20,
+    height: 20,
   },
   backButton: {
     width: 34,

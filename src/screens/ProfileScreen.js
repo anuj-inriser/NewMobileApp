@@ -10,7 +10,7 @@ import {
   Modal,
   Alert,
   Platform,
-  Animated
+  Animated,
 } from "react-native";
 import { useAlert } from "../context/AlertContext";
 import TextInput from "../components/TextInput";
@@ -52,8 +52,8 @@ import ArrowUp from "../../assets/arrow_up.png";
 import { Ionicons } from "@expo/vector-icons";
 import { useKeyboardAvoidingShift } from "../hooks/useKeyboardAvoidingShift";
 
-const ProfileScreen = () => {
-  const translateY = useKeyboardAvoidingShift()
+const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
+  const translateY = useKeyboardAvoidingShift();
   const { showSuccess, showError } = useAlert();
   const [kycOpen, setKycOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
@@ -61,7 +61,14 @@ const ProfileScreen = () => {
   const [linkedAccount, setLinkedAccount] = useState(false);
   const [accountPrivacy, setAccountPrivacy] = useState(false);
   const navigation = useNavigation();
-  const { authToken, clientId, clearAuth, userData, profileImage, refreshUserProfile } = useAuth();
+  const {
+    authToken,
+    clientId,
+    clearAuth,
+    userData,
+    profileImage,
+    refreshUserProfile,
+  } = useAuth();
   const [portfolioData, setPortfolioData] = useState([]);
   const [totalCurrent, setTotalCurrent] = useState("0.00");
   const [totalProfit, setTotalProfit] = useState("0.00");
@@ -203,7 +210,7 @@ const ProfileScreen = () => {
       }
 
       // ✅ FIX HERE
-      +   setPhoneOtpVerified(true);
+      setPhoneOtpVerified(true);
 
       setPhoneOtpModalOpen(false);
       setEditErrors((p) => ({ ...p, mobile: "" }));
@@ -212,16 +219,15 @@ const ProfileScreen = () => {
     }
   };
 
-
   const resendProfilePhoneOtp = async () => {
     await sendProfilePhoneOtp();
   };
-
 
   const pickAttachment = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
+      base64: true,
     });
 
     if (!result.canceled) {
@@ -325,7 +331,6 @@ const ProfileScreen = () => {
     }
   };
 
-
   const handlePanChange = (text) => {
     const cleaned = text.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
     if (cleaned.length <= 10) {
@@ -351,10 +356,7 @@ const ProfileScreen = () => {
   const pickDocument = async (type) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      showError(
-        "Permission required",
-        "Please allow media access."
-      );
+      showError("Permission required", "Please allow media access.");
       return;
     }
 
@@ -362,6 +364,7 @@ const ProfileScreen = () => {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: false,
       quality: 0.8,
+      base64: true,
     });
 
     if (!result.canceled) {
@@ -380,24 +383,38 @@ const ProfileScreen = () => {
   };
 
   const uriToBase64 = async (uri) => {
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    if (!uri) return null;
+    
+    // If it's already a base64 data string, just return the data part
+    if (uri.startsWith("data:")) {
+      return uri.split(",")[1];
+    }
 
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64data = reader.result.split(",")[1];
-        resolve(base64data);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result.split(",")[1];
+          resolve(base64data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error("uriToBase64 error:", error);
+      return null;
+    }
   };
   const fetchKycPercent = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
 
-      const res = await axiosInstance.get(`${apiUrl}/api/userkyc/percent/${userId}`);
+      const res = await axiosInstance.get(
+        `${apiUrl}/api/userkyc/percent/${userId}`,
+      );
       setKycPercent(res.data.percent);
 
       if (res.data?.success) {
@@ -474,15 +491,13 @@ const ProfileScreen = () => {
       console.error("Username validation error:", error);
       return false;
     }
-  }
+  };
   const handleSaveProfile = async () => {
     const e = {};
 
-    const isValidEmail = (email) =>
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-    const isValidMobile = (mobile) =>
-      /^\d{10}$/.test(mobile);
+    const isValidMobile = (mobile) => /^\d{10}$/.test(mobile);
 
     if (!editName.trim()) e.name = "Name required";
 
@@ -529,18 +544,12 @@ const ProfileScreen = () => {
       };
 
       const userId = await AsyncStorage.getItem("userId");
-      await axiosInstance.put(
-        `${apiUrl}/api/users/users/${userId}`,
-        payload
-      );
+      await axiosInstance.put(`${apiUrl}/api/users/users/${userId}`, payload);
 
       setEditOpen(false);
       getUserById();
     } catch (err) {
-      if (
-        err?.response?.status === 409 &&
-        err?.response?.data?.message
-      ) {
+      if (err?.response?.status === 409 && err?.response?.data?.message) {
         const msg = err.response.data.message.toLowerCase();
 
         const errors = {};
@@ -618,7 +627,6 @@ const ProfileScreen = () => {
   //     });
   //   }
   // };
-
 
   const formatAmount = (num) => {
     if (!num) return "0";
@@ -701,18 +709,17 @@ const ProfileScreen = () => {
       console.log("API Error:", err);
     }
   };
-  const profitColor = Number(totalProfit) >= 0 ? global.colors.success : global.colors.error;
-  const percentColor = Number(profitPercentage) >= 0 ? global.colors.success : global.colors.error;
+  const profitColor =
+    Number(totalProfit) >= 0 ? global.colors.success : global.colors.error;
+  const percentColor =
+    Number(profitPercentage) >= 0 ? global.colors.success : global.colors.error;
   const profitDisplay = `₹${formatAmount(Math.abs(totalProfit))}`;
   const percentDisplay = `${Math.abs(profitPercentage)}%`;
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      showError(
-        "Alert",
-        "Permission required."
-      );
+      showError("Alert", "Permission required.");
       return;
     }
 
@@ -721,10 +728,18 @@ const ProfileScreen = () => {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: true,
     });
 
     if (!result.canceled) {
       setEditImage(result.assets[0].uri);
+      // Store base64 if needed immediately or rely on uriToBase64 later
+      // But we added base64: true so we can use it.
+      if (result.assets[0].base64) {
+        setEditImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+      } else {
+        setEditImage(result.assets[0].uri);
+      }
     }
   };
 
@@ -763,13 +778,10 @@ const ProfileScreen = () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
 
-      await axiosInstance.put(
-        `${apiUrl}/api/users/change-password/${userId}`,
-        {
-          password: newPassword,
-          confirmPassword,
-        }
-      );
+      await axiosInstance.put(`${apiUrl}/api/users/change-password/${userId}`, {
+        password: newPassword,
+        confirmPassword,
+      });
 
       setNewPassword("");
       setConfirmPassword("");
@@ -841,6 +853,7 @@ const ProfileScreen = () => {
     if (!files.length) return null;
 
     const file = files[0];
+    if (file?.base64) return file.base64; // Use pre-fetched base64
     if (!file?.uri) return null;
 
     return await uriToBase64(file.uri);
@@ -855,15 +868,12 @@ const ProfileScreen = () => {
       if (!isValidPan(pan)) {
         showError(
           "Invalid PAN Number",
-          "Please enter a valid PAN number (e.g. ANDPS2321P)."
+          "Please enter a valid PAN number (e.g. ANDPS2321P).",
         );
         return;
       }
       if (panFiles.length === 0 && !panDocBase64) {
-        showError(
-          "PAN File Missing",
-          "Please upload a PAN document."
-        );
+        showError("PAN File Missing", "Please upload a PAN document.");
         return;
       }
       const isValidAadhar = (aadhar) => {
@@ -873,15 +883,12 @@ const ProfileScreen = () => {
       if (!isValidAadhar(aadhar)) {
         showError(
           "Invalid Aadhaar Number",
-          "Please enter a valid 12-digit Aadhaar number."
+          "Please enter a valid 12-digit Aadhaar number.",
         );
         return;
       }
       if (aadharFiles.length === 0 && !aadharDocBase64) {
-        showError(
-          "Aadhaar File Missing",
-          "Please upload an Aadhaar document."
-        );
+        showError("Aadhaar File Missing", "Please upload an Aadhaar document.");
         return;
       }
       const userId = await AsyncStorage.getItem("userId");
@@ -922,17 +929,11 @@ const ProfileScreen = () => {
 
       await loadKycData();
       fetchKycPercent();
-      showSuccess(
-        "Success",
-        "KYC submitted successfully."
-      );
+      showSuccess("Success", "KYC submitted successfully.");
       setKycOpen(false);
       getUserById();
     } catch (error) {
-      showError(
-        "Error",
-        "Failed to submit KYC."
-      );
+      showError("Error", "Failed to submit KYC.");
     }
   };
 
@@ -975,10 +976,7 @@ const ProfileScreen = () => {
   const submitReportIssue = async () => {
     try {
       if (!issueCategory || !issueDescription) {
-        showError(
-          "Error",
-          "Please select category and description"
-        );
+        showError("Error", "Please select category and description");
         return;
       }
 
@@ -1018,17 +1016,16 @@ const ProfileScreen = () => {
       setIssueDescription("");
       setAttachment(null);
     } catch (err) {
-      showError(
-        "Error",
-        "Failed to submit issue"
-      );
+      showError("Error", "Failed to submit issue");
     }
   };
 
   const loadKycData = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
-      const res = await axiosInstance.get(`${apiUrl}/api/userkyc/getuserkyc/${userId}`);
+      const res = await axiosInstance.get(
+        `${apiUrl}/api/userkyc/getuserkyc/${userId}`,
+      );
       if (res.data.data) {
         const kyc = res.data.data;
         setGender(kyc.gender || "");
@@ -1060,51 +1057,90 @@ const ProfileScreen = () => {
           style={{
             flex: 1,
             transform: [{ translateY }],
-          }}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 100 }}
-          >
-            <View style={styles.profileCard}>
-              <View style={styles.topRow}>
-                <Image
-                  source={getImageSource(profileImage)}
-                  style={styles.profileImage}
-                />
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <View
+              style={{ flexDirection: "row", justifyContent: "space-between" }}
+            >
+              <Text
+                style={{
+                  position: "absolute",
+                  left: 8,
+                  top: 5,
+                  zIndex: 999,
+                  padding: 8,
+                  fontSize: 18,
+                  fontWeight: "500",
 
-                <View style={{ marginLeft: 12 }}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.nameText}>{name}</Text>
-                    {kycPercent === 100 && (
-                      <TouchableOpacity style={styles.docIcon}>
-                        <Image
-                          source={ProfileImg1}
-                          style={{ width: 16, height: 16 }}
-                        />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  <Text style={styles.username}>@{username}</Text>
-                  <Text style={styles.contact}>{mobile}</Text>
-                  <Text style={styles.contact}>{email}</Text>
-                  <Text style={styles.location}>
-                    {[cityVal, stateVal].filter(Boolean).join(", ")}
-                  </Text>
-                </View>
-
+                  marginBottom: 10,
+                  paddingHorizontal: 16,
+                  color: global.colors.textPrimary,
+                  textAlign: "left",
+                }}
+              >
+                Profile
+              </Text>
+              {isInsideSlider && (
                 <TouchableOpacity
-                  style={styles.editBtn}
-                  onPress={openEditProfile}
+                  style={styles.closeSliderBtnRight}
+                  onPress={closeSlider}
                 >
-                  <Image
-                    source={ProfilePencil}
-                    style={{ width: 30, height: 30 }}
+                  <Ionicons
+                    name="close"
+                    size={28}
+                    color={global.colors.textPrimary}
                   />
                 </TouchableOpacity>
-              </View>
+              )}
+            </View>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingBottom: 100,
+                ...(isInsideSlider && { paddingTop: 40 }),
+              }}
+            >
+              <View style={styles.profileCard}>
+                <View style={styles.topRow}>
+                  <Image
+                    source={getImageSource(profileImage)}
+                    style={styles.profileImage}
+                  />
 
-              {/* <View style={styles.planRow}>
+                  <View style={{ marginLeft: 12 }}>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.nameText}>{name}</Text>
+                      {kycPercent === 100 && (
+                        <TouchableOpacity style={styles.docIcon}>
+                          <Image
+                            source={ProfileImg1}
+                            style={{ width: 16, height: 16 }}
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    <Text style={styles.username}>@{username}</Text>
+                    <Text style={styles.contact}>{mobile}</Text>
+                    <Text style={styles.contact}>{email}</Text>
+                    <Text style={styles.location}>
+                      {[cityVal, stateVal].filter(Boolean).join(", ")}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={openEditProfile}
+                  >
+                    <Image
+                      source={ProfilePencil}
+                      style={{ width: 30, height: 30 }}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* <View style={styles.planRow}>
                             <View>
                                 <Text style={styles.planLabel}>Premium Plan</Text>
                                 <Text style={styles.planStatus}>Active</Text>
@@ -1118,9 +1154,9 @@ const ProfileScreen = () => {
                                 <Text style={styles.planBtnText}>Manage Plan</Text>
                             </TouchableOpacity>
                         </View> */}
-            </View>
+              </View>
 
-            {/* <View style={styles.statsRow}>
+              {/* <View style={styles.statsRow}>
                         <View style={styles.statsCard}>
                             <Image source={Troffy} style={styles.statsIcon} />
                             <Text style={styles.statsTitle}>
@@ -1140,7 +1176,7 @@ const ProfileScreen = () => {
                         </View>
                     </View> */}
 
-            {/* <View style={styles.badgesSection}>
+              {/* <View style={styles.badgesSection}>
                         <Text style={styles.badgesTitle}>Badges</Text>
                         <View style={styles.badgeRow}>
                             <View style={{ alignItems: "center" }}>
@@ -1176,305 +1212,313 @@ const ProfileScreen = () => {
                         </View>
                     </View> */}
 
-            <TouchableOpacity
-              style={kycOpen ? styles.kycHeader : styles.kycHeaderclosed}
-              onPress={() => setKycOpen(!kycOpen)}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Image
-                  source={KycIcon}
-                  style={{ width: 30, height: 30, marginRight: 8 }}
-                />
-                <Text style={styles.kycTitle}>
-                  KYC Verification&nbsp;&nbsp;&nbsp;
-                </Text>
-                <KycChart percentage={kycPercent} />
-              </View>
-
-              <Image
-                source={kycOpen ? ArrowUp : ArrowDown}
-                style={{ width: 15, height: 8 }}
-              />
-            </TouchableOpacity>
-
-            {kycOpen && (
-              <View style={styles.kycBody}>
-                <Text style={styles.label}>Gender</Text>
-                <View style={styles.genderRow}>
-                  <TouchableOpacity
-                    style={[
-                      styles.genderBtn,
-                      gender === "Male" && styles.genderSelected,
-                    ]}
-                    onPress={() => setGender("Male")}
-                  >
-                    <Text
-                      style={[
-                        styles.genderText,
-                        gender === "Male" && styles.genderTextSelected,
-                      ]}
-                    >
-                      Male
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.genderBtn,
-                      gender === "Female" && styles.genderSelected,
-                    ]}
-                    onPress={() => setGender("Female")}
-                  >
-                    <Text
-                      style={[
-                        styles.genderText,
-                        gender === "Female" && styles.genderTextSelected,
-                      ]}
-                    >
-                      Female
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.label}>DOB</Text>
-                <TouchableOpacity
-                  style={styles.datepickerinputBox}
-                  onPress={() => setShowDobPicker(true)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.inputText}>
-                    {dob
-                      ? dob.toLocaleDateString("en-IN")
-                      : "Select Date of Birth"}
-                  </Text>
-                  <Image source={Calendar} style={styles.iconSmall} />
-                </TouchableOpacity>
-
-                <Text style={styles.label}>Father's Name</Text>
-                <View style={styles.inputBox}>
-                  <TextInput
-                    style={styles.inputText}
-                    placeholder="Enter your father's name"
-                    value={fatherName}
-                    onChangeText={setFatherName}
-                    multiline
+              <TouchableOpacity
+                style={kycOpen ? styles.kycHeader : styles.kycHeaderclosed}
+                onPress={() => setKycOpen(!kycOpen)}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Image
+                    source={KycIcon}
+                    style={{ width: 30, height: 30, marginRight: 8 }}
                   />
+                  <Text style={styles.kycTitle}>
+                    KYC Verification&nbsp;&nbsp;&nbsp;
+                  </Text>
+                  <KycChart percentage={kycPercent} />
                 </View>
-                {showDobPicker && (
-                  <DateTimePicker
-                    value={dob || new Date()}
-                    mode="date"
-                    display="calendar"
-                    maximumDate={new Date()}
-                    onChange={(event, selectedDate) => {
-                      setShowDobPicker(false);
-                      if (selectedDate) {
-                        setDob(selectedDate);
+
+                <Image
+                  source={kycOpen ? ArrowUp : ArrowDown}
+                  style={{ width: 15, height: 8 }}
+                />
+              </TouchableOpacity>
+
+              {kycOpen && (
+                <View style={styles.kycBody}>
+                  <Text style={styles.label}>Gender</Text>
+                  <View style={styles.genderRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.genderBtn,
+                        gender === "Male" && styles.genderSelected,
+                      ]}
+                      onPress={() => setGender("Male")}
+                    >
+                      <Text
+                        style={[
+                          styles.genderText,
+                          gender === "Male" && styles.genderTextSelected,
+                        ]}
+                      >
+                        Male
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.genderBtn,
+                        gender === "Female" && styles.genderSelected,
+                      ]}
+                      onPress={() => setGender("Female")}
+                    >
+                      <Text
+                        style={[
+                          styles.genderText,
+                          gender === "Female" && styles.genderTextSelected,
+                        ]}
+                      >
+                        Female
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.label}>DOB</Text>
+                  <TouchableOpacity
+                    style={styles.datepickerinputBox}
+                    onPress={() => setShowDobPicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.inputText}>
+                      {dob
+                        ? dob.toLocaleDateString("en-IN")
+                        : "Select Date of Birth"}
+                    </Text>
+                    <Image source={Calendar} style={styles.iconSmall} />
+                  </TouchableOpacity>
+
+                  <Text style={styles.label}>Father's Name</Text>
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      style={styles.inputText}
+                      placeholder="Enter your father's name"
+                      value={fatherName}
+                      onChangeText={setFatherName}
+                      multiline
+                    />
+                  </View>
+                  {showDobPicker && (
+                    <DateTimePicker
+                      value={dob || new Date()}
+                      mode="date"
+                      display="calendar"
+                      maximumDate={new Date()}
+                      onChange={(event, selectedDate) => {
+                        setShowDobPicker(false);
+                        if (selectedDate) {
+                          setDob(selectedDate);
+                        }
+                      }}
+                    />
+                  )}
+
+                  <Text style={styles.label}>PAN Number</Text>
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      style={styles.inputText}
+                      placeholder="Enter PAN Number"
+                      autoCapitalize="characters"
+                      maxLength={10}
+                      value={pan}
+                      onChangeText={handlePanChange}
+                    />
+                    <TouchableOpacity onPress={() => pickDocument("PAN")}>
+                      <Image source={Attach} style={styles.iconSmall2} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.fileTagRow}>
+                    {panDocBase64 && panFiles.length === 0 && (
+                      <TouchableOpacity
+                        style={styles.fileTag}
+                        onPress={() => {
+                          setPreviewBase64(panDocBase64);
+                          setPreviewVisible(true);
+                        }}
+                      >
+                        <Image source={Attach} style={styles.iconSmall3} />
+                        <Text style={styles.fileTagText}> PAN Document</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {panFiles.length > 0 && (
+                      <View style={styles.fileTag}>
+                        <Image source={Attach} style={styles.iconSmall3} />
+                        <Text style={styles.fileTagText}> PAN Document</Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setPanFiles([]);
+                            setPanDocBase64(null);
+                          }}
+                        >
+                          <Text style={{ marginLeft: 6, fontWeight: "700" }}>
+                            ×
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+
+                  <Text style={styles.label}>Aadhar Number</Text>
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      style={styles.inputText}
+                      placeholder="Enter Aadhar Number"
+                      keyboardType="number-pad"
+                      maxLength={12}
+                      value={aadhar}
+                      onChangeText={handleAadharChange}
+                    />
+                    <TouchableOpacity onPress={() => pickDocument("AADHAR")}>
+                      <Image source={Attach} style={styles.iconSmall2} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.fileTagRow}>
+                    {aadharDocBase64 && aadharFiles.length === 0 && (
+                      <TouchableOpacity
+                        style={styles.fileTag}
+                        onPress={() => {
+                          setPreviewBase64(aadharDocBase64);
+                          setPreviewVisible(true);
+                        }}
+                      >
+                        <Image source={Attach} style={styles.iconSmall3} />
+                        <Text style={styles.fileTagText}>
+                          {" "}
+                          Aadhaar Document
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {aadharFiles.length > 0 && (
+                      <View style={styles.fileTag}>
+                        <Image source={Attach} style={styles.iconSmall3} />
+                        <Text style={styles.fileTagText}>
+                          {" "}
+                          Aadhaar Document
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setAadharFiles([]);
+                            setAadharDocBase64(null);
+                          }}
+                        >
+                          <Text style={{ marginLeft: 6, fontWeight: "700" }}>
+                            ×
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+
+                  <Text style={styles.label}>Address</Text>
+                  <View style={styles.textAreaBox}>
+                    <TextInput
+                      style={styles.textArea}
+                      placeholder="Enter your address"
+                      value={address}
+                      onChangeText={setAddress}
+                      multiline
+                      numberOfLines={4}
+                      textAlignVertical="top"
+                    />
+                  </View>
+
+                  <Text style={styles.label}>City</Text>
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      style={styles.inputText}
+                      placeholder="Enter city"
+                      value={city}
+                      onChangeText={setCity}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>State</Text>
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      style={styles.inputText}
+                      placeholder="Enter state"
+                      value={stateName}
+                      onChangeText={setStateName}
+                    />
+                  </View>
+
+                  <Text style={styles.label}>Pincode</Text>
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      style={styles.inputText}
+                      placeholder="Enter pincode"
+                      value={pincode}
+                      onChangeText={setPincode}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.submitBtn, isKycCompleted]}
+                    onPress={() => {
+                      if (isKycCompleted) {
+                        showError(
+                          "Information",
+                          "Your KYC is already completed. If you need any changes, please contact support.",
+                        );
+                        return;
                       }
+                      handleKycSubmit();
                     }}
-                  />
-                )}
-
-                <Text style={styles.label}>PAN Number</Text>
-                <View style={styles.inputBox}>
-                  <TextInput
-                    style={styles.inputText}
-                    placeholder="Enter PAN Number"
-                    autoCapitalize="characters"
-                    maxLength={10}
-                    value={pan}
-                    onChangeText={handlePanChange}
-                  />
-                  <TouchableOpacity onPress={() => pickDocument("PAN")}>
-                    <Image source={Attach} style={styles.iconSmall2} />
+                  >
+                    <Text style={styles.submitText}>
+                      {isKycCompleted ? "KYC Completed" : "Submit"}
+                    </Text>
                   </TouchableOpacity>
                 </View>
+              )}
 
-                <View style={styles.fileTagRow}>
-                  {panDocBase64 && panFiles.length === 0 && (
-                    <TouchableOpacity
-                      style={styles.fileTag}
-                      onPress={() => {
-                        setPreviewBase64(panDocBase64);
-                        setPreviewVisible(true);
-                      }}
-                    >
-                      <Image source={Attach} style={styles.iconSmall3} />
-                      <Text style={styles.fileTagText}> PAN Document</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {panFiles.length > 0 && (
-                    <View style={styles.fileTag}>
-                      <Image source={Attach} style={styles.iconSmall3} />
-                      <Text style={styles.fileTagText}> PAN Document</Text>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setPanFiles([]);
-                          setPanDocBase64(null);
-                        }}
-                      >
-                        <Text style={{ marginLeft: 6, fontWeight: "700" }}>
-                          ×
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-
-                <Text style={styles.label}>Aadhar Number</Text>
-                <View style={styles.inputBox}>
-                  <TextInput
-                    style={styles.inputText}
-                    placeholder="Enter Aadhar Number"
-                    keyboardType="number-pad"
-                    maxLength={12}
-                    value={aadhar}
-                    onChangeText={handleAadharChange}
+              <TouchableOpacity
+                style={
+                  preferencesOpen ? styles.kycHeader : styles.kycHeaderclosed
+                }
+                onPress={() => setPreferencesOpen(!preferencesOpen)}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Image
+                    source={AccountPrivacy}
+                    style={{ width: 30, height: 30, marginRight: 8 }}
                   />
-                  <TouchableOpacity onPress={() => pickDocument("AADHAR")}>
-                    <Image source={Attach} style={styles.iconSmall2} />
-                  </TouchableOpacity>
+                  <Text style={styles.kycTitle}>Preferences</Text>
                 </View>
-
-                <View style={styles.fileTagRow}>
-                  {aadharDocBase64 && aadharFiles.length === 0 && (
-                    <TouchableOpacity
-                      style={styles.fileTag}
-                      onPress={() => {
-                        setPreviewBase64(aadharDocBase64);
-                        setPreviewVisible(true);
-                      }}
-                    >
-                      <Image source={Attach} style={styles.iconSmall3} />
-                      <Text style={styles.fileTagText}> Aadhaar Document</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {aadharFiles.length > 0 && (
-                    <View style={styles.fileTag}>
-                      <Image source={Attach} style={styles.iconSmall3} />
-                      <Text style={styles.fileTagText}> Aadhaar Document</Text>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setAadharFiles([]);
-                          setAadharDocBase64(null);
-                        }}
-                      >
-                        <Text style={{ marginLeft: 6, fontWeight: "700" }}>
-                          ×
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-
-                <Text style={styles.label}>Address</Text>
-                <View style={styles.textAreaBox}>
-                  <TextInput
-                    style={styles.textArea}
-                    placeholder="Enter your address"
-                    value={address}
-                    onChangeText={setAddress}
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
-                  />
-                </View>
-
-                <Text style={styles.label}>City</Text>
-                <View style={styles.inputBox}>
-                  <TextInput
-                    style={styles.inputText}
-                    placeholder="Enter city"
-                    value={city}
-                    onChangeText={setCity}
-                  />
-                </View>
-
-                <Text style={styles.label}>State</Text>
-                <View style={styles.inputBox}>
-                  <TextInput
-                    style={styles.inputText}
-                    placeholder="Enter state"
-                    value={stateName}
-                    onChangeText={setStateName}
-                  />
-                </View>
-
-                <Text style={styles.label}>Pincode</Text>
-                <View style={styles.inputBox}>
-                  <TextInput
-                    style={styles.inputText}
-                    placeholder="Enter pincode"
-                    value={pincode}
-                    onChangeText={setPincode}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.submitBtn, isKycCompleted]}
-                  onPress={() => {
-                    if (isKycCompleted) {
-                      showError(
-                        "Information",
-                        "Your KYC is already completed. If you need any changes, please contact support.",
-                      );
-                      return;
-                    }
-                    handleKycSubmit();
-                  }}
-                >
-                  <Text style={styles.submitText}>
-                    {isKycCompleted ? "KYC Completed" : "Submit"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={preferencesOpen ? styles.kycHeader : styles.kycHeaderclosed}
-              onPress={() => setPreferencesOpen(!preferencesOpen)}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Image
-                  source={AccountPrivacy}
-                  style={{ width: 30, height: 30, marginRight: 8 }}
+                  source={preferencesOpen ? ArrowUp : ArrowDown}
+                  style={{ width: 15, height: 8 }}
                 />
-                <Text style={styles.kycTitle}>Preferences</Text>
-              </View>
-              <Image
-                source={preferencesOpen ? ArrowUp : ArrowDown}
-                style={{ width: 15, height: 8 }}
-              />
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            {preferencesOpen && (
-              <View style={styles.settingsCard}>
-                <PreferencesSection />
-              </View>
-            )}
+              {preferencesOpen && (
+                <View style={styles.settingsCard}>
+                  <PreferencesSection />
+                </View>
+              )}
 
-            <TouchableOpacity
-              style={setting ? styles.kycHeader : styles.kycHeaderclosed}
-              onPress={() => setSetting(!setting)}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity
+                style={setting ? styles.kycHeader : styles.kycHeaderclosed}
+                onPress={() => setSetting(!setting)}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Image
+                    source={Setting}
+                    style={{ width: 30, height: 30, marginRight: 8 }}
+                  />
+                  <Text style={styles.kycTitle}>Settings</Text>
+                </View>
                 <Image
-                  source={Setting}
-                  style={{ width: 30, height: 30, marginRight: 8 }}
+                  source={setting ? ArrowUp : ArrowDown}
+                  style={{ width: 15, height: 8 }}
                 />
-                <Text style={styles.kycTitle}>Settings</Text>
-              </View>
-              <Image
-                source={setting ? ArrowUp : ArrowDown}
-                style={{ width: 15, height: 8 }}
-              />
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            {setting && (
-              <View style={styles.settingsCard}>
-                {/* <Text style={styles.label}>Language</Text>
+              {setting && (
+                <View style={styles.settingsCard}>
+                  {/* <Text style={styles.label}>Language</Text>
                             <View style={styles.dropdownBox}>
                                 <Text style={styles.inputText}>Select your language</Text>
                                 <Image source={ArrowDown} style={{ width: 15, height: 8 }} />
@@ -1493,129 +1537,156 @@ const ProfileScreen = () => {
 
                             <View style={styles.divider} /> */}
 
-                <View style={styles.divider} />
+                  <View style={styles.divider} />
 
-                <Text style={styles.label}>Change Password</Text>
-                <View style={[styles.inputField, { flexDirection: "row", alignItems: "center" }]}>
-                  <TextInput
-                    style={[styles.inputText, { flex: 1 }]}
-                    placeholder="Enter your new password"
-                    secureTextEntry={!showNewPassword}
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                  />
-                  <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
-                    <Ionicons
-                      name={showNewPassword ? "eye-off-outline" : "eye-outline"}
-                      size={20}
-                      color={global.colors.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
-                {!!passwordErrors.newPassword && (
-                  <Text style={{ color: "red", fontSize: 12, marginBottom: 6 }}>
-                    {passwordErrors.newPassword}
-                  </Text>
-                )}
-
-                <Text style={styles.label}>Confirm Password</Text>
-                <View style={[styles.inputField, { flexDirection: "row", alignItems: "center" }]}>
-                  <TextInput
-                    style={[styles.inputText, { flex: 1 }]}
-                    placeholder="Re-enter your password"
-                    secureTextEntry={!showConfirmPassword}
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  <Text style={styles.label}>Change Password</Text>
+                  <View
+                    style={[
+                      styles.inputField,
+                      { flexDirection: "row", alignItems: "center" },
+                    ]}
                   >
-                    <Ionicons
-                      name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
-                      size={20}
-                      color={global.colors.textSecondary}
+                    <TextInput
+                      style={[styles.inputText, { flex: 1 }]}
+                      placeholder="Enter your new password"
+                      secureTextEntry={!showNewPassword}
+                      value={newPassword}
+                      onChangeText={setNewPassword}
                     />
+                    <TouchableOpacity
+                      onPress={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      <Ionicons
+                        name={
+                          showNewPassword ? "eye-off-outline" : "eye-outline"
+                        }
+                        size={20}
+                        color={global.colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {!!passwordErrors.newPassword && (
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 6 }}
+                    >
+                      {passwordErrors.newPassword}
+                    </Text>
+                  )}
+
+                  <Text style={styles.label}>Confirm Password</Text>
+                  <View
+                    style={[
+                      styles.inputField,
+                      { flexDirection: "row", alignItems: "center" },
+                    ]}
+                  >
+                    <TextInput
+                      style={[styles.inputText, { flex: 1 }]}
+                      placeholder="Re-enter your password"
+                      secureTextEntry={!showConfirmPassword}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                    />
+                    <TouchableOpacity
+                      onPress={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                    >
+                      <Ionicons
+                        name={
+                          showConfirmPassword
+                            ? "eye-off-outline"
+                            : "eye-outline"
+                        }
+                        size={20}
+                        color={global.colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {!!passwordErrors.confirmPassword && (
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 6 }}
+                    >
+                      {passwordErrors.confirmPassword}
+                    </Text>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.saveBtn}
+                    onPress={handleChangePassword}
+                  >
+                    <Text style={styles.saveBtnText}>Save Changes</Text>
                   </TouchableOpacity>
+                  {!!passwordErrors.general && (
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 6 }}
+                    >
+                      {passwordErrors.general}
+                    </Text>
+                  )}
+
+                  {!!passwordErrors.success && (
+                    <Text
+                      style={{ color: "green", fontSize: 12, marginBottom: 6 }}
+                    >
+                      {passwordErrors.success}
+                    </Text>
+                  )}
                 </View>
-                {!!passwordErrors.confirmPassword && (
-                  <Text style={{ color: "red", fontSize: 12, marginBottom: 6 }}>
-                    {passwordErrors.confirmPassword}
-                  </Text>
-                )}
+              )}
 
-                <TouchableOpacity
-                  style={styles.saveBtn}
-                  onPress={handleChangePassword}
-                >
-                  <Text style={styles.saveBtnText}>Save Changes</Text>
-                </TouchableOpacity>
-                {!!passwordErrors.general && (
-                  <Text style={{ color: "red", fontSize: 12, marginBottom: 6 }}>
-                    {passwordErrors.general}
-                  </Text>
-                )}
-
-                {!!passwordErrors.success && (
-                  <Text style={{ color: "green", fontSize: 12, marginBottom: 6 }}>
-                    {passwordErrors.success}
-                  </Text>
-                )}
-
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={aboutUsOpen ? styles.kycHeader : styles.kycHeaderclosed}
-              onPress={() => setAboutUsOpen(!aboutUsOpen)}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity
+                style={aboutUsOpen ? styles.kycHeader : styles.kycHeaderclosed}
+                onPress={() => setAboutUsOpen(!aboutUsOpen)}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Image
+                    source={AboutUs}
+                    style={{ width: 30, height: 30, marginRight: 8 }}
+                  />
+                  <Text style={styles.kycTitle}>More</Text>
+                </View>
                 <Image
-                  source={AboutUs}
-                  style={{ width: 30, height: 30, marginRight: 8 }}
+                  source={aboutUsOpen ? ArrowUp : ArrowDown}
+                  style={{ width: 15, height: 8 }}
                 />
-                <Text style={styles.kycTitle}>More</Text>
-              </View>
-              <Image
-                source={aboutUsOpen ? ArrowUp : ArrowDown}
-                style={{ width: 15, height: 8 }}
-              />
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            {aboutUsOpen && (
-              <View style={styles.aboutUsBody}>
-                {[
-                  "Send Feedback",
-                  "Report an Issue",
-                  // "Register as Research & Analyst",
-                  "Terms & Conditions",
-                  "App Information",
-                ].map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.aboutItem}
-                    onPress={() => {
-                      if (item === "Send Feedback") {
-                        setFeedbackModalOpen(true);
-                      }
-                      if (item === "Report an Issue") {
-                        setReportModalOpen(true);
-                      }
-                      if (item === "Terms & Conditions") {
-                        setTermsModalOpen(true);
-                      }
-                      if (item === "App Information") {
-                        setAppInfoModalOpen(true);
-                      }
-                    }}
-                  >
-                    <Text style={styles.aboutText}>{item}</Text>
-                    <Text style={styles.aboutArrow}>›</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+              {aboutUsOpen && (
+                <View style={styles.aboutUsBody}>
+                  {[
+                    "Send Feedback",
+                    "Report an Issue",
+                    // "Register as Research & Analyst",
+                    "Terms & Conditions",
+                    "App Information",
+                  ].map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.aboutItem}
+                      onPress={() => {
+                        if (item === "Send Feedback") {
+                          setFeedbackModalOpen(true);
+                        }
+                        if (item === "Report an Issue") {
+                          setReportModalOpen(true);
+                        }
+                        if (item === "Terms & Conditions") {
+                          setTermsModalOpen(true);
+                        }
+                        if (item === "App Information") {
+                          setAppInfoModalOpen(true);
+                        }
+                      }}
+                    >
+                      <Text style={styles.aboutText}>{item}</Text>
+                      <Text style={styles.aboutArrow}>›</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
-            {/* <TouchableOpacity style={linkedAccount ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setLinkedAccount(!linkedAccount)}>
+              {/* <TouchableOpacity style={linkedAccount ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setLinkedAccount(!linkedAccount)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
                             <Image source={LinkedAccount} style={{ width: 30, height: 30, marginRight: 8, }} />
                             <Text style={styles.kycTitle}>Linked Accounts</Text>
@@ -1681,7 +1752,7 @@ const ProfileScreen = () => {
                         </View>
                     )} */}
 
-            {/* <TouchableOpacity style={accountPrivacy ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setAccountPrivacy(!accountPrivacy)}>
+              {/* <TouchableOpacity style={accountPrivacy ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setAccountPrivacy(!accountPrivacy)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
                             <Image source={LinkedAccount} style={{ width: 30, height: 30, marginRight: 8, }} />
                             <Text style={styles.kycTitle}>Account Privacy</Text>
@@ -1716,17 +1787,26 @@ const ProfileScreen = () => {
                             ))}
                         </View>
                     )} */}
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
-          </ScrollView>
+              <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
           <Modal visible={phoneOtpModalOpen} transparent animationType="fade">
             <View style={popupStyles.overlay}>
               <View style={popupStyles.box}>
                 <Text style={popupStyles.title}>Verify Mobile</Text>
-                <Text style={popupStyles.sub}>OTP sent to +91 {editMobile}</Text>
+                <Text style={popupStyles.sub}>
+                  OTP sent to +91 {editMobile}
+                </Text>
 
-                <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 14 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    marginTop: 14,
+                  }}
+                >
                   {phoneOtp.map((digit, index) => (
                     <TextInput
                       key={index}
@@ -1737,12 +1817,10 @@ const ProfileScreen = () => {
                       value={digit}
                       onChangeText={(text) => handlePhoneOtpChange(text, index)}
                       textAlign="center"
-                      autoFocus={index === 0}   // 🔥 cursor on first box
+                      autoFocus={index === 0} // 🔥 cursor on first box
                     />
                   ))}
                 </View>
-
-
 
                 {!!phoneOtpError && (
                   <Text style={{ color: "red", fontSize: 12 }}>
@@ -1789,7 +1867,9 @@ const ProfileScreen = () => {
                 </Text>
 
                 {/* OTP BOXES */}
-                <View style={{ flexDirection: "row", justifyContent: "center" }}>
+                <View
+                  style={{ flexDirection: "row", justifyContent: "center" }}
+                >
                   {phoneOtp.map((d, i) => (
                     <TextInput
                       key={i}
@@ -1810,7 +1890,9 @@ const ProfileScreen = () => {
                 )}
 
                 <TouchableOpacity onPress={sendPhoneOtp}>
-                  <Text style={{ color: global.colors.secondary, marginTop: 10 }}>
+                  <Text
+                    style={{ color: global.colors.secondary, marginTop: 10 }}
+                  >
                     Resend OTP
                   </Text>
                 </TouchableOpacity>
@@ -1844,8 +1926,9 @@ const ProfileScreen = () => {
                 </View>
                 <Text style={styles.successTitle}>Feedback Submitted</Text>
                 <Text style={styles.successText}>
-                  We really appreciate you taking the time to share your thoughts.
-                  Your input helps us create a better experience for all users.
+                  We really appreciate you taking the time to share your
+                  thoughts. Your input helps us create a better experience for
+                  all users.
                 </Text>
                 <TouchableOpacity
                   style={styles.successBtn}
@@ -1872,8 +1955,8 @@ const ProfileScreen = () => {
                 </View>
                 <Text style={styles.successTitle}>Report Submitted</Text>
                 <Text style={styles.successText}>
-                  Thanks for bringing this to our attention. We may contact you in
-                  case more information is required.
+                  Thanks for bringing this to our attention. We may contact you
+                  in case more information is required.
                 </Text>
                 <TouchableOpacity
                   style={styles.successBtn}
@@ -1890,8 +1973,9 @@ const ProfileScreen = () => {
             animationType="fade"
             onRequestClose={() => setReportModalOpen(false)}
           >
-            <Animated.View style={[styles.modalOverlay, { transform: [{ translateY }] }]}>
-
+            <Animated.View
+              style={[styles.modalOverlay, { transform: [{ translateY }] }]}
+            >
               <View style={styles.reportCard}>
                 <TouchableOpacity
                   style={styles.reportClose}
@@ -1912,7 +1996,13 @@ const ProfileScreen = () => {
                     onPress={() => setIssueDropdownOpen(!issueDropdownOpen)}
                     activeOpacity={0.7}
                   >
-                    <Text style={{ color: issueCategory ? global.colors.secondary : global.colors.disabled }}>
+                    <Text
+                      style={{
+                        color: issueCategory
+                          ? global.colors.secondary
+                          : global.colors.disabled,
+                      }}
+                    >
                       {issueCategory || "Select your concern"}
                     </Text>
                     <Text style={{ fontSize: 16 }}>▾</Text>
@@ -2032,10 +2122,9 @@ const ProfileScreen = () => {
             animationType="fade"
             onRequestClose={() => setFeedbackModalOpen(false)}
           >
-            <Animated.View style={[
-              styles.modalOverlay,
-              { transform: [{ translateY }] },
-            ]}>
+            <Animated.View
+              style={[styles.modalOverlay, { transform: [{ translateY }] }]}
+            >
               <View style={styles.feedbackCard}>
                 <TouchableOpacity
                   style={styles.feedbackClose}
@@ -2060,7 +2149,12 @@ const ProfileScreen = () => {
                         <Text
                           style={[
                             styles.star,
-                            { color: star <= rating ? global.colors.warning : global.colors.disabled },
+                            {
+                              color:
+                                star <= rating
+                                  ? global.colors.warning
+                                  : global.colors.disabled,
+                            },
                           ]}
                         >
                           ★
@@ -2090,12 +2184,13 @@ const ProfileScreen = () => {
                     style={styles.feedbackSubmit}
                     onPress={submitFeedback}
                   >
-                    <Text style={styles.feedbackSubmitText}>Submit Feedback</Text>
+                    <Text style={styles.feedbackSubmitText}>
+                      Submit Feedback
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
             </Animated.View>
-
           </Modal>
           <Modal
             visible={termsModalOpen}
@@ -2103,8 +2198,7 @@ const ProfileScreen = () => {
             animationType="fade"
             onRequestClose={() => setTermsModalOpen(false)}
           >
-            <Animated.View style={styles.modalOverlay}
-            >
+            <Animated.View style={styles.modalOverlay}>
               <View style={styles.termsCard}>
                 <View style={styles.termsHeader}>
                   <Text style={styles.termsTitle}>Terms & Conditions</Text>
@@ -2126,9 +2220,9 @@ const ProfileScreen = () => {
                     • Refund & Subscription Policy
                   </Text>
                   <Text style={styles.termsText}>
-                    All subscription purchases are final. Refunds, if applicable,
-                    are processed according to platform guidelines and applicable
-                    laws.
+                    All subscription purchases are final. Refunds, if
+                    applicable, are processed according to platform guidelines
+                    and applicable laws.
                   </Text>
                   <Text style={styles.termsItemTitle}>
                     • Market Data & Accuracy
@@ -2149,10 +2243,12 @@ const ProfileScreen = () => {
                     • No Investment Advice
                   </Text>
                   <Text style={styles.termsText}>
-                    The information provided is for educational purposes only and
-                    does not constitute financial advice.
+                    The information provided is for educational purposes only
+                    and does not constitute financial advice.
                   </Text>
-                  <Text style={styles.termsItemTitle}>• User Responsibility</Text>
+                  <Text style={styles.termsItemTitle}>
+                    • User Responsibility
+                  </Text>
                   <Text style={styles.termsText}>
                     Users are responsible for their investment decisions and
                     compliance with applicable laws.
@@ -2161,13 +2257,13 @@ const ProfileScreen = () => {
                     • Limitation of Liability
                   </Text>
                   <Text style={styles.termsText}>
-                    We shall not be liable for any losses arising from the use of
-                    the platform.
+                    We shall not be liable for any losses arising from the use
+                    of the platform.
                   </Text>
                   <Text style={styles.termsItemTitle}>• Policy Updates</Text>
                   <Text style={styles.termsText}>
-                    Policies may be updated periodically. Continued use of the app
-                    implies acceptance of updated terms.
+                    Policies may be updated periodically. Continued use of the
+                    app implies acceptance of updated terms.
                   </Text>
                   <TouchableOpacity onPress={() => setDeleteModalVisible(true)}>
                     <Text style={styles.deleteAccountText}>Delete Account</Text>
@@ -2175,7 +2271,6 @@ const ProfileScreen = () => {
                 </ScrollView>
               </View>
             </Animated.View>
-
           </Modal>
           <Modal
             visible={appInfoModalOpen}
@@ -2204,9 +2299,7 @@ const ProfileScreen = () => {
                   </Text>
 
                   <Text style={styles.appInfoLabel}>CIN</Text>
-                  <Text style={styles.appInfoValue}>
-                    U74999UP2021PTC154107
-                  </Text>
+                  <Text style={styles.appInfoValue}>U74999UP2021PTC154107</Text>
                 </ScrollView>
               </View>
             </View>
@@ -2214,12 +2307,14 @@ const ProfileScreen = () => {
 
           <Modal visible={editOpen} transparent animationType="slide">
             <View style={styles.modalOverlay}>
-              <Animated.View style={[
-                styles.modalCard,
-                { transform: [{ translateY }] },
-              ]}>
+              <Animated.View
+                style={[styles.modalCard, { transform: [{ translateY }] }]}
+              >
                 <Text style={styles.modalTitle}>Edit Profile</Text>
-                <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+                <TouchableOpacity
+                  style={styles.imagePicker}
+                  onPress={pickImage}
+                >
                   <Image
                     source={getImageSource(editImage)}
                     style={styles.modalImage}
@@ -2261,7 +2356,9 @@ const ProfileScreen = () => {
                     style={popupStyles.verifyphoneBtn}
                     onPress={sendProfilePhoneOtp}
                   >
-                    <Text style={popupStyles.verifyphoneText}>Verify Mobile</Text>
+                    <Text style={popupStyles.verifyphoneText}>
+                      Verify Mobile
+                    </Text>
                   </TouchableOpacity>
                 )}
 
@@ -2312,7 +2409,14 @@ const ProfileScreen = () => {
                 )}
 
                 {editEmailVerified && editEmail !== email && (
-                  <Text style={{ color: "green", fontSize: 10, marginBottom: 6, alignSelf: "flex-end" }}>
+                  <Text
+                    style={{
+                      color: "green",
+                      fontSize: 10,
+                      marginBottom: 6,
+                      alignSelf: "flex-end",
+                    }}
+                  >
                     ✓ Email verified
                   </Text>
                 )}
@@ -2325,7 +2429,9 @@ const ProfileScreen = () => {
                     <Text style={styles.cancelText}>Cancel</Text>
                   </TouchableOpacity>
                   {!!editErrors.general && (
-                    <Text style={{ color: "red", fontSize: 12, marginBottom: 8 }}>
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 8 }}
+                    >
                       {editErrors.general}
                     </Text>
                   )}
@@ -2337,7 +2443,6 @@ const ProfileScreen = () => {
                   </TouchableOpacity>
                 </View>
               </Animated.View>
-
             </View>
           </Modal>
           <Modal visible={emailOtpModalOpen} transparent animationType="fade">
@@ -2701,6 +2806,14 @@ const styles = StyleSheet.create({
     color: global.colors.secondary,
   },
 
+  closeSliderBtnRight: {
+    position: "absolute",
+    right: 10,
+    top: 10,
+    zIndex: 999,
+    padding: 0,
+  },
+
   /* DROPDOWN */
   dropdownBox: {
     backgroundColor: global.colors.background,
@@ -2803,7 +2916,7 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: global.colors.background,
+    backgroundColor: global.colors.primary,
   },
 
   /* PROFILE CARD */
@@ -2958,7 +3071,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  badgeCount: { color: global.colors.background, fontSize: 14, fontWeight: "700" },
+  badgeCount: {
+    color: global.colors.background,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   badgeLabel: {
     color: global.colors.secondary,
     fontSize: 11,
@@ -2974,7 +3091,11 @@ const styles = StyleSheet.create({
     width: 70,
   },
 
-  badgeIconInactive: { width: 22, height: 22, tintColor: global.colors.textSecondary },
+  badgeIconInactive: {
+    width: 22,
+    height: 22,
+    tintColor: global.colors.textSecondary,
+  },
 
   badgeLabelInactive: { color: global.colors.textSecondary, fontSize: 11 },
 
@@ -3003,7 +3124,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   kycTitle: { fontSize: 15, fontWeight: "700", color: global.colors.secondary },
-  kycPercent: { marginLeft: 8, fontWeight: "700", color: global.colors.secondary, },
+  kycPercent: {
+    marginLeft: 8,
+    fontWeight: "700",
+    color: global.colors.secondary,
+  },
 
   kycBody: {
     backgroundColor: global.colors.surface,
@@ -3035,7 +3160,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  genderText: { fontSize: 14, color: global.colors.secondary, fontWeight: "600" },
+  genderText: {
+    fontSize: 14,
+    color: global.colors.secondary,
+    fontWeight: "600",
+  },
   inputBox: {
     backgroundColor: global.colors.background,
     borderRadius: 12,
@@ -3091,7 +3220,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  submitText: { color: global.colors.background, fontSize: 16, fontWeight: "700" },
+  submitText: {
+    color: global.colors.background,
+    fontSize: 16,
+    fontWeight: "700",
+  },
   genderSelected: {
     backgroundColor: global.colors.secondary,
   },
@@ -3478,8 +3611,8 @@ const styles = StyleSheet.create({
   },
 
   checkbox: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
     borderRadius: 4,
     backgroundColor: global.colors.secondary,
     justifyContent: "center",
@@ -3588,8 +3721,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#000",
   },
-
-
 
   attachText: {
     fontSize: 12,
@@ -3701,5 +3832,19 @@ const popupStyles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 10,
+  },
+  Slidertitle: {
+    position: "absolute",
+    left: 16,
+    top: 5,
+    zIndex: 999,
+    padding: 8,
+    fontSize: 18,
+    fontWeight: "500",
+
+    marginBottom: 10,
+    paddingHorizontal: 16,
+    color: global.colors.textPrimary,
+    textAlign: "left",
   },
 });

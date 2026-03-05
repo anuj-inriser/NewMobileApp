@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { useIntervalData } from '../hooks/useIntervalData';
+import SparklineChart from './Sparkline';
 
 const { width } = Dimensions.get('window');
 
@@ -185,6 +186,7 @@ const StockListCard = ({ stock, realtime, onPress }) => {
                     />
                 )}
             </View> */}
+            <SparklineChart symbol={stock.symbol} color={color} />
 
                 {/* Right: Price */}
                 <View style={styles.verticalCardRight}>
