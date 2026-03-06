@@ -13,6 +13,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import InternetListener from "./src/components/InternetListener";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import BottomTabBar from "./src/components/BottomTabBar";
 
@@ -345,6 +346,7 @@ export default function App() {
               <WatchlistProvider>
                 <AlertProvider>
                   <NavigationContainer>
+                    <InternetListener />
                     <RootNavigator />
                   </NavigationContainer>
                 </AlertProvider>

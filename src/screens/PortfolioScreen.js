@@ -40,26 +40,27 @@ const PortfolioScreen = () => {
     const [sortOpen, setSortOpen] = useState(false);
     const [brokerFilters, setBrokerFilters] = useState([]);
     const [selectedBroker, setSelectedBroker] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
     const portfolioSymbols = orders
         .map(o => o.tradingsymbol)
         .filter(Boolean);
     const { prices: realtimePrices } = useRealtimePrices();
-    
+
     const getRealtimeData = (symbol) => {
-        if (!symbol) return null;
+        if (!symbol || !authToken) return null;
         const symEq = symbol.endsWith("-EQ") ? symbol : `${symbol}-EQ`;
         const symNoEq = symbol.replace("-EQ", "");
-        
-        return realtimePrices[symbol] || 
-               realtimePrices[`NSE:${symbol}`] || 
-               realtimePrices[`BSE:${symbol}`] ||
-               realtimePrices[symEq] ||
-               realtimePrices[`NSE:${symEq}`] ||
-               realtimePrices[`BSE:${symEq}`] ||
-               realtimePrices[symNoEq] ||
-               realtimePrices[`NSE:${symNoEq}`] ||
-               realtimePrices[`BSE:${symNoEq}`] ||
-               null;
+
+        return realtimePrices[symbol] ||
+            realtimePrices[`NSE:${symbol}`] ||
+            realtimePrices[`BSE:${symbol}`] ||
+            realtimePrices[symEq] ||
+            realtimePrices[`NSE:${symEq}`] ||
+            realtimePrices[`BSE:${symEq}`] ||
+            realtimePrices[symNoEq] ||
+            realtimePrices[`NSE:${symNoEq}`] ||
+            realtimePrices[`BSE:${symNoEq}`] ||
+            null;
     };
 
     const applyBrokerFilter = (brokerId) => {
@@ -165,55 +166,62 @@ const PortfolioScreen = () => {
             setSelectedTab(1);
         }
     }, [route.params]);
+
+    const fetchOrders = async () => {
+        try {
+            setLoading(true);
+            const userId = await AsyncStorage.getItem("userId");
+            const deviceId = await getDeviceId();
+
+            // Use getPortfolioBalance endpoint for portfolio data (same as EquityScreen)
+            const response = await fetch(`${apiUrl}/api/portfolio/get`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${authToken}`,
+                    "Content-Type": "application/json",
+                    "userid": userId,
+                    "device_mac": deviceId
+                }
+            });
+
+            const json = await response.json();
+
+            const allOrders = json?.data || [];
+
+            // Deduplicate using tradingsymbol and broker_id
+            const seen = new Set();
+            const uniqueOrders = allOrders.filter(item => {
+                const key = `${item.tradingsymbol}_${item.broker_id}`;
+                if (seen.has(key)) {
+                    return false;
+                }
+                seen.add(key);
+                return true;
+            });
+
+            setOrders(uniqueOrders);
+            setOriginalOrders(uniqueOrders);
+            setSortOrder(null);
+
+        } catch (error) {
+            console.log("❌ API Error:", error.message);
+            console.error("Full Error:", error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false)
+        }
+    };
+
     useEffect(() => {
-        const fetchOrders = async () => {
-            try {
-                setLoading(true);
-                const userId = await AsyncStorage.getItem("userId");
-                const deviceId = await getDeviceId();
-
-                // Use getPortfolioBalance endpoint for portfolio data (same as EquityScreen)
-                const response = await fetch(`${apiUrl}/api/portfolio/getPortfolioBalance`, {
-                    method: "GET",
-                    headers: {
-                        "Authorization": `Bearer ${authToken}`,
-                        "Content-Type": "application/json",
-                        "userid": userId,
-                        "device_mac": deviceId
-                    }
-                });
-
-                const json = await response.json();
-
-                const allOrders = json?.data || [];
-
-                // Deduplicate using tradingsymbol and broker_id
-                const seen = new Set();
-                const uniqueOrders = allOrders.filter(item => {
-                    const key = `${item.tradingsymbol}_${item.broker_id}`;
-                    if (seen.has(key)) {
-                        return false;
-                    }
-                    seen.add(key);
-                    return true;
-                });
-
-                setOrders(uniqueOrders);
-                setOriginalOrders(uniqueOrders);
-                setSortOrder(null);
-
-            } catch (error) {
-                console.log("❌ API Error:", error.message);
-                console.error("Full Error:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         if (selectedTab === 1) {
             fetchOrders();
         }
     }, [selectedTab]);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchOrders();
+    };
 
     useEffect(() => {
         const fetchBrokers = async () => {
@@ -307,7 +315,7 @@ const PortfolioScreen = () => {
 
     return (
         <>
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.container} edges={['top']}>
                 {/* <TopHeader /> */}
 
                 {/* Sort + Filter Bar */}
@@ -324,7 +332,7 @@ const PortfolioScreen = () => {
                             />
                             <Text style={styles.actionText}>Sort</Text>
                         </TouchableOpacity>
-                        
+
 
                         {/* FILTER BUTTON */}
                         {/* <TouchableOpacity style={styles.iconRow} onPress={() => setIsFilterOpen(true)}>
@@ -347,13 +355,6 @@ const PortfolioScreen = () => {
                     profitPercent={profitPercent}
                     compactMode={true}
                 /> */}
-                <PortfolioHoldingsCard
-                    totalCurrent={portfolioTotals.totalCurrent}
-                    totalInvested={portfolioTotals.totalInvested}
-                    profit={portfolioTotals.totalToday}
-                    profitPercent={todayPercent}
-                    compactMode={true}
-                />
 
 
 
@@ -425,57 +426,75 @@ const PortfolioScreen = () => {
                 </Modal>
 
                 {/* ORDERS LIST */}
+                <View style={{flex: 1}}>
+
                 {loading ? (
                     <View style={styles.loaderBox}>
                         <Text style={styles.loaderText}>Loading...</Text>
                     </View>
                 ) : (
-                    <FlatList
-                        data={orders}
-                        keyExtractor={(item, index) => item.symboltoken + "-" + index}
-                        renderItem={({ item }) => {
-                            const rt = getRealtimeData(item.tradingsymbol);
-                            const ltp = rt?.price ?? Number(item.ltp || 0);
-                            const prevClose = rt?.prevClose ?? Number(item.close || 0);
+                    <>
+                        <FlatList
+                            data={orders}
+                            keyExtractor={(item, index) => item.symboltoken + "-" + index}
+                            renderItem={({ item }) => {
+                                const rt = getRealtimeData(item.tradingsymbol);
+                                const ltp = rt?.price ?? Number(item.ltp || 0);
+                                const prevClose = rt?.prevClose ?? Number(item.close || 0);
 
-                            return (
-                                <PortfolioCard
-                                    name={item.tradingsymbol}
-                                    shares={Number(item.realisedquantity || 0)}
-                                    invested={Number(
-                                        Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
-                                    )}
-                                    price={Number(
-                                        Number(item.averageprice || 0).toFixed(2)
-                                    )}
-                                    currentValue={Number(
-                                        Number(ltp || 0).toFixed(2)
-                                    )}
-                                    profit={(Number(ltp).toFixed(2) * item.realisedquantity).toFixed(2)}
-                                    profitPercent={Number(
-                                        (
-                                            (Number(ltp || 0) * Number(item.realisedquantity || 0)) -
-                                            (Number(item.averageprice || 0) * Number(item.realisedquantity || 0))
-                                        ) /
-                                        (Number(item.averageprice || 0) * Number(item.realisedquantity || 0)) * 100
-                                    ).toFixed(2)}
-                                    today={(
-                                        (Number(ltp || 0) - Number(prevClose || 0)) *
-                                        Number(item.realisedquantity || 0)
-                                    )}
-                                    todayPercent={(((
-                                        (Number(ltp || 0) - Number(prevClose || 0)) *
-                                        Number(item.realisedquantity || 0)
-                                    ) / Number(
-                                        Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
-                                    )) * 100).toFixed(2)}
-                                />
-                            );
-                        }}
-                        style={{ marginTop: 10 }}
-                        showsVerticalScrollIndicator={false}
-                    />
+                                return (
+                                    <PortfolioCard
+                                        name={item.tradingsymbol}
+                                        shares={Number(item.realisedquantity || 0)}
+                                        invested={Number(
+                                            Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
+                                        )}
+                                        price={Number(
+                                            Number(item.averageprice || 0).toFixed(2)
+                                        )}
+                                        currentValue={Number(
+                                            Number(ltp || 0).toFixed(2)
+                                        )}
+                                        profit={(Number(ltp).toFixed(2) * item.realisedquantity).toFixed(2)}
+                                        profitPercent={Number(
+                                            (
+                                                (Number(ltp || 0) * Number(item.realisedquantity || 0)) -
+                                                (Number(item.averageprice || 0) * Number(item.realisedquantity || 0))
+                                            ) /
+                                            (Number(item.averageprice || 0) * Number(item.realisedquantity || 0)) * 100
+                                        ).toFixed(2)}
+                                        today={(
+                                            (Number(ltp || 0) - Number(prevClose || 0)) *
+                                            Number(item.realisedquantity || 0)
+                                        )}
+                                        todayPercent={(((
+                                            (Number(ltp || 0) - Number(prevClose || 0)) *
+                                            Number(item.realisedquantity || 0)
+                                        ) / Number(
+                                            Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
+                                        )) * 100).toFixed(2)}
+                                    />
+                                );
+                                }}
+                                ListHeaderComponent={
+                                      <PortfolioHoldingsCard
+                            totalCurrent={portfolioTotals.totalCurrent}
+                            totalInvested={portfolioTotals.totalInvested}
+                            profit={portfolioTotals.totalToday}
+                            profitPercent={todayPercent}
+                            compactMode={true}
+                        />
+                                }
+                                    // style={{ marginTop: 10 }}
+                                    contentContainerStyle={{  paddingBottom: 100 }}
+                            showsVerticalScrollIndicator={false}
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                        />
+                    </>
                 )}
+
+                </View>
             </SafeAreaView>
             {/* <BottomTabBar /> */}
         </>
@@ -486,6 +505,7 @@ export default PortfolioScreen;
 
 const styles = StyleSheet.create({
     loaderBox: {
+        flex: 1,
         marginTop: 40,
         justifyContent: "center",
         alignItems: "center",
@@ -527,24 +547,24 @@ const styles = StyleSheet.create({
     },
 
     row: {
-           flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 16,
+        paddingVertical: 10,
     },
 
     iconRow: {
         flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 18,
+        alignItems: "center",
+        marginLeft: 18,
     },
 
     actionText: {
         marginLeft: 6,
-    fontSize: 13,
-    color: "#000",
-    fontWeight: "600",
+        fontSize: 13,
+        color: "#000",
+        fontWeight: "600",
     },
 
     overlay: {
