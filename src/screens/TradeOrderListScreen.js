@@ -73,6 +73,7 @@ export default function TradeOrderListScreen() {
 
   const symbolsRef = useRef([]);
   const fetchedPrevCloseRef = useRef(false);
+  const lastHandledRefreshRef = useRef(0);
 
   useEffect(() => {
     const enriched = rawStocks.map(item => {
@@ -99,10 +100,15 @@ export default function TradeOrderListScreen() {
 
   // Refetch when refreshTrigger changes
   useEffect(() => {
-    if (currentWatchlistId && refreshTrigger) {
+    if (
+      currentWatchlistId &&
+      refreshTrigger &&
+      refreshTrigger !== lastHandledRefreshRef.current
+    ) {
+      lastHandledRefreshRef.current = refreshTrigger;
       refetch();
     }
-  }, [refreshTrigger, currentWatchlistId, refetch]);
+  }, [refreshTrigger, currentWatchlistId]);
 
   // Sort and Filter states
   const [sortOpen, setSortOpen] = useState(false);

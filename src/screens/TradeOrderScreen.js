@@ -42,6 +42,7 @@ export default function TradeOrderScreen({
   producttype: propProductType,
   internaltype: propInternalType,
   orderid: propOrderId,
+  exchange: propExchange,
 }) {
   const route = useRoute();
   const hideHeader = propHideHeader || route.params?.hideHeader;
@@ -183,7 +184,7 @@ export default function TradeOrderScreen({
   const swipeRef = useRef(null);
   const [selectedMenu, setSelectedMenu] = useState("Intraday");
   const [transactionType, setTransactionType] = useState("BUY"); // BUY or SELL
-  const [selected, setSelected] = useState("NSE");
+  const [selected, setSelected] = useState(propExchange || "NSE");
   const [segment, setSegment] = useState("INTRADAY");
 
   const [selectedSegmentType, setSelectedSegmentType] = useState("");
@@ -220,6 +221,12 @@ export default function TradeOrderScreen({
   const [selectedExchange, setSelectedExchange] = useState("NSE");
 
   const symbol = passedSymbol || "WELENT-EQ";
+  useEffect(() => {
+    if (propExchange) {
+      setSelected(propExchange);
+    }
+  }, [propExchange]);
+
   const fetchBrokerage = async () => {
     try {
       const symbolToken = passedToken || "";

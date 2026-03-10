@@ -20,7 +20,7 @@ const WatchlistItemCard = ({
   prevCloses = {},
   onPressItem,
   onRemoveItem,
-   isFetching,
+  isFetching,
   refetch,
 }) => {
   const swipeableRefs = useRef({});
@@ -90,7 +90,15 @@ const WatchlistItemCard = ({
 
     const change = ltp - prev;
     const changePercent = prev !== 0 ? (change / prev) * 100 : 0;
-    const isUp = change >= 0;
+    // const isUp = change >= 0;
+    const isUp = change > 0;
+    let color = global.colors.textSecondary;
+
+    if (change > 0) {
+      color = global.colors.success;
+    } else if (change < 0) {
+      color = global.colors.error;
+    }
     const initials =
       item.name
         ?.split(" ")
@@ -119,8 +127,8 @@ const WatchlistItemCard = ({
         overshootLeft={false}
         overshootRight={false}
       >
-        <TouchableOpacity 
-          style={styles.cardWrapper} 
+        <TouchableOpacity
+          style={styles.cardWrapper}
           activeOpacity={0.9}
           onPress={() => openStockInfoDrawer(symbol, null, {
             name: item.name,
@@ -128,7 +136,7 @@ const WatchlistItemCard = ({
           })}
         >
           <LinearGradient
-            colors={isUp ? [global.colors.surface, global.colors.success] : [global.colors.error, global.colors.error]}
+            colors={isUp ? [global.colors.surface, color] : [global.colors.error, color]}
             style={styles.gradientWave}
           />
           <View style={styles.card}>
@@ -145,7 +153,7 @@ const WatchlistItemCard = ({
                 ₹ {ltp > 0 ? ltp.toFixed(2) : "--"}
               </Text>
               <Text
-                style={[styles.verticalChange, { color: isUp ? global.colors.success : global.colors.error }]}
+                style={[styles.verticalChange, { color: color }]}
               >
                 {Math.abs(change).toFixed(2)} ({Math.abs(changePercent).toFixed(2)}%)
               </Text>

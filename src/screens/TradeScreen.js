@@ -13,6 +13,7 @@ import {
   Modal,
   ScrollView,
   AppState,
+  RefreshControl,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 // import TopHeader from "../components/TopHeader";
@@ -51,6 +52,7 @@ const TradeScreen = () => {
   const [selectedFilter, setSelectedFilter] = useState("All");
   const touchMoveX = useRef(0);
   const touchStartX = useRef(0);
+
 
   const mergeWithRealtime = (list, realtimePrices) => {
     return list.map((item) => {
@@ -256,7 +258,7 @@ const TradeScreen = () => {
     }
   }, [tradeTypes]);
 
-  const { data: tradeRecommendations = [], isLoading: loadingRecommendations } =
+  const { data: tradeRecommendations = [], isLoading: loadingRecommendations, refetch, isFetching } =
     useQuery({
       queryKey: [
         "tradeRecommendations",
@@ -290,16 +292,16 @@ const TradeScreen = () => {
       enabled: !!selectedCategory,
 
       // replaces your setInterval
-      refetchInterval: 1000,
+      // refetchInterval: 1000,
 
-      refetchIntervalInBackground: true,
+      // refetchIntervalInBackground: true,
     });
 
   const displayStocks = useMemo(() => {
     return mergeWithRealtime(tradeRecommendations, prices);
   }, [tradeRecommendations, prices]);
 
-  const renderdata = () => {};
+  const renderdata = () => { };
 
   return (
     <>
@@ -369,11 +371,19 @@ const TradeScreen = () => {
           </TouchableOpacity>
         </Modal>
 
-        <View
+        <ScrollView
           style={{ flex: 1 }}
           onTouchStart={handleSwipeStart}
           onTouchMove={handleSwipeMove}
           onTouchEnd={handleSwipeEnd}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={isFetching}
+              onRefresh={refetch}
+            />
+          }
         >
           {tradeRecommendations.length === 0 ? (
             <View
@@ -395,43 +405,40 @@ const TradeScreen = () => {
               </Text>
             </View>
           ) : (
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContainer}
-            >
-              {displayStocks.map((recommendation) => {
-                const liveData = prices[recommendation.token];
-                return (
-                  <TradeCard
-                    key={recommendation.tradeId}
-                    script={recommendation.script_name}
-                    script_id={recommendation.script}
-                    status={recommendation.status}
-                    tradeRecommendation={
-                      recommendation.tradeRecommendationId === 1
-                        ? "Buy"
-                        : "Sell"
-                    }
-                    entryDate={recommendation.createdAt}
-                    exitDate={recommendation.exitDate}
-                    entry={recommendation.recoPriceLow}
-                    target={recommendation.targetOne}
-                    stopLoss={recommendation.stopLoss}
-                    potential_profits={recommendation.potential_profits}
-                    perspective={recommendation.tradeTypeName}
-                    token={recommendation.token}
-                    ltp={Number(recommendation.ltp)}
-                    prev_close={recommendation.prev_close}
-                    exitTypeId={recommendation.exitTypeId}
-                    exitPriceLow={recommendation.exitPriceLow}
-                    recoPriceLow={recommendation.recoPriceLow}
-                    isLocked={Number(role) === 1}
-                  />
-                );
-              })}
-            </ScrollView>
+
+            displayStocks.map((recommendation) => {
+              const liveData = prices[recommendation.token];
+              return (
+                <TradeCard
+                  key={recommendation.tradeId}
+                  script={recommendation.script_name}
+                  script_id={recommendation.script}
+                  status={recommendation.status}
+                  tradeRecommendation={
+                    recommendation.tradeRecommendationId === 1
+                      ? "Buy"
+                      : "Sell"
+                  }
+                  entryDate={recommendation.createdAt}
+                  exitDate={recommendation.exitDate}
+                  entry={recommendation.recoPriceLow}
+                  target={recommendation.targetOne}
+                  stopLoss={recommendation.stopLoss}
+                  potential_profits={recommendation.potential_profits}
+                  perspective={recommendation.tradeTypeName}
+                  token={recommendation.token}
+                  ltp={Number(recommendation.ltp)}
+                  prev_close={recommendation.prev_close}
+                  exitTypeId={recommendation.exitTypeId}
+                  exitPriceLow={recommendation.exitPriceLow}
+                  recoPriceLow={recommendation.recoPriceLow}
+                  isLocked={Number(role) === 1}
+                />
+              );
+            })
           )}
-        </View>
+        </ScrollView>
+
       </SafeAreaView>
 
       {/* <BottomTabBar /> */}

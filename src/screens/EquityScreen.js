@@ -65,8 +65,18 @@ const LeftBuyAction = () => (
 const MarketCapList = ({ data, exchange, category, navigation, onBuy, refreshing,
   onRefresh, }) => {
   const renderItem = ({ item }) => {
-    const isPositive = item.change >= 0;
-    const color = isPositive ? global.colors.success : global.colors.error;
+    // const isPositive = item.change >= 0;
+    // const color = isPositive ? global.colors.success : global.colors.error;
+
+    const isPositive = item.change > 0;
+
+    let color = global.colors.textSecondary; // grey for 0
+
+    if (item.change > 0) {
+      color = global.colors.success;
+    } else if (item.change < 0) {
+      color = global.colors.error;
+    }
 
     return (
       <TouchableOpacity
@@ -119,9 +129,18 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy, refreshing
 // ✅ SectorsList Component
 const SectorsList = ({ data, exchange, category, navigation, refreshing, onRefresh }) => {
   const renderItem = ({ item }) => {
-    const isPositive = item.change >= 0;
-    const color = isPositive ? global.colors.success : global.colors.error;
+    // const isPositive = item.change >= 0;
+    // const color = isPositive ? global.colors.success : global.colors.error;
 
+    const isPositive = item.change > 0;
+
+    let color = global.colors.textSecondary; // grey for 0
+
+    if (item.change > 0) {
+      color = global.colors.success;
+    } else if (item.change < 0) {
+      color = global.colors.error;
+    }
     return (
       <TouchableOpacity
         style={styles.marketCapItem}
@@ -276,7 +295,7 @@ export default function EquityScreen() {
     if (initialExchange !== undefined && initialExchange !== selectedExchange) {
       setSelectedExchange(initialExchange);
     }
-  // ✅ Use primitive values from route.params, not the object itself
+    // ✅ Use primitive values from route.params, not the object itself
   }, [route.params?.initialCategory, route.params?.initialExchange]);
 
 
@@ -700,25 +719,74 @@ export default function EquityScreen() {
   const handleExchangeChange = (exchange) => setSelectedExchange(exchange);
 
   // ✅ Sort Logic
+  // const applySortToData = (sortType, data) => {
+  //   let sorted = [...data];
+
+  //   const getChangePercent = (item) => {
+  //     const value = Number(item.ltp || 0);
+  //     console.log("value", value)
+  //     const prevClose = Number(item.prev_close || 0);
+  //     console.log("prev", prevClose)
+  //     const change = prevClose > 0 ? value - prevClose : 0;
+  //     console.log("change", change)
+  //     const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+  //     console.log("percent ", changePercent)
+  //     return changePercent;
+  //   };
+
+  //   if (sortType === "A-Z") {
+  //     sorted.sort((a, b) => {
+  //       const nameA = (a.symbol || "").toUpperCase();
+  //       const nameB = (b.symbol || "").toUpperCase();
+  //       return nameA.localeCompare(nameB);
+  //     });
+  //   } else if (sortType === "Z-A") {
+  //     sorted.sort((a, b) => {
+  //       const nameA = (a.symbol || "").toUpperCase();
+  //       const nameB = (b.symbol || "").toUpperCase();
+  //       return nameB.localeCompare(nameA);
+  //     });
+  //   }
+  //   if (sortType === "High-Low") {
+  //     sorted.sort((a, b) => getChangePercent(a) - getChangePercent(b));
+  //   }
+  //   else if (sortType === "Low-High") {
+  //     sorted.sort((a, b) => getChangePercent(b) - getChangePercent(a));
+  //   }
+
+  //   return sorted;
+  // };
+
   const applySortToData = (sortType, data) => {
     let sorted = [...data];
 
+    const getChangePercent = (item) => {
+      const value = Number(item.ltp || 0);
+      const prevClose = Number(item.prev_close || 0);
+      const change = prevClose > 0 ? value - prevClose : 0;
+      const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+      return changePercent;
+    };
+
     if (sortType === "A-Z") {
       sorted.sort((a, b) => {
-        const nameA = (a.group_name || a.name || "").toUpperCase();
-        const nameB = (b.group_name || b.name || "").toUpperCase();
+        const nameA = (a.symbol || "").toUpperCase();
+        const nameB = (b.symbol || "").toUpperCase();
         return nameA.localeCompare(nameB);
       });
-    } else if (sortType === "Z-A") {
+    }
+    else if (sortType === "Z-A") {
       sorted.sort((a, b) => {
-        const nameA = (a.group_name || a.name || "").toUpperCase();
-        const nameB = (b.group_name || b.name || "").toUpperCase();
+        const nameA = (a.symbol || "").toUpperCase();
+        const nameB = (b.symbol || "").toUpperCase();
         return nameB.localeCompare(nameA);
       });
-    } else if (sortType === "High-Low") {
-      sorted.sort((a, b) => Number(b.ltp || 0) - Number(a.ltp || 0));
-    } else if (sortType === "Low-High") {
-      sorted.sort((a, b) => Number(a.ltp || 0) - Number(b.ltp || 0));
+    }
+    else if (sortType === "High-Low") {
+      sorted.sort((a, b) => getChangePercent(b) - getChangePercent(a));
+    }
+    else if (sortType === "Low-High") {
+      sorted.sort((a, b) => getChangePercent(a) - getChangePercent(b));
     }
 
     return sorted;
@@ -740,155 +808,207 @@ export default function EquityScreen() {
   const handleFilterByType = (filterType) => {
     setIsFilterOpen(false);
 
+    const getChangePercent = (item) => {
+      const value = Number(item.ltp || 0);
+      const prevClose = Number(item.prev_close || 0);
+      const change = prevClose > 0 ? value - prevClose : 0;
+      return prevClose > 0 ? (change / prevClose) * 100 : 0;
+    };
+
+    const processData = (data) => {
+      let filtered = [...data];
+
+      if (filterType === "Gainers") {
+        filtered = filtered
+          .filter((item) => getChangePercent(item) > 0)
+          .sort((a, b) => getChangePercent(b) - getChangePercent(a));
+      }
+
+      else if (filterType === "Losers") {
+        filtered = filtered
+          .filter((item) => getChangePercent(item) < 0)
+          .sort((a, b) => getChangePercent(a) - getChangePercent(b));
+      }
+
+      return filtered;
+    };
+
     if (selectedCategory === "Market Cap") {
-      let filtered = [...originalMarketCapData];
+      setMarketCapData(
+        filterType === "All"
+          ? originalMarketCapData
+          : processData(originalMarketCapData)
+      );
+    }
 
-      if (filterType === "Gainers") {
-        // Filter market caps with positive change (gainers)
-        filtered = filtered.filter((item) => {
-          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-          const change = ((ltp - oi) / oi) * 100;
-          return change > 0;
-        });
-        // Sort by change descending
-        filtered.sort((a, b) => {
-          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-          const changeA = ((ltpA - oiA) / oiA) * 100;
+    else if (selectedCategory === "Indices") {
+      setAllIndicesData(
+        filterType === "All"
+          ? originalAllIndicesData
+          : processData(originalAllIndicesData)
+      );
+    }
 
-          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-          const changeB = ((ltpB - oiB) / oiB) * 100;
-
-          return changeB - changeA;
-        });
-      } else if (filterType === "Losers") {
-        // Filter market caps with negative change (losers)
-        filtered = filtered.filter((item) => {
-          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-          const change = ((ltp - oi) / oi) * 100;
-          return change < 0;
-        });
-        // Sort by change ascending (most negative first)
-        filtered.sort((a, b) => {
-          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-          const changeA = ((ltpA - oiA) / oiA) * 100;
-
-          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-          const changeB = ((ltpB - oiB) / oiB) * 100;
-
-          return changeA - changeB;
-        });
-      } else {
-        // "All" - reset to original
-        filtered = originalMarketCapData;
-      }
-
-      setMarketCapData(filtered);
-    } else if (selectedCategory === "Indices") {
-      let filtered = [...originalAllIndicesData];
-
-      if (filterType === "Gainers") {
-        // Filter indices with positive change (gainers)
-        filtered = filtered.filter((item) => {
-          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-          const change = ((ltp - oi) / oi) * 100;
-          return change > 0;
-        });
-        // Sort by change descending
-        filtered.sort((a, b) => {
-          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-          const changeA = ((ltpA - oiA) / oiA) * 100;
-
-          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-          const changeB = ((ltpB - oiB) / oiB) * 100;
-
-          return changeB - changeA;
-        });
-      } else if (filterType === "Losers") {
-        // Filter indices with negative change (losers)
-        filtered = filtered.filter((item) => {
-          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-          const change = ((ltp - oi) / oi) * 100;
-          return change < 0;
-        });
-        // Sort by change ascending (most negative first)
-        filtered.sort((a, b) => {
-          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-          const changeA = ((ltpA - oiA) / oiA) * 100;
-
-          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-          const changeB = ((ltpB - oiB) / oiB) * 100;
-
-          return changeA - changeB;
-        });
-      } else {
-        // "All" - reset to original
-        filtered = originalAllIndicesData;
-      }
-
-      setAllIndicesData(filtered);
-    } else if (selectedCategory === "Sectors") {
-      let filtered = [...originalSectorsData];
-
-      if (filterType === "Gainers") {
-        // Filter sectors with positive change (gainers)
-        filtered = filtered.filter((item) => {
-          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-          const change = ((ltp - oi) / oi) * 100;
-          return change > 0;
-        });
-        // Sort by change descending
-        filtered.sort((a, b) => {
-          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-          const changeA = ((ltpA - oiA) / oiA) * 100;
-
-          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-          const changeB = ((ltpB - oiB) / oiB) * 100;
-
-          return changeB - changeA;
-        });
-      } else if (filterType === "Losers") {
-        // Filter sectors with negative change (losers)
-        filtered = filtered.filter((item) => {
-          const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-          const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-          const change = ((ltp - oi) / oi) * 100;
-          return change < 0;
-        });
-        // Sort by change ascending (most negative first)
-        filtered.sort((a, b) => {
-          const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-          const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-          const changeA = ((ltpA - oiA) / oiA) * 100;
-
-          const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-          const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-          const changeB = ((ltpB - oiB) / oiB) * 100;
-
-          return changeA - changeB;
-        });
-      } else {
-        // "All" - reset to original
-        filtered = originalSectorsData;
-      }
-
-      setSectorsData(filtered);
+    else if (selectedCategory === "Sectors") {
+      setSectorsData(
+        filterType === "All"
+          ? originalSectorsData
+          : processData(originalSectorsData)
+      );
     }
   };
+  // const handleFilterByType = (filterType) => {
+  //   setIsFilterOpen(false);
+
+  //   if (selectedCategory === "Market Cap") {
+  //     let filtered = [...originalMarketCapData];
+
+  //     if (filterType === "Gainers") {
+  //       // Filter market caps with positive change (gainers)
+  //       filtered = filtered.filter((item) => {
+  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+  //         const change = ((ltp - oi) / oi) * 100;
+  //         return change > 0;
+  //       });
+  //       // Sort by change descending
+  //       filtered.sort((a, b) => {
+  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+  //         const changeA = ((ltpA - oiA) / oiA) * 100;
+
+  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+  //         const changeB = ((ltpB - oiB) / oiB) * 100;
+
+  //         return changeB - changeA;
+  //       });
+  //     } else if (filterType === "Losers") {
+  //       // Filter market caps with negative change (losers)
+  //       filtered = filtered.filter((item) => {
+  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+  //         const change = ((ltp - oi) / oi) * 100;
+  //         return change < 0;
+  //       });
+  //       // Sort by change ascending (most negative first)
+  //       filtered.sort((a, b) => {
+  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+  //         const changeA = ((ltpA - oiA) / oiA) * 100;
+
+  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+  //         const changeB = ((ltpB - oiB) / oiB) * 100;
+
+  //         return changeA - changeB;
+  //       });
+  //     } else {
+  //       // "All" - reset to original
+  //       filtered = originalMarketCapData;
+  //     }
+
+  //     setMarketCapData(filtered);
+  //   } else if (selectedCategory === "Indices") {
+  //     let filtered = [...originalAllIndicesData];
+
+  //     if (filterType === "Gainers") {
+  //       // Filter indices with positive change (gainers)
+  //       filtered = filtered.filter((item) => {
+  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+  //         const change = ((ltp - oi) / oi) * 100;
+  //         return change > 0;
+  //       });
+  //       // Sort by change descending
+  //       filtered.sort((a, b) => {
+  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+  //         const changeA = ((ltpA - oiA) / oiA) * 100;
+
+  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+  //         const changeB = ((ltpB - oiB) / oiB) * 100;
+
+  //         return changeB - changeA;
+  //       });
+  //     } else if (filterType === "Losers") {
+  //       // Filter indices with negative change (losers)
+  //       filtered = filtered.filter((item) => {
+  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+  //         const change = ((ltp - oi) / oi) * 100;
+  //         return change < 0;
+  //       });
+  //       // Sort by change ascending (most negative first)
+  //       filtered.sort((a, b) => {
+  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+  //         const changeA = ((ltpA - oiA) / oiA) * 100;
+
+  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+  //         const changeB = ((ltpB - oiB) / oiB) * 100;
+
+  //         return changeA - changeB;
+  //       });
+  //     } else {
+  //       // "All" - reset to original
+  //       filtered = originalAllIndicesData;
+  //     }
+
+  //     setAllIndicesData(filtered);
+  //   } else if (selectedCategory === "Sectors") {
+  //     let filtered = [...originalSectorsData];
+
+  //     if (filterType === "Gainers") {
+  //       // Filter sectors with positive change (gainers)
+  //       filtered = filtered.filter((item) => {
+  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+  //         const change = ((ltp - oi) / oi) * 100;
+  //         return change > 0;
+  //       });
+  //       // Sort by change descending
+  //       filtered.sort((a, b) => {
+  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+  //         const changeA = ((ltpA - oiA) / oiA) * 100;
+
+  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+  //         const changeB = ((ltpB - oiB) / oiB) * 100;
+
+  //         return changeB - changeA;
+  //       });
+  //     } else if (filterType === "Losers") {
+  //       // Filter sectors with negative change (losers)
+  //       filtered = filtered.filter((item) => {
+  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
+  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
+  //         const change = ((ltp - oi) / oi) * 100;
+  //         return change < 0;
+  //       });
+  //       // Sort by change ascending (most negative first)
+  //       filtered.sort((a, b) => {
+  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
+  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
+  //         const changeA = ((ltpA - oiA) / oiA) * 100;
+
+  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
+  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
+  //         const changeB = ((ltpB - oiB) / oiB) * 100;
+
+  //         return changeA - changeB;
+  //       });
+  //     } else {
+  //       // "All" - reset to original
+  //       filtered = originalSectorsData;
+  //     }
+
+  //     setSectorsData(filtered);
+  //   }
+  // };
 
   const handleViewAllIndices = () => {
     setSelectedCategory("Indices");
@@ -1375,7 +1495,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: global.colors.secondary,
   },
-  
+
   // New Advanced Card Styles
   card_verticalCard: {
     backgroundColor: global.colors.background,

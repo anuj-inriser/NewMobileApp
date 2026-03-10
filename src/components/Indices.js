@@ -23,19 +23,28 @@ import SparklineChart from "./Sparkline";
 
 // ✅ Vertical Card with Swipe Gesture
 const IndexVerticalCard = ({ index, onPress }) => {
-  const isPositive = index.change >= 0;
-  const color = isPositive ? global.colors.success : global.colors.error;
+  // const isPositive = index.change >= 0;
+  // const color = isPositive ? global.colors.success : global.colors.error;
 
+  const isPositive = index.change > 0;
+
+  let color = global.colors.textSecondary; // grey for 0
+
+  if (index.change > 0) {
+    color = global.colors.success;
+  } else if (index.change < 0) {
+    color = global.colors.error;
+  }
   // const isMarketStillOpen = isMarketOpen();
   // const timeColor = isMarketStillOpen ? global.colors.textSecondary : "#ef4444"; // Red if closed
 
   const timeStr = index.timestamp
     ? new Date(index.timestamp).toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      }).toLowerCase()
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }).toLowerCase()
     : "04:14:59 pm";
 
   return (
@@ -187,7 +196,7 @@ const Indices = ({
         <TouchableOpacity
           style={styles.retryButton}
           // onPress={() => window.location.reload()}
-          onPress={() => {}}
+          onPress={() => { }}
         >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
@@ -196,34 +205,39 @@ const Indices = ({
   }
 
   // ✅ Empty
-  if (indicesWithRealtimeData.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <ActivityIndicator size="large" color={global.colors.secondary} />
-      </View>
-    );
-  }
+  // if (indicesWithRealtimeData.length === 0) {
+  //   return (
+  //     <View style={styles.emptyContainer}>
+  //       <ActivityIndicator size="large" color={global.colors.secondary} />
+  //     </View>
+  //   );
+  // }
 
   // ✅ ONLY VERTICAL LIST — NO HORIZONTAL, NO GRID
   return (
     <>
-    <FlatList
-      data={indicesWithRealtimeData}
-      keyExtractor={(item, i) => `${exchange}-${item.symbol}-${i}`}
-      renderItem={({ item }) => (
-        <IndexVerticalCard
-          index={item}
-          onPress={onIndexPress}
+      <FlatList
+        data={indicesWithRealtimeData}
+        keyExtractor={(item, i) => `${exchange}-${item.symbol}-${i}`}
+        renderItem={({ item }) => (
+          <IndexVerticalCard
+            index={item}
+            onPress={onIndexPress}
           // onSwipeRight={onSwipeToChart}
-        />
-      )}
-      style={styles.container}
-      contentContainerStyle={styles.verticalList}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    />
+          />
+        )}
+        style={styles.container}
+        contentContainerStyle={styles.verticalList}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No Indices Data Available</Text>
+          </View>
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      />
     </>
   );
 };
@@ -349,6 +363,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "transparent",
+    marginTop: 190
   },
   emptyText: {
     marginTop: 12,

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Modal,
   AppState,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import PositionCard from "./PositionCard";
@@ -31,7 +32,21 @@ const PositionsList = () => {
   const [sortOpen, setSortOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [refreshing, setRefreshing] = useState(false);
+
   const { authToken } = useAuth();
+
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchPositions()
+    } catch (error) {
+      console.log("Refresh error:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const fetchPositions = async () => {
     try {
@@ -234,17 +249,24 @@ const PositionsList = () => {
         </TouchableOpacity>
       </Modal>
 
-      {loading ? (
-        <View style={styles.loaderBox}>
-          <Text style={styles.loaderText}>Loading...</Text>
-        </View>
-      ) : positions.length === 0 ? (
-        <View style={{ justifyContent:"center", alignItems: "center", flex:1 }}>
-          <Text style={styles.noDataText}>No Position Found</Text>
-        </View>
-      ) : (
-        <ScrollView style={{ marginTop: 10 }} contentContainerStyle={{ paddingBottom: 80 }}>
-          {positions.map((item, index) => (
+      <ScrollView style={{ marginTop: 10 }} contentContainerStyle={{ paddingBottom: 80 }}
+        refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+        />
+      }>
+        {loading ? (
+          <View style={styles.loaderBox}>
+            <Text style={styles.loaderText}>Loading...</Text>
+          </View>
+        ) : positions.length === 0 ? (
+          <View style={{ justifyContent: "center", alignItems: "center", flex: 1 }}>
+            <Text style={styles.noDataText}>No Position Found</Text>
+          </View>
+        ) : (
+
+          positions.map((item, index) => (
             <PositionCard
               key={`${item.tradingsymbol}_${index}`}
               tradingsymbol={item.tradingsymbol}
@@ -260,9 +282,9 @@ const PositionsList = () => {
               unrealised={item.unrealised}
               realised={item.realised}
             />
-          ))}
-        </ScrollView>
-      )}
+          ))
+        )}
+      </ScrollView>
     </View>
   );
 };
@@ -274,7 +296,7 @@ const styles = StyleSheet.create({
     backgroundColor: global.colors.background,
   },
   loaderBox: {
-    flex:1,
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -313,7 +335,7 @@ const styles = StyleSheet.create({
     marginLeft: 18,
   },
   actionText: {
- marginLeft: 6,
+    marginLeft: 6,
     fontSize: 13,
     color: "#000",
     fontWeight: "600",

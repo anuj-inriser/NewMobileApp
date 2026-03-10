@@ -28,7 +28,7 @@ const EXPANDED_HEIGHT = SCREEN_HEIGHT * 0.75;
 const StockInfoView = ({ symbol, hideOverview = false, isInsideSlider = false, closeSlider, onFullScreenToggle, isFullScreen }) => {
   const navigation = useNavigation();
   const { prices } = useRealtimePrices();
-  const { defaultTab, drawerMetadata } = useDrawer();
+  const { selectedSymbol, defaultTab, drawerMetadata } = useDrawer();
 
   // Tabs State
   const subTabs = [
@@ -302,6 +302,7 @@ const StockInfoView = ({ symbol, hideOverview = false, isInsideSlider = false, c
               name={drawerMetadata.name || symbol}
               price={drawerMetadata.price || price}
               internaltype="Place"
+              exchange={drawerMetadata.exchange}
             />
                    {/* <TradeOrderFormNative
               symbol={symbol}

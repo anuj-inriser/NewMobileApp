@@ -11,6 +11,9 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Modal,
+  Animated,
+  Linking
 } from "react-native";
 import TextInput from "../components/TextInput";
 import { apiUrl } from "../utils/apiUrl";
@@ -18,16 +21,52 @@ import { useAuth } from "../context/AuthContext";
 import axiosInstance from "../api/axios";
 import { getPushToken } from "../../src/utils/pushToken";
 import { ChartPrefetchService } from "../services/ChartPrefetchService";
+import { useKeyboardAvoidingShift } from "../hooks/useKeyboardAvoidingShift";
 
 export default function LoginScreen({ navigation }) {
+  const translateY = useKeyboardAvoidingShift();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [screenState, setScreenState] = useState("phone");
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [phoneOtp, setPhoneOtp] = useState(["", "", "", ""]);
   const [acceptedTnc, setAcceptedTnc] = useState(false);
+  const [phoneOtpModalOpen, setPhoneOtpModalOpen] = useState(false);
+  const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false)
+  const [resetPassword, setResetPassword] = useState('')
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [tncError, setTncError] = useState("");
+  const openTnC = () => {
+    Linking.openURL("https://www.equitty.one/terms");
+  };
+  const otpInputRefs = useRef([]);
+  const [showPhoneOtpModal, setShowPhoneOtpModal] = useState(false);
+  const [phoneOtpError, setPhoneOtpError] = useState("");
+  const [phoneOtpTimer, setPhoneOtpTimer] = useState(30);
+  const [canResendPhoneOtp, setCanResendPhoneOtp] = useState(false);
+  const [phoneOtpVerified, setPhoneOtpVerified] = useState(false);
+  useEffect(() => {
+    let interval;
+
+    if (phoneOtpModalOpen && !canResendPhoneOtp) {
+      interval = setInterval(() => {
+        setPhoneOtpTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setCanResendPhoneOtp(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => clearInterval(interval);
+  }, [phoneOtpModalOpen, canResendPhoneOtp]);
   const getIpAddress = async () => {
     try {
       const res = await fetch("https://api.ipify.org?format=json");
@@ -55,6 +94,119 @@ export default function LoginScreen({ navigation }) {
     if (!password.trim()) return "Password required";
     return "";
   };
+
+  const handlePhoneOtpChange = (text, index) => {
+    if (!/^\d?$/.test(text)) return; // only 1 digit allowed
+
+    const updated = [...phoneOtp];
+    updated[index] = text;
+    setPhoneOtp(updated);
+
+    // 👉 Move to next box automatically
+    if (text && index < 3) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+
+    // 👈 Move to previous box on backspace
+    if (!text && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const sendProfilePhoneOtp = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/signup/send-phone-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+
+      console.log("response ", response)
+
+      if (!response.ok) {
+        throw new Error("Failed to send OTP");
+      }
+
+      const data = await response.json();
+
+      // reset OTP fields
+      setPhoneOtp(["", "", "", ""]);
+      // setCanResendPhoneOtp(false);
+
+      // open modal
+      setPhoneOtpModalOpen(true);
+
+    } catch (err) {
+      console.log("OTP Error:", err);
+      setEditErrors({ mobile: "Failed to send OTP" });
+    }
+  };
+
+  const verifyProfilePhoneOtp = async () => {
+    const enteredOtp = phoneOtp.join("");
+
+    if (enteredOtp.length !== 4) {
+      setPhoneOtpError("Enter OTP");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${apiUrl}/api/signup/verify-phone-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: phone,
+          otp: enteredOtp,
+        }),
+      });
+
+      const data = await res.json();
+      console.log('data', data)
+
+      if (!data.success) {
+        setPhoneOtpError("Invalid OTP");
+        return;
+      }
+
+      // ✅ FIX HERE
+      setPhoneOtpVerified(true);
+
+      setPhoneOtpModalOpen(false);
+      setResetPasswordModalOpen(true)
+      // setEditErrors((p) => ({ ...p, mobile: "" }));
+    } catch {
+      setPhoneOtpError("Verification failed");
+    }
+  };
+
+  const verifyResetPassword = async () => {
+    if (resetPassword !== confirmPassword) {
+      setPhoneOtpError("Password do not match");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${apiUrl}/api/signup/update-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: phone,
+          password: resetPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        setPhoneOtpError("Invalid OTP");
+        return;
+      }
+      setResetPasswordModalOpen(false)
+
+    } catch (error) {
+
+    }
+  }
 
   const handleCheckUser = async () => {
     const phoneError = validatePhone();
@@ -127,7 +279,6 @@ export default function LoginScreen({ navigation }) {
         ChartPrefetchService.prefetchWatchlist();
         const { userId, name, email, phone, userimage, token, permission } =
           result.data;
-        console.log("Test1234567890", result.data);
         await setAuthData({
           userId: String(userId),
           userData: { name, email, phone, userimage },
@@ -152,7 +303,7 @@ export default function LoginScreen({ navigation }) {
       }
     } catch (e) {
       setLoading(false);
-      setErrors({ password: "Incorrect password" });
+      setErrors({ password: e?.response?.data?.message || "Incorrect password" });
     }
   };
 
@@ -225,6 +376,12 @@ export default function LoginScreen({ navigation }) {
             {!!errors.password && (
               <Text style={styles.errorText}>{errors.password}</Text>
             )}
+            <TouchableOpacity
+              onPress={sendProfilePhoneOtp}
+              style={styles.forgetPassword}
+            >
+              <Text>Forget Password?</Text>
+            </TouchableOpacity>
           </>
         )}
 
@@ -234,7 +391,10 @@ export default function LoginScreen({ navigation }) {
 
         <View style={styles.tncRow}>
           <Text style={styles.tncText}>
-            I accept the <Text style={styles.tncLink}>T&Cs</Text>
+            I accept the{" "}
+            <Text style={styles.tncLink} onPress={openTnC}>
+              T&Cs
+            </Text>
           </Text>
           <TouchableOpacity
             activeOpacity={0.8}
@@ -288,6 +448,150 @@ export default function LoginScreen({ navigation }) {
         {/* <Text style={styles.disclaimer}>
           Disclaimer: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
         </Text> */}
+
+        <Modal visible={phoneOtpModalOpen} transparent animationType="fade">
+          <View style={popupStyles.overlay}>
+            <View style={popupStyles.box}>
+              <Text style={popupStyles.title}>Verify OTP</Text>
+              <Text style={popupStyles.sub}>
+                OTP sent to +91 {phone}
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "center",
+                  marginTop: 14,
+                }}
+              >
+                {phoneOtp.map((digit, index) => (
+                  <TextInput
+                    key={index}
+                    ref={(ref) => (otpInputRefs.current[index] = ref)}
+                    style={styles.otpBox}
+                    keyboardType="number-pad"
+                    maxLength={1}
+                    value={digit}
+                    onChangeText={(text) => handlePhoneOtpChange(text, index)}
+                    textAlign="center"
+                    autoFocus={index === 0} // 🔥 cursor on first box
+                  />
+                ))}
+              </View>
+
+              {!!phoneOtpError && (
+                <Text style={{ color: "red", fontSize: 12 }}>
+                  {phoneOtpError}
+                </Text>
+              )}
+
+              {!canResendPhoneOtp ? (
+                <Text style={{ fontSize: 12, marginTop: 10 }}>
+                  Resend OTP in {phoneOtpTimer}s
+                </Text>
+              ) : (
+                <TouchableOpacity onPress={resendProfilePhoneOtp}>
+                  <Text
+                    style={{
+                      color: global.colors.secondary,
+                      fontWeight: "700",
+                      marginTop: 10,
+                    }}
+                  >
+                    Resend OTP
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={popupStyles.btnRow}>
+                <TouchableOpacity onPress={() => setPhoneOtpModalOpen(false)}>
+                  <Text style={popupStyles.cancel}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={verifyProfilePhoneOtp}>
+                  <Text style={popupStyles.verify}>Verify</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal visible={resetPasswordModalOpen} transparent animationType="fade">
+          <Animated.View style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "center",
+            alignItems: "center", transform: [{ translateY }]
+          }}>
+            <View style={popupStyles.box}>
+              <Text style={popupStyles.title}>Change Password</Text>
+
+              {/* New Password */}
+              <Text style={styles.label}>New Password</Text>
+              <View style={styles.inputField}>
+                <TextInput
+                  style={styles.inputText}
+                  placeholder="Enter new password"
+                  secureTextEntry={!showNewPassword}
+                  value={resetPassword}
+                  onChangeText={setResetPassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <Ionicons
+                    name={showNewPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#777"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Confirm Password */}
+              <Text style={styles.label}>Confirm Password</Text>
+              <View style={styles.inputField}>
+                <TextInput
+                  style={styles.inputText}
+                  placeholder="Confirm password"
+                  secureTextEntry={!showConfirmPassword}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                />
+                <TouchableOpacity
+                  onPress={() =>
+                    setShowConfirmPassword(!showConfirmPassword)
+                  }
+                >
+                  <Ionicons
+                    name={
+                      showConfirmPassword
+                        ? "eye-off-outline"
+                        : "eye-outline"
+                    }
+                    size={20}
+                    color="#777"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {!!phoneOtpError && (
+                <Text style={styles.error}>{phoneOtpError}</Text>
+              )}
+
+              <View style={popupStyles.btnRow}>
+                <TouchableOpacity
+                  onPress={() => setResetPasswordModalOpen(false)}
+                >
+                  <Text style={popupStyles.cancel}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={verifyResetPassword}>
+                  <Text style={popupStyles.verify}>Reset</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Animated.View>
+        </Modal>
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -442,5 +746,153 @@ const styles = StyleSheet.create({
   tncLink: {
     fontWeight: "700",
     color: global.colors.secondary,
+  },
+
+  forgetPassword: {
+    textAlign: 'left',
+    outlineColor: 'blue'
+  },
+  otpBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    marginHorizontal: 6,
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#000",
+  },
+
+  label: {
+    fontSize: 14,
+    fontWeight: "500",
+    marginBottom: 6,
+    marginTop: 12,
+    color: "#333",
+  },
+
+  inputField: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#dcdcdc",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 48,
+    backgroundColor: "#fff",
+  },
+
+  inputText: {
+    flex: 1,
+    fontSize: 15,
+    color: "#000",
+  },
+
+  error: {
+    color: "red",
+    fontSize: 12,
+    marginTop: 8,
+  },
+
+});
+
+const popupStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  box: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: global.colors.secondary,
+    marginBottom: 6,
+  },
+  inputField: {
+    backgroundColor: global.colors.background,
+    borderRadius: 12,
+    paddingVertical: 2, // 👈 height control
+    paddingHorizontal: 14,
+    marginBottom: 12, // 👈 thoda compact
+  },
+  inputText: {
+    color: global.colors.textSecondary,
+    fontSize: 14,
+  },
+  sub: {
+    fontSize: 13,
+    color: "#555",
+    marginBottom: 14,
+  },
+  input: {
+    height: 45,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+  },
+  btnRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 20,
+  },
+  cancel: {
+    marginRight: 20,
+    color: "#555",
+    fontWeight: "600",
+  },
+  verify: {
+    color: global.colors.secondary,
+    fontWeight: "700",
+  },
+  verifyBtn: {
+    marginTop: 8,
+    backgroundColor: global.colors.secondary,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    alignSelf: "flex-end",
+  },
+  verifyText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 10,
+  },
+  verifyphoneBtn: {
+    marginBottom: 8,
+    marginTop: -4,
+    backgroundColor: global.colors.secondary,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    alignSelf: "flex-end",
+  },
+  verifyphoneText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 10,
+  },
+  Slidertitle: {
+    position: "absolute",
+    left: 16,
+    top: 5,
+    zIndex: 999,
+    padding: 8,
+    fontSize: 18,
+    fontWeight: "500",
+
+    marginBottom: 10,
+    paddingHorizontal: 16,
+    color: global.colors.textPrimary,
+    textAlign: "left",
   },
 });

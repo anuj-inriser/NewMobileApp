@@ -386,9 +386,18 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   const currentHigh = intervalData?.ohlc?.high ?? 0;
   const currentLow = intervalData?.ohlc?.low ?? 0;
 
-  const isPositive = currentChange >= 0;
-  const color = isPositive ? global.colors.success : global.colors.error;
+  // const isPositive = currentChange >= 0;
+  // const color = isPositive ? global.colors.success : global.colors.error;
 
+  const isPositive = currentChange > 0;
+
+  let color = global.colors.textSecondary; // grey for 0
+
+  if (currentChange > 0) {
+    color = global.colors.success;
+  } else if (currentChange < 0) {
+    color = global.colors.error;
+  }
   const formatXAxisLabel = useCallback((time, interval, index, total) => {
     let date;
     if (typeof time === 'string') {

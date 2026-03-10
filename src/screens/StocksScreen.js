@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect,useMemo } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -69,13 +69,13 @@ const AdvancedHeaderCard = ({ item, realtime, counts }) => {
   // const isMarketStillOpen = isMarketOpen();
   // const timeColor = isMarketStillOpen ? global.colors.textSecondary : "#ef4444"; // Redis/Red if closed
 
-  const timeStr = realtime?.timestamp 
+  const timeStr = realtime?.timestamp
     ? new Date(realtime.timestamp).toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      }).toLowerCase()
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }).toLowerCase()
     : "04:14:59 pm";
 
   return (
@@ -148,7 +148,7 @@ const StocksScreen = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetchStocks()
+      await refetch()
     } catch (error) {
 
     } finally {
@@ -186,6 +186,7 @@ const StocksScreen = () => {
     isLoading,
     error,
     refetch,
+    isFetching
   } = useQuery({
     queryKey: [
       "stocks-screen",
@@ -257,34 +258,68 @@ const StocksScreen = () => {
   const applySortToData = (sortType, data) => {
     let sorted = [...data];
 
+    const getChangePercent = (item) => {
+      const value = Number(realtimePrices[item.symbol]?.price || item.ltp || 0);
+      const prevClose = Number(item.prev_close || 0);
+      const change = prevClose > 0 ? value - prevClose : 0;
+      const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+      return changePercent;
+    };
+
     if (sortType === "A-Z") {
       sorted.sort((a, b) => {
         const nameA = (a.symbol || "").toUpperCase();
         const nameB = (b.symbol || "").toUpperCase();
         return nameA.localeCompare(nameB);
       });
-    } else if (sortType === "Z-A") {
+    }
+    else if (sortType === "Z-A") {
       sorted.sort((a, b) => {
         const nameA = (a.symbol || "").toUpperCase();
         const nameB = (b.symbol || "").toUpperCase();
         return nameB.localeCompare(nameA);
       });
-    } else if (sortType === "High-Low") {
-      sorted.sort((a, b) => {
-        const priceA = Number(realtimePrices[a.symbol]?.price || a.ltp || 0);
-        const priceB = Number(realtimePrices[b.symbol]?.price || b.ltp || 0);
-        return priceB - priceA;
-      });
-    } else if (sortType === "Low-High") {
-      sorted.sort((a, b) => {
-        const priceA = Number(realtimePrices[a.symbol]?.price || a.ltp || 0);
-        const priceB = Number(realtimePrices[b.symbol]?.price || b.ltp || 0);
-        return priceA - priceB;
-      });
+    }
+    else if (sortType === "High-Low") {
+      sorted.sort((a, b) => getChangePercent(b) - getChangePercent(a));
+    }
+    else if (sortType === "Low-High") {
+      sorted.sort((a, b) => getChangePercent(a) - getChangePercent(b));
     }
 
     return sorted;
   };
+  // const applySortToData = (sortType, data) => {
+  //   let sorted = [...data];
+
+  //   if (sortType === "A-Z") {
+  //     sorted.sort((a, b) => {
+  //       const nameA = (a.symbol || "").toUpperCase();
+  //       const nameB = (b.symbol || "").toUpperCase();
+  //       return nameA.localeCompare(nameB);
+  //     });
+  //   } else if (sortType === "Z-A") {
+  //     sorted.sort((a, b) => {
+  //       const nameA = (a.symbol || "").toUpperCase();
+  //       const nameB = (b.symbol || "").toUpperCase();
+  //       return nameB.localeCompare(nameA);
+  //     });
+  //   } else if (sortType === "High-Low") {
+  //     sorted.sort((a, b) => {
+  //       const priceA = Number(realtimePrices[a.symbol]?.price || a.ltp || 0);
+  //       const priceB = Number(realtimePrices[b.symbol]?.price || b.ltp || 0);
+  //       return priceB - priceA;
+  //     });
+  //   } else if (sortType === "Low-High") {
+  //     sorted.sort((a, b) => {
+  //       const priceA = Number(realtimePrices[a.symbol]?.price || a.ltp || 0);
+  //       const priceB = Number(realtimePrices[b.symbol]?.price || b.ltp || 0);
+  //       return priceA - priceB;
+  //     });
+  //   }
+
+  //   return sorted;
+  // };
 
   const handleSort = (sortType) => {
     setSelectedSort(sortType);
@@ -430,9 +465,9 @@ const StocksScreen = () => {
             {/* ✅ Advanced Header Card */}
             {headerData && (
               <View style={{ paddingHorizontal: 8, marginTop: 12, marginBottom: 10 }}>
-                <AdvancedHeaderCard 
-                  item={headerData} 
-                  realtime={realtimePrices[headerData.symbol] || realtimePrices[headerData.name]} 
+                <AdvancedHeaderCard
+                  item={headerData}
+                  realtime={realtimePrices[headerData.symbol] || realtimePrices[headerData.name]}
                   counts={counts}
                 />
               </View>
@@ -446,7 +481,8 @@ const StocksScreen = () => {
             realtime={realtimePrices[item.symbol]}
             onPress={() => openStockInfoDrawer(item.symbol, null, {
               name: item.name || item.symbol,
-              price: Number(realtimePrices[item.symbol]?.price || item.ltp || 0)
+              price: Number(realtimePrices[item.symbol]?.price || item.ltp || 0),
+              exchange: item.exchange || selectedExchange
             })}
           />
         )}
@@ -467,7 +503,7 @@ const StocksScreen = () => {
             )}
           </View>
         }
-        refreshing={refreshing}
+        refreshing={isFetching}
         onRefresh={onRefresh}
       />
 
@@ -680,7 +716,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   card_topMiddle: {
-    justifyContent: "flex-end", 
+    justifyContent: "flex-end",
     paddingHorizontal: 8,
   },
   card_topRight: {

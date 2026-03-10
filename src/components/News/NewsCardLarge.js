@@ -235,7 +235,7 @@ const NewsCardLarge = ({ item, onPress }) => {
                 onClose={() => setReportModalOpen(false)}
                 userId={userId}
                 contentType="News"
-                contentId={item.id}
+                contentId={item.news_id}
             />
 
         </>

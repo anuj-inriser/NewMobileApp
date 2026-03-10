@@ -22,12 +22,6 @@ const SparklineChart = ({ symbol, color = '#00c853', width = 100, height = 40 })
   const max = Math.max(...data);
   const range = max - min === 0 ? 1 : max - min;
 
-  console.log("data", data)
-
-
-  console.log("min", min)
-  console.log("max", max)
-  console.log("range", range)
   // Normalize points to SVG coordinates
   const points = data.map((val, i) => ({
     x: (i / (data.length - 1)) * width,

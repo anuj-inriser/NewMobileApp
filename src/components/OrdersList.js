@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   AppState,
+  RefreshControl,
 } from "react-native";
 import { useAlert } from "../context/AlertContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -31,10 +32,22 @@ const OrdersList = () => {
   const [sortOpen, setSortOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [refreshing, setRefreshing] = useState(false);
   const { authToken } = useAuth();
 
   const normalizeStatus = (status = "") =>
     status.toString().trim().toLowerCase();
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchOrders()
+    } catch (error) {
+      console.log("Refresh error:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -240,17 +253,28 @@ const OrdersList = () => {
         </TouchableOpacity>
       </Modal>
 
-      {loading ? (
-        <View style={styles.loaderBox}>
-          <Text style={styles.loaderText}>Loading...</Text>
-        </View>
-      ) : orders.length === 0 ? (
-        <View style={{ justifyContent:"center", alignItems: "center", flex:1 }}>
-          <Text style={styles.noDataText}>No Orders Found</Text>
-        </View>
-      ) : (
-        <ScrollView style={{ marginTop: 10 }}>
-          {orders.map((item, index) => (
+      <ScrollView
+        style={{ marginTop: 10, flex: 1 }}
+        contentContainerStyle={styles.scrollContainer}
+        scrollEnabled={orders.length > 0}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+          />
+        }
+      >
+        {loading ? (
+          <View style={styles.loaderBox}>
+            <Text style={styles.loaderText}>Loading...</Text>
+          </View>
+        ) : orders.length === 0 ? (
+          <View style={{ justifyContent: "center", alignItems: "center", flex: 1 }}>
+            <Text style={styles.noDataText}>No Orders Found</Text>
+          </View>
+        ) : (
+
+          orders.map((item, index) => (
             <OrderItemCard
               key={`${item.orderid}_${index}`}
               name={item.trading_symbol}
@@ -300,9 +324,9 @@ const OrdersList = () => {
                 );
               }}
             />
-          ))}
-        </ScrollView>
-      )}
+          ))
+        )}
+      </ScrollView>
     </View>
   );
 };
@@ -315,7 +339,7 @@ const styles = StyleSheet.create({
     backgroundColor: global.colors.background,
   },
   loaderBox: {
-    flex:1,
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -323,6 +347,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: global.colors.textSecondary,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 25,
+    paddingHorizontal: 12,
+    marginTop: 5
   },
   noDataText: {
 
@@ -355,7 +385,7 @@ const styles = StyleSheet.create({
     marginLeft: 18,
   },
   actionText: {
- marginLeft: 6,
+    marginLeft: 6,
     fontSize: 13,
     color: "#000",
     fontWeight: "600",

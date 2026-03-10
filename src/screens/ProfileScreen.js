@@ -133,6 +133,8 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
   const [emailOtpLoading, setEmailOtpLoading] = useState(false);
   // PHONE OTP STATES
   const [phoneOtpModalOpen, setPhoneOtpModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [phoneOtp, setPhoneOtp] = useState(["", "", "", ""]);
   const [phoneOtpVerified, setPhoneOtpVerified] = useState(false);
   const otpInputRefs = useRef([]);
@@ -384,7 +386,7 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
 
   const uriToBase64 = async (uri) => {
     if (!uri) return null;
-    
+
     // If it's already a base64 data string, just return the data part
     if (uri.startsWith("data:")) {
       return uri.split(",")[1];
@@ -752,6 +754,10 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
   const handleChangePassword = async () => {
     const e = {};
 
+    if (!currentPassword) {
+      e.currentPassword = "Enter current password first"
+    }
+
     if (!newPassword) {
       e.newPassword = "New password required";
     } else {
@@ -761,7 +767,6 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
         e.newPassword = "Password must contain 1 special character";
       }
     }
-
     if (!confirmPassword) {
       e.confirmPassword = "Confirm password required";
     } else if (newPassword !== confirmPassword) {
@@ -778,20 +783,30 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
     try {
       const userId = await AsyncStorage.getItem("userId");
 
-      await axiosInstance.put(`${apiUrl}/api/users/change-password/${userId}`, {
+      const res = await axiosInstance.put(`${apiUrl}/api/users/change-password/${userId}`, {
+        currentPassword: currentPassword,
         password: newPassword,
         confirmPassword,
       });
 
+      if (!res.data?.status && !res.data?.success) {
+        setPasswordErrors({
+          general: res.data?.message || "Failed to change password",
+        });
+        return;
+      }
+
       setNewPassword("");
       setConfirmPassword("");
+      setCurrentPassword("");
       setPasswordErrors({
         success: "Password changed successfully",
       });
     } catch (err) {
-      setPasswordErrors({
-        general: "Failed to change password",
-      });
+      setPasswordErrors((prev) => ({
+        ...prev,
+        general: err?.response?.data?.message || "Failed to change password",
+      }));
     }
   };
 
@@ -1538,6 +1553,42 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
                             <View style={styles.divider} /> */}
 
                   <View style={styles.divider} />
+
+                  <Text style={styles.label}>Current Password</Text>
+                  <View
+                    style={[
+                      styles.inputField,
+                      { flexDirection: "row", alignItems: "center" },
+                    ]}
+                  >
+                    <TextInput
+                      style={[styles.inputText, { flex: 1 }]}
+                      placeholder="Enter current password"
+                      secureTextEntry={!showCurrentPassword}
+                      value={currentPassword}
+                      onChangeText={setCurrentPassword}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                    >
+                      <Ionicons
+                        name={
+                          showCurrentPassword ? "eye-off-outline" : "eye-outline"
+                        }
+                        size={20}
+                        color={global.colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {!!passwordErrors.currentPassword && (
+                    <Text
+                      style={{ color: "red", fontSize: 12, marginBottom: 6 }}
+                    >
+                      {passwordErrors.currentPassword}
+                    </Text>
+                  )}
+
+
 
                   <Text style={styles.label}>Change Password</Text>
                   <View

@@ -7,6 +7,7 @@ import { AlertProvider } from "./src/context/AlertContext";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // SDK 54 fix: Use legacy for downloadAsync compatibility
 import * as FileSystem from "expo-file-system/legacy";
+import * as ScreenCapture from 'expo-screen-capture';
 import * as Notifications from "expo-notifications";
 import messaging from "@react-native-firebase/messaging";
 import { NavigationContainer } from "@react-navigation/native";
@@ -167,10 +168,10 @@ function RootNavigator() {
         <>
           <RootStack.Screen name="App" component={AppNavigator} />
           <RootStack.Screen name="TradeOrder" component={TradeOrderScreen} />
-          <RootStack.Screen 
-            name="TradeOrderNative" 
-            component={TradeOrderNativeScreen} 
-            options={{ 
+          <RootStack.Screen
+            name="TradeOrderNative"
+            component={TradeOrderNativeScreen}
+            options={{
               animation: "slide_from_bottom",
               gestureEnabled: true,
             }}
@@ -334,6 +335,13 @@ export default function App() {
       if (fcmUnsubscribe) fcmUnsubscribe();
       openSub.remove();
       if (wsUnsubscribe) wsUnsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    ScreenCapture.preventScreenCaptureAsync();
+    return () => {
+      ScreenCapture.allowScreenCaptureAsync();
     };
   }, []);
 

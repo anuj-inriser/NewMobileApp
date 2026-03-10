@@ -43,7 +43,7 @@ const StockListCard = ({ stock, realtime, onPress }) => {
 
     const rawPrice =
         realtime?.price ??
-        intervalData?.ltp ??
+        // intervalData?.ltp ??
         stock.ltp ??
         0;
 
@@ -56,7 +56,7 @@ const StockListCard = ({ stock, realtime, onPress }) => {
     const currentChangePercent =
         basePrevClose > 0 ? (currentChange / basePrevClose) * 100 : 0;
 
-    const isPositive = currentChange >= 0;
+    // const isPositive = currentChange >= 0;
     const displayChange =
         typeof currentChange === "number"
             ? Math.abs(currentChange).toFixed(2)
@@ -67,7 +67,16 @@ const StockListCard = ({ stock, realtime, onPress }) => {
             ? Math.abs(currentChangePercent).toFixed(2)
             : "0.00";
 
-    const color = isPositive ? global.colors.success : global.colors.error;
+    // const color = isPositive ? global.colors.success : global.colors.error;
+    const isPositive = currentChange > 0;
+
+    let color = global.colors.textSecondary; // grey for 0
+
+    if (currentChange > 0) {
+        color = global.colors.success;
+    } else if (currentChange < 0) {
+        color = global.colors.error;
+    }
 
     // Prepare Chart Data
     // We strictly want the last 30 points for a clean sparkline (100 is too crowded for 80px)
@@ -186,7 +195,7 @@ const StockListCard = ({ stock, realtime, onPress }) => {
                     />
                 )}
             </View> */}
-            <SparklineChart symbol={stock.symbol} color={color} />
+                <SparklineChart symbol={stock.symbol} color={color} />
 
                 {/* Right: Price */}
                 <View style={styles.verticalCardRight}>
@@ -246,7 +255,7 @@ const styles = StyleSheet.create({
     price: { fontSize: 15, fontWeight: '600', color: global.colors.textPrimary, },
     change: { fontSize: 12, fontWeight: '600', marginTop: 4 },
 
-    noData: {  color: global.colors.disabled, fontSize: 12 },
+    noData: { color: global.colors.disabled, fontSize: 12 },
     cardWrapper: { marginVertical: 6, marginHorizontal: 4 },
     card: {
         flexDirection: "row",

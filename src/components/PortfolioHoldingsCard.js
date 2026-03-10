@@ -19,13 +19,20 @@ const PortfolioHoldingsCard = ({
   // const profitDisplay = profit >= 0 ? `₹${formatAmount(Math.abs(profit))}` : `₹${formatAmount(Math.abs(profit))}`;
   // const percentDisplay = profitPercent >= 0 ? `${profitPercent.toFixed(2)}%` : `${profitPercent.toFixed(2)}%`;
 
-    const totalProfit = totalCurrent - totalInvested;
-    const totalProfitDisplay = `₹${Math.abs(totalProfit).toFixed(2)}`;
+  const totalProfit = totalCurrent - totalInvested;
+  const totalProfitDisplay = `₹${Math.abs(totalProfit).toFixed(2)}`;
   const totalProfitPercent =
     totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
-    const totalProfitPercentDisplay = `${Math.abs(totalProfitPercent).toFixed(2)}%`;
+  const totalProfitPercentDisplay = `${Math.abs(totalProfitPercent).toFixed(2)}%`;
 
-  const profitColor = profit >= 0 ? global.colors.success : global.colors.error;
+  // const profitColor = profit >= 0 ? global.colors.success : global.colors.error;
+  let profitColor = global.colors.textSecondary; // grey for 0
+
+  if (profit > 0) {
+    profitColor = global.colors.success;
+  } else if (profit < 0) {
+    profitColor = global.colors.error;
+  }
 
   const profitDisplay = `₹${Math.abs(profit).toFixed(2)}`;
 

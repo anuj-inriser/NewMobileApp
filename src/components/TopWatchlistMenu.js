@@ -38,6 +38,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
   const [showContent, setShowContent] = useState(true);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const deleteScale = useRef(new Animated.Value(0.5)).current;
+  const lastNotifiedWatchlistIdRef = useRef(undefined);
 const loadShowState = async (uid) => {
     // const saved = await AsyncStorage.getItem(SHOW_KEY);
     // if (saved === "true") {
@@ -93,13 +94,12 @@ const loadShowState = async (uid) => {
   }, [watchlistData]);
 
   useEffect(() => {
-    if (lists.length > 0) {
-      const current = lists[active - 1];
-      onWatchlistChange?.(current?.id || null);
-    } else {
-      onWatchlistChange?.(null);
+    const nextId = lists.length > 0 ? (lists[active - 1]?.id || null) : null;
+    if (lastNotifiedWatchlistIdRef.current !== nextId) {
+      lastNotifiedWatchlistIdRef.current = nextId;
+      onWatchlistChange?.(nextId);
     }
-  }, [active, lists]);
+  }, [active, lists, onWatchlistChange]);
 
   // const loadUserAndFetch = async () => {
   //   try {
