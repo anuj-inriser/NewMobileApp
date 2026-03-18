@@ -62,6 +62,7 @@ const connect = () => {
   const protocol = getWsProtocol(wsUrl);
   const url = `${protocol}://${wsUrl}/ws/prices`;
 
+  console.log("uuuuuuuu",url);
   console.log("🔌 [MarketWS] Connecting...");
 
   ws = new WebSocket(url);
@@ -75,6 +76,7 @@ const connect = () => {
   ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data);
+      // console.log("------------------msg---------------------",msg)
       listeners.forEach((fn) => fn(msg));
     } catch (e) {
       console.warn('[MarketWS] Invalid JSON:', event.data);

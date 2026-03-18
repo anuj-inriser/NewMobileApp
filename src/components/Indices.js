@@ -53,9 +53,9 @@ const IndexVerticalCard = ({ index, onPress }) => {
       onPress={() => onPress && onPress(index)}
     >
       <View style={styles.infoContainer}>
-        <Text style={styles.indexName}>{index.name || index.symbol}</Text>
+        <Text style={styles.indexName}>{index.symbol}</Text>
         <View style={styles.symbolTimeRow}>
-          <Text style={styles.indexSymbol}>{index.symbol}</Text>
+          <Text style={styles.indexSymbol}>{index.name}</Text>
           {/* <Text style={[styles.indexTime, { color: global.colors.textSecondary }]}>{timeStr}</Text> */}
         </View>
       </View>
@@ -113,8 +113,9 @@ const Indices = ({
       const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
 
       return {
-        symbol: item.symbol || item.group_name || item.script_id,
-        name: item.name || item.group_name || item.script_name,
+        symbol: item.symbol ,
+        name: item.group_name,
+        token: item.token,
         value,
         prevClose,
         change,
@@ -152,9 +153,9 @@ const Indices = ({
       }
       return true;
     });
-
     return filtered.map((index) => {
-      const rt = realtimePrices[index.symbol] || realtimePrices[index.name];
+      const rt = realtimePrices[index.token] ;
+      //  console.log("rt", rt)
       if (!rt) return index; // Stable DB data
 
       const prevClose =

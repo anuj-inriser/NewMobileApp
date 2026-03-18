@@ -56,7 +56,7 @@ const TradeScreen = () => {
 
   const mergeWithRealtime = (list, realtimePrices) => {
     return list.map((item) => {
-      const rt = realtimePrices[item.token] || realtimePrices[item.script_id];
+      const rt = realtimePrices[item.token];
 
       // ✅ LTP: realtime > item.ltp > 0
       const ltp =
@@ -408,6 +408,7 @@ const TradeScreen = () => {
 
             displayStocks.map((recommendation) => {
               const liveData = prices[recommendation.token];
+              {/* console.log("recommedation", recommendation ) */}
               return (
                 <TradeCard
                   key={recommendation.tradeId}
@@ -433,6 +434,7 @@ const TradeScreen = () => {
                   exitPriceLow={recommendation.exitPriceLow}
                   recoPriceLow={recommendation.recoPriceLow}
                   isLocked={Number(role) === 1}
+                  isin={recommendation.isin}
                 />
               );
             })

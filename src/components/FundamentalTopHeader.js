@@ -404,7 +404,7 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
                   <View>
                     <TouchableOpacity
                       onPress={() => {
-                        openStockInfoDrawer(item.script_id, "placeorder", {
+                        openStockInfoDrawer(item.token, item.script_id, "placeorder", item.isin, {
                           name: item.script_name
                         });
                       }}

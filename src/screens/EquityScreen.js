@@ -347,7 +347,25 @@ export default function EquityScreen() {
     },
     [navigation, selectedExchange]
   );
+  const getCurrentTokens = () => {
+    if (selectedCategory === "Indices") {
+      return allData.map((i) => i.token).filter(Boolean);
+    }
 
+    if (selectedCategory === "Market Cap") {
+      return marketCapData.map((i) => i.token).filter(Boolean);
+    }
+
+    if (selectedCategory === "Sectors") {
+      return sectorsData.map((i) => i.token).filter(Boolean);
+    }
+
+    if (selectedCategory === "Themes") {
+      return themesData.map((i) => i.token).filter(Boolean);
+    }
+
+    return [];
+  };
   const getCurrentSymbols = () => {
     if (!Array.isArray(allData)) return [];
 
@@ -441,31 +459,71 @@ export default function EquityScreen() {
   //     };
   //   }, [])
   // );
+  //  useFocusEffect(
+  //   useCallback(() => {
+  //     const page = "EquityScreen";
+  //     const context = selectedCategory; // 🔥 VERY IMPORTANT
+  //     const symbols = getCurrentSymbols();
+
+  //     if (!symbols.length) return;
+
+  //     // 🟢 Screen active → subscribe
+  //     console.log("[Subscribe] Tokens on focus:", symbols); // <-- log here
+  //     subscribeSymbols(symbols, page, context);
+
+  //     const appStateSub = AppState.addEventListener("change", (state) => {
+  //       if (state !== "active") {
+  //         // ⏱ app background → delayed unsubscribe
+  //         unsubscribeDelayed(symbols, page, context);
+  //       } else {
+  //         // 🔄 app foreground again → cancel unsubscribe
+  //         console.log("[Resubscribe] Tokens on foreground:", symbols); // <-- log here
+  //         subscribeSymbols(symbols, page, context);
+  //       }
+  //     });
+
+  //     return () => {
+  //       // 🚫 screen blur (navigate away OR tab switch)
+  //       // ❗ direct unsubscribe nahi, sirf delay
+  //       console.log("[Unsubscribe delayed] Tokens:", symbols); // <-- log here
+  //       unsubscribeDelayed(symbols, page, context);
+  //       appStateSub?.remove();
+  //     };
+  //   }, [
+  //     selectedCategory,
+  //     selectedExchange,
+  //     allData,
+  //     marketCapData,
+  //     sectorsData,
+  //     themesData,
+  //   ])
+  // );
+
   useFocusEffect(
     useCallback(() => {
       const page = "EquityScreen";
-      const context = selectedCategory; // 🔥 VERY IMPORTANT
-      const symbols = getCurrentSymbols();
+      const context = selectedCategory;
 
-      if (!symbols.length) return;
+      const tokens = getCurrentTokens();
 
-      // 🟢 Screen active → subscribe
-      subscribeSymbols(symbols, page, context);
+      if (!tokens.length) return;
+
+      console.log("[Subscribe] Tokens on focus:", tokens);
+
+      subscribeSymbols(tokens, page, context);
 
       const appStateSub = AppState.addEventListener("change", (state) => {
         if (state !== "active") {
-          // ⏱ app background → delayed unsubscribe
-          unsubscribeDelayed(symbols, page, context);
+          unsubscribeDelayed(tokens, page, context);
         } else {
-          // 🔄 app foreground again → cancel unsubscribe
-          subscribeSymbols(symbols, page, context);
+          console.log("[Resubscribe] Tokens on foreground:", tokens);
+          subscribeSymbols(tokens, page, context);
         }
       });
 
       return () => {
-        // 🚫 screen blur (navigate away OR tab switch)
-        // ❗ direct unsubscribe nahi, sirf delay
-        unsubscribeDelayed(symbols, page, context);
+        console.log("[Unsubscribe delayed] Tokens:", tokens);
+        unsubscribeDelayed(tokens, page, context);
         appStateSub?.remove();
       };
     }, [
@@ -477,21 +535,22 @@ export default function EquityScreen() {
       themesData,
     ])
   );
-  useEffect(() => {
-    const symbols = allData.map(i => i.symbol).filter(Boolean);
-    if (!symbols.length) return;
+  // useEffect(() => {
+  //   const symbols = allData.map((i) => i.symbol).filter(Boolean);
+  //   if (!symbols.length) return;
 
-    const key = `${selectedCategory}-${selectedExchange}`;
-    if (subscribedRef.current[key]) return;
+  //   const key = `${selectedCategory}-${selectedExchange}`;
+  //   if (subscribedRef.current[key]) return;
 
-    subscribeSymbols(symbols, "EquityScreen", selectedCategory);
-    subscribedRef.current[key] = true;
+  //   console.log("[Subscribe Effect] Tokens:", symbols); // <-- log here
+  //   subscribeSymbols(symbols, "EquityScreen", selectedCategory);
+  //   subscribedRef.current[key] = true;
 
-    return () => {
-      unsubscribeDelayed(symbols, "EquityScreen", selectedCategory);
-    };
-  }, [allData, selectedCategory, selectedExchange]);
-
+  //   return () => {
+  //     console.log("[Unsubscribe Effect delayed] Tokens:", symbols); // <-- log here
+  //     unsubscribeDelayed(symbols, "EquityScreen", selectedCategory);
+  //   };
+  // }, [allData, selectedCategory, selectedExchange]);
   // useEffect(() => {
   //   if (subscribedOnceRef.current) return;
 
@@ -514,20 +573,20 @@ export default function EquityScreen() {
   // ]);
 
 
-  useEffect(() => {
-    const symbols = allData.map(i => i.symbol).filter(Boolean);
-    if (!symbols.length) return;
+  // useEffect(() => {
+  //   const symbols = allData.map(i => i.symbol).filter(Boolean);
+  //   if (!symbols.length) return;
 
-    const key = `${selectedCategory}-${selectedExchange}`;
-    if (subscribedRef.current[key]) return;
+  //   const key = `${selectedCategory}-${selectedExchange}`;
+  //   if (subscribedRef.current[key]) return;
 
-    subscribeSymbols(symbols, "EquityScreen", selectedCategory);
-    subscribedRef.current[key] = true;
+  //   subscribeSymbols(symbols, "EquityScreen", selectedCategory);
+  //   subscribedRef.current[key] = true;
 
-    return () => {
-      unsubscribeDelayed(symbols, "EquityScreen", selectedCategory);
-    };
-  }, [allData, selectedCategory, selectedExchange]);
+  //   return () => {
+  //     unsubscribeDelayed(symbols, "EquityScreen", selectedCategory);
+  //   };
+  // }, [allData, selectedCategory, selectedExchange]);
 
 
 
@@ -630,21 +689,26 @@ export default function EquityScreen() {
     fetchThemes,
   ]);
 
-  // ✅ Indices Fetch (unchanged)
-  const fetchIndices = async ({ queryKey }) => {
-    const [, exchange] = queryKey;
-    const url =
-      exchange === "BSE"
-        ? `/indicesNew/bse`
-        : `/indicesNew/nse`;
+  // ✅ Indices Fetch 
 
-    // const response = await fetch(url);
-    const response = await axiosInstance.get(url)
-    if (!response.status) throw new Error(`API failed: ${response.status}`);
-    const result = response.data;
-    return result.data; // must be array
+  const fetchIndices = async ({ queryKey: [, exchange] }) => {
+    try {
+      const url =
+        exchange === "BSE"
+          ? "/indicesNew/bse"
+          : "/indicesNew/nse";
+
+      const response = await axiosInstance.get(url);
+
+      return response.data.data;
+
+    } catch (error) {
+      console.error(
+        error?.response?.data?.message || "Error fetching indices"
+      );
+      throw error;
+    }
   };
-
 
 
   // const { data: allData = [], isLoading: loading } = useQuery({
@@ -857,158 +921,6 @@ export default function EquityScreen() {
       );
     }
   };
-  // const handleFilterByType = (filterType) => {
-  //   setIsFilterOpen(false);
-
-  //   if (selectedCategory === "Market Cap") {
-  //     let filtered = [...originalMarketCapData];
-
-  //     if (filterType === "Gainers") {
-  //       // Filter market caps with positive change (gainers)
-  //       filtered = filtered.filter((item) => {
-  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-  //         const change = ((ltp - oi) / oi) * 100;
-  //         return change > 0;
-  //       });
-  //       // Sort by change descending
-  //       filtered.sort((a, b) => {
-  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-  //         const changeA = ((ltpA - oiA) / oiA) * 100;
-
-  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-  //         const changeB = ((ltpB - oiB) / oiB) * 100;
-
-  //         return changeB - changeA;
-  //       });
-  //     } else if (filterType === "Losers") {
-  //       // Filter market caps with negative change (losers)
-  //       filtered = filtered.filter((item) => {
-  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-  //         const change = ((ltp - oi) / oi) * 100;
-  //         return change < 0;
-  //       });
-  //       // Sort by change ascending (most negative first)
-  //       filtered.sort((a, b) => {
-  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-  //         const changeA = ((ltpA - oiA) / oiA) * 100;
-
-  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-  //         const changeB = ((ltpB - oiB) / oiB) * 100;
-
-  //         return changeA - changeB;
-  //       });
-  //     } else {
-  //       // "All" - reset to original
-  //       filtered = originalMarketCapData;
-  //     }
-
-  //     setMarketCapData(filtered);
-  //   } else if (selectedCategory === "Indices") {
-  //     let filtered = [...originalAllIndicesData];
-
-  //     if (filterType === "Gainers") {
-  //       // Filter indices with positive change (gainers)
-  //       filtered = filtered.filter((item) => {
-  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-  //         const change = ((ltp - oi) / oi) * 100;
-  //         return change > 0;
-  //       });
-  //       // Sort by change descending
-  //       filtered.sort((a, b) => {
-  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-  //         const changeA = ((ltpA - oiA) / oiA) * 100;
-
-  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-  //         const changeB = ((ltpB - oiB) / oiB) * 100;
-
-  //         return changeB - changeA;
-  //       });
-  //     } else if (filterType === "Losers") {
-  //       // Filter indices with negative change (losers)
-  //       filtered = filtered.filter((item) => {
-  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-  //         const change = ((ltp - oi) / oi) * 100;
-  //         return change < 0;
-  //       });
-  //       // Sort by change ascending (most negative first)
-  //       filtered.sort((a, b) => {
-  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-  //         const changeA = ((ltpA - oiA) / oiA) * 100;
-
-  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-  //         const changeB = ((ltpB - oiB) / oiB) * 100;
-
-  //         return changeA - changeB;
-  //       });
-  //     } else {
-  //       // "All" - reset to original
-  //       filtered = originalAllIndicesData;
-  //     }
-
-  //     setAllIndicesData(filtered);
-  //   } else if (selectedCategory === "Sectors") {
-  //     let filtered = [...originalSectorsData];
-
-  //     if (filterType === "Gainers") {
-  //       // Filter sectors with positive change (gainers)
-  //       filtered = filtered.filter((item) => {
-  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-  //         const change = ((ltp - oi) / oi) * 100;
-  //         return change > 0;
-  //       });
-  //       // Sort by change descending
-  //       filtered.sort((a, b) => {
-  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-  //         const changeA = ((ltpA - oiA) / oiA) * 100;
-
-  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-  //         const changeB = ((ltpB - oiB) / oiB) * 100;
-
-  //         return changeB - changeA;
-  //       });
-  //     } else if (filterType === "Losers") {
-  //       // Filter sectors with negative change (losers)
-  //       filtered = filtered.filter((item) => {
-  //         const ltp = realtimePrices[item.symbol]?.ltp || item.ltp || 0;
-  //         const oi = realtimePrices[item.symbol]?.oi || item.oi || item.close || 0;
-  //         const change = ((ltp - oi) / oi) * 100;
-  //         return change < 0;
-  //       });
-  //       // Sort by change ascending (most negative first)
-  //       filtered.sort((a, b) => {
-  //         const ltpA = realtimePrices[a.symbol]?.ltp || a.ltp || 0;
-  //         const oiA = realtimePrices[a.symbol]?.oi || a.oi || a.close || 0;
-  //         const changeA = ((ltpA - oiA) / oiA) * 100;
-
-  //         const ltpB = realtimePrices[b.symbol]?.ltp || b.ltp || 0;
-  //         const oiB = realtimePrices[b.symbol]?.oi || b.oi || b.close || 0;
-  //         const changeB = ((ltpB - oiB) / oiB) * 100;
-
-  //         return changeA - changeB;
-  //       });
-  //     } else {
-  //       // "All" - reset to original
-  //       filtered = originalSectorsData;
-  //     }
-
-  //     setSectorsData(filtered);
-  //   }
-  // };
 
   const handleViewAllIndices = () => {
     setSelectedCategory("Indices");
@@ -1088,6 +1000,7 @@ export default function EquityScreen() {
             symbol: item.symbol || item.group_name,
             name: item.group_name,
             value,
+            token: item.token,
             prevClose,
             change,
             changePercent,
@@ -1159,6 +1072,7 @@ export default function EquityScreen() {
           return {
             symbol: item.symbol || item.group_name,
             name: item.group_name,
+            token: item.token,
             value,
             prevClose,
             change,
@@ -1371,7 +1285,8 @@ export default function EquityScreen() {
 }
 const mergeWithRealtime = (list, realtimePrices) => {
   return list.map((item) => {
-    const rt = realtimePrices[item.symbol];
+    const rt = realtimePrices[item.token];
+
     if (!rt) return item;
 
     const prevClose = item.prevClose || rt.prevClose || rt.open || item.value;

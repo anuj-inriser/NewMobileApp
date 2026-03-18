@@ -12,7 +12,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAlert } from "../context/AlertContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
-import { useQuery } from "@tanstack/react-query";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
 import { subscribeSymbols, unsubscribeDelayed } from "../ws/marketSubscriptions";
 
@@ -30,6 +29,7 @@ export default function TradeOrderFormNew({
   exchange = "NSE",
   onOrderPlaced,
 }) {
+  console.log("token ", token)
   const navigation = useNavigation();
   const { authToken } = useAuth();
   const { showSuccess, showError } = useAlert();
@@ -130,36 +130,71 @@ export default function TradeOrderFormNew({
   }, [selected, symbol, isUserTypedPrice]);
 
   // Subscribe this symbol to WS on mount so we receive price ticks
+  // useEffect(() => {
+  //   if (!token && !symbol) return;
+  //   const sym = token || symbol;
+  //   subscribeSymbols([sym], 'TradeOrderForm', symbol);
+  //   return () => unsubscribeDelayed([sym], 'TradeOrderForm', symbol);
+  // }, [symbol, token]);
   useEffect(() => {
-    if (!token && !symbol) return;
-    const sym = token || symbol;
-    subscribeSymbols([sym], 'TradeOrderForm', symbol);
-    return () => unsubscribeDelayed([sym], 'TradeOrderForm', symbol);
-  }, [symbol, token]);
+  if (!token) return;
+
+  const tokens = [token];
+
+  console.log("🟢 SUBSCRIBE TradeOrderForm:", tokens);
+
+  subscribeSymbols(tokens, "TradeOrderForm", "OrderScreen");
+
+  return () => {
+    console.log("🔴 UNSUBSCRIBE TradeOrderForm:", tokens);
+    unsubscribeDelayed(tokens, "TradeOrderForm", "OrderScreen");
+  };
+}, [token]);
 
   // Sync WS price into LTP display + auto-fill price
+  // useEffect(() => {
+  //   const key = symbol?.toUpperCase().trim();
+  //   // Try all possible key variants the WS might use
+  //   const rtData =
+  //     prices?.[key] ||
+  //     prices?.[key + '-EQ'] ||
+  //     prices?.[`${selected}:${key}`] ||
+  //     prices?.[`${selected}:${key}-EQ`] ||
+  //     {};
+  //   const rtPrice = rtData?.price;
+  //   if (!rtPrice || rtPrice <= 0) return;
+
+  //   const ltpStr = parseFloat(rtPrice).toFixed(2);
+  //   if (selected === 'NSE') setNseLtp(`₹${ltpStr}`);
+  //   else setBseLtp(`₹${ltpStr}`);
+
+  //   const userTypedRecently =
+  //     isUserTypedPrice && userTypedTime && Date.now() - userTypedTime < 60000;
+  //   if (!userTypedRecently) {
+  //     setPrice(ltpStr);
+  //   }
+  // }, [prices, symbol, selected]);
+
   useEffect(() => {
-    const key = symbol?.toUpperCase().trim();
-    // Try all possible key variants the WS might use
-    const rtData =
-      prices?.[key] ||
-      prices?.[key + '-EQ'] ||
-      prices?.[`${selected}:${key}`] ||
-      prices?.[`${selected}:${key}-EQ`] ||
-      {};
-    const rtPrice = rtData?.price;
-    if (!rtPrice || rtPrice <= 0) return;
+  if (!token) return;
 
-    const ltpStr = parseFloat(rtPrice).toFixed(2);
-    if (selected === 'NSE') setNseLtp(`₹${ltpStr}`);
-    else setBseLtp(`₹${ltpStr}`);
+  const rtData = prices?.[token] || {};
+  const rtPrice = rtData?.price;
 
-    const userTypedRecently =
-      isUserTypedPrice && userTypedTime && Date.now() - userTypedTime < 60000;
-    if (!userTypedRecently) {
-      setPrice(ltpStr);
-    }
-  }, [prices, symbol, selected]);
+  if (!rtPrice || rtPrice <= 0) return;
+
+  const ltpStr = parseFloat(rtPrice).toFixed(2);
+
+  if (selected === "NSE") setNseLtp(`₹${ltpStr}`);
+  else setBseLtp(`₹${ltpStr}`);
+
+  const userTypedRecently =
+    isUserTypedPrice && userTypedTime && Date.now() - userTypedTime < 60000;
+
+  if (!userTypedRecently) {
+    setPrice(ltpStr);
+  }
+}, [prices, token, selected]);
 
   // 2. Fetch Funds
   const fetchFunds = async (segmentType) => {

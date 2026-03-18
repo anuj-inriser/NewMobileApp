@@ -83,7 +83,9 @@ const WatchlistItemCard = ({
 
   const renderItem = ({ item }) => {
     const symbol = item.symbol || item.script_symbol || String(item.script_id);
-    const rt = realtimePrices[symbol] || realtimePrices[item.token];
+    const token = item.token;
+    const isin = item.isin;
+    const rt = realtimePrices[token];
 
     const ltp = Number(rt?.price || item.value || item.ltp || 0);
     const prev = Number(rt?.prevClose || item.prevClose || item.prev_close || ltp);
@@ -116,13 +118,13 @@ const WatchlistItemCard = ({
     return (
       <Swipeable
         ref={(ref) => (swipeableRefs.current[symbol] = ref)}
-        renderLeftActions={() => (
-          <View style={styles.leftAction}>
-            <Text style={styles.buyText}>Buy ››</Text>
-          </View>
-        )}
+        // renderLeftActions={() => (
+        //   <View style={styles.leftAction}>
+        //     <Text style={styles.buyText}>Buy ››</Text>
+        //   </View>
+        // )}
         renderRightActions={renderRightActions}
-        onSwipeableLeftOpen={() => handleBuy(item)}
+        // onSwipeableLeftOpen={() => handleBuy(item)}
         onSwipeableRightOpen={() => handleRemove(item)}
         overshootLeft={false}
         overshootRight={false}
@@ -130,7 +132,7 @@ const WatchlistItemCard = ({
         <TouchableOpacity
           style={styles.cardWrapper}
           activeOpacity={0.9}
-          onPress={() => openStockInfoDrawer(symbol, null, {
+          onPress={() => openStockInfoDrawer(token, symbol, null, isin, {
             name: item.name,
             price: ltp
           })}

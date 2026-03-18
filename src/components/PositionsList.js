@@ -77,14 +77,26 @@ const PositionsList = () => {
   };
 
   // Websocket Logic
-  const getSymbols = () => {
+  // const getSymbols = () => {
+  //   if (!positions.length) return [];
+  //   return Array.from(
+  //     new Set(
+  //       positions
+  //         .map(
+  //           (o) => o.symboltoken || o.symbol_token || o.tradingsymbol || null,
+  //         )
+  //         .filter(Boolean),
+  //     ),
+  //   );
+  // };
+
+  const getTokens = () => {
     if (!positions.length) return [];
+
     return Array.from(
       new Set(
         positions
-          .map(
-            (o) => o.symboltoken || o.symbol_token || o.tradingsymbol || null,
-          )
+          .map((o) => o.symboltoken || o.symbol_token || null)
           .filter(Boolean),
       ),
     );
@@ -100,23 +112,22 @@ const PositionsList = () => {
     useCallback(() => {
       const page = "PositionsList";
       const context = "LiveUpdates";
-      const symbols = getSymbols();
+     const tokens = getTokens();
+      if (!tokens.length) return;
 
-      if (!symbols.length) return;
-
-      console.log(`🟢 SUBSCRIBE → ${page}`, symbols);
-      subscribeSymbols(symbols, page, context);
+      console.log(`🟢 SUBSCRIBE → ${page}`, tokens);
+      subscribeSymbols(tokens, page, context);
 
       const appStateSub = AppState.addEventListener("change", (state) => {
         if (state !== "active") {
-          unsubscribeDelayed(symbols, page, context);
+          unsubscribeDelayed(tokens, page, context);
         } else {
-          subscribeSymbols(symbols, page, context);
+          subscribeSymbols(tokens, page, context);
         }
       });
 
       return () => {
-        unsubscribeDelayed(symbols, page, context);
+        unsubscribeDelayed(tokens, page, context);
         appStateSub?.remove();
       };
     }, [positions]),
@@ -251,11 +262,11 @@ const PositionsList = () => {
 
       <ScrollView style={{ marginTop: 10 }} contentContainerStyle={{ paddingBottom: 80 }}
         refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-        />
-      }>
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+          />
+        }>
         {loading ? (
           <View style={styles.loaderBox}>
             <Text style={styles.loaderText}>Loading...</Text>

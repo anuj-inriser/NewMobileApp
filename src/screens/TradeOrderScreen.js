@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Image,
   View,
@@ -28,12 +28,14 @@ import { useRealtimePrices } from "../hooks/useRealtimePrices";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import OrderInputNew from "../components/OrderInputNew";
+import axiosInstance from "../api/axios";
 // import DublearrowRight from "../../assets/dublearrowright.png";
 export default function TradeOrderScreen({
   navigation,
   hideHeader: propHideHeader,
   symbol: propSymbol,
   token: propToken,
+  isin: propIsin,
   name: propName,
   price: propPrice,
   quantity: propQuantity,
@@ -173,6 +175,7 @@ export default function TradeOrderScreen({
 
   const passedSymbol = propSymbol || params.symbol;
   const passedToken = propToken || params.token;
+  const passedIsin = propIsin || params.isin;
   const passedName = propName || params.name;
   const passedPrice = propPrice || params.price;
   const passedQuantity = propQuantity || params.quantity;
@@ -201,7 +204,7 @@ export default function TradeOrderScreen({
   };
 
   const [price, setPrice] = useState("0");
-  const [qty, setQty] = useState("1");
+  const [qty, setQty] = useState("0");
   const [taxes, setTaxes] = useState("0");
   const [isUserTypedPrice, setIsUserTypedPrice] = useState(false);
   const [userTypedTime, setUserTypedTime] = useState(null);
@@ -217,10 +220,18 @@ export default function TradeOrderScreen({
   const [target, setTarget] = useState("0");
   const [stopLoss, setStopLoss] = useState("0");
   const [swipeKey, setSwipeKey] = useState(Date.now());
+  const [stockInfo, setStockInfo] = useState([])
 
   const [selectedExchange, setSelectedExchange] = useState("NSE");
 
+  const [activeSymbol, setActiveSymbol] = useState(
+    passedSymbol || "WELENT-EQ",
+  );
+  const [activeToken, setActiveToken] = useState(passedToken);
+
   const symbol = passedSymbol || "WELENT-EQ";
+  const token = passedToken;
+  const isin = passedIsin;
   useEffect(() => {
     if (propExchange) {
       setSelected(propExchange);
@@ -229,7 +240,7 @@ export default function TradeOrderScreen({
 
   const fetchBrokerage = async () => {
     try {
-      const symbolToken = passedToken || "";
+      const symbolToken = activeToken || "";
 
       // ⭐ Get current LTP
       let liveLtp =
@@ -242,7 +253,7 @@ export default function TradeOrderScreen({
       // ⭐ Price to send → If user price = 0 → use LTP
       const P = parseFloat(price) === 0 ? liveLtp : parseFloat(price);
 
-      const url = `${apiUrl}/api/brokerage/calculate?price=${P}&quantity=${qty}&segment=${segment}&symbol=${symbol}&symboltoken=${symbolToken}&exchange=${selected}`;
+      const url = `${apiUrl}/api/brokerage/calculate?price=${P}&quantity=${qty}&segment=${segment}&symbol=${activeSymbol}&symboltoken=${symbolToken}&exchange=${selected}`;
 
       const res = await fetch(url, {
         method: "GET",
@@ -346,8 +357,8 @@ export default function TradeOrderScreen({
       const payload = {
         variety: "NORMAL",
         orderid: passedOrderId,
-        tradingsymbol: symbol,
-        symboltoken: passedToken,
+        tradingsymbol: activeSymbol,
+        symboltoken: activeToken,
         exchange: selected,
 
         ordertype: p === 0 ? "MARKET" : "LIMIT",
@@ -400,8 +411,8 @@ export default function TradeOrderScreen({
 
       const payload = {
         variety: "NORMAL",
-        tradingsymbol: symbol,
-        symboltoken: passedToken,
+        tradingsymbol: activeSymbol,
+        symboltoken: activeToken,
         transactiontype: "BUY",
         exchange: selected,
 
@@ -482,7 +493,7 @@ export default function TradeOrderScreen({
   // -------------------------
   // 🔄 FETCH LTP
   // -------------------------
-  const fetchLtp = async () => {
+  const fetchLtp = async (sym = activeSymbol, tok = activeToken) => {
     try {
       // If user typed recently (within 1 minute), don't overwrite price
       if (
@@ -493,9 +504,12 @@ export default function TradeOrderScreen({
         return; // Do NOT update price from LTP
       }
 
+      // console.log("ex", selected)
+      // console.log("sym", sym)
+      // console.log("tok", tok)
       const ex = selected;
       const res = await fetch(
-        `${apiUrl}/api/buyshare/search?symbol=${symbol}&exchange=${ex}`,
+        `${apiUrl}/api/buyshare/search?symbol=${sym}&exchange=${ex}&token=${tok}`,
         {
           headers: {
             Authorization: "Bearer " + authToken,
@@ -503,7 +517,6 @@ export default function TradeOrderScreen({
         },
       );
       const data = await res.json();
-
       if (data.success) {
         const rawLtp = data.ltp || data.price || data.value || 0;
         const ltp = parseFloat(rawLtp).toFixed(2);
@@ -525,10 +538,56 @@ export default function TradeOrderScreen({
   };
 
   useEffect(() => {
-    fetchLtp();
-    const t = setInterval(fetchLtp, 3000);
+    fetchLtp(activeSymbol, activeToken);
+    const t = setInterval(() => fetchLtp(activeSymbol, activeToken), 3000);
     return () => clearInterval(t);
-  }, [selected, symbol]);
+  }, [selected, activeSymbol, activeToken]);
+
+
+  useEffect(() => {
+    const fetchtokenbyisin = async () => {
+      try {
+
+        if (!apiUrl || !isin || !selected) return;
+
+        console.log("apirul", apiUrl)
+        console.log("isin", isin)
+        console.log("selected", selected)
+
+        const url = `${apiUrl}/api/buyshare/gettokenbyisin`;
+
+        const response = await axiosInstance.get(url, {
+          params: {
+            isin: isin,
+            exchange: selected
+          },
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        });
+
+        console.log("API response:", response.data);
+
+        const data = response?.data?.data?.[0] || {};
+
+        const newSymbol =
+          data.symbol || data.tradingsymbol || data.tradingSymbol || data.script;
+        const newToken = data.token || data.symboltoken || data.symbolToken;
+
+        if (newSymbol) setActiveSymbol(newSymbol);
+        if (newToken) setActiveToken(newToken);
+
+        if (newSymbol || newToken) {
+          fetchLtp(newSymbol || activeSymbol, newToken || activeToken);
+        }
+
+      } catch (error) {
+        console.log("AXIOS ERROR:", error.response?.data || error.message);
+      }
+    };
+
+    fetchtokenbyisin();
+  }, [selected, isin]);
 
   // Autofill passed values when screen loads
   useEffect(() => {
@@ -614,12 +673,109 @@ export default function TradeOrderScreen({
 
   const isModifyMode = internaltype?.toLowerCase() === "modify";
 
+  const fetchStockInfoData = async () => {
+    try {
+      const res = await axiosInstance.get('/indicesNew/stockinfodata');
+
+      if (res.data.data) {
+        setStockInfo(res.data.data)
+      }
+    } catch (error) {
+      console.error(error?.response?.message || 'Error fetching data')
+    }
+  }
+
+  useEffect(() => {
+    fetchStockInfoData();
+  }, [])
+
+  // const mergeWithRealtime = (list, prices) => {
+  //   return list.map((item) => {
+  //     // console.log("item", item)
+  //     const rt = prices[item.token] || item.ltp;
+  //     if (!rt) return item;
+
+  //     const prevClose = item.prevClose || rt.prevClose || rt.open || item.value || item.prev_close;
+
+  //     const change = (rt.price || rt) - prevClose;
+  //     const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+
+
+  //     return {
+  //       ...item,
+  //       value: rt.price || rt,
+  //       change,
+  //       changePercent,
+  //       timestamp: rt.timestamp || rt.exchange_timestamp || item.timestamp || item.exchange_timestamp,
+  //       exchange_timestamp: rt.exchange_timestamp || item.exchange_timestamp,
+  //     };
+  //   });
+  // };
+
+  // const displayStocks = useMemo(() => {
+  //   return mergeWithRealtime(stockInfo, prices);
+  // }, [stockInfo, prices]);
+
+  // // Realtime data for stock card
+  // const rtData = prices[token];
+  // const changeVal = rtData?.change || 0;
+  // const changePct = rtData?.changePercent || 0;
+  // const isPositive = changeVal >= 0;
+  // const currentPriceDisplay = selected === "NSE" ? nseLtp : bseLtp;
+
+  const mergeWithRealtime = (list, prices) => {
+    const mergedPrices = { ...prices };
+
+    list.forEach((item) => {
+      const rt = prices[item.token] || item.ltp;
+      if (!rt) return;
+
+      const price = rt.price || rt;
+
+      const prevClose =
+        item.prevClose ||
+        rt.prevClose ||
+        rt.open ||
+        item.value ||
+        item.prev_close ||
+        price;
+
+      const change = price - prevClose;
+      const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+
+      mergedPrices[item.token] = {
+        ...(typeof rt === "object" ? rt : {}),
+        price,
+        change,
+        changePercent,
+        timestamp:
+          rt.timestamp ||
+          rt.exchange_timestamp ||
+          item.timestamp ||
+          item.exchange_timestamp,
+        exchange_timestamp: rt.exchange_timestamp || item.exchange_timestamp,
+      };
+    });
+
+    return mergedPrices;
+  };
+
+  const displayPrices = useMemo(() => {
+    return mergeWithRealtime(stockInfo, prices);
+  }, [stockInfo, prices]);
+
   // Realtime data for stock card
-  const rtData = prices?.[symbol] || prices?.[symbol + "-EQ"] || {};
-  const changeVal = rtData.change || 0;
-  const changePct = rtData.changePercent || 0;
+ const rtData = displayPrices[activeToken];
+  const changeVal = rtData?.change || 0;
+  const changePct = rtData?.changePercent || 0;
   const isPositive = changeVal >= 0;
-  const currentPriceDisplay = selected === "NSE" ? nseLtp : bseLtp;
+  // const currentPriceDisplay = selected === "NSE" ? nseLtp : bseLtp;
+  const currentPriceDisplay =
+  rtData?.price != null
+    ? `₹${Number(rtData?.price || 0).toFixed(2)}`
+    : selected === "NSE"
+    ? nseLtp
+    : bseLtp;
 
   // Swipe button dynamic values
   const swipeTitle = isModifyMode
@@ -645,10 +801,12 @@ export default function TradeOrderScreen({
 
       <View style={styles.premiumScrollContent}>
         {/* Stock Info Card */}
-        {/* <View style={styles.premiumStockCard}>
+        <View style={styles.premiumStockCard}>
           <View style={styles.stockInfoLeft}>
-            <Text style={styles.premiumStockName}>{passedName || symbol}</Text>
-            <Text style={styles.premiumStockSymbol}>{symbol}</Text>
+            <Text style={styles.premiumStockName}>
+              {activeSymbol}
+            </Text>
+            {/* <Text style={styles.premiumStockSymbol}>{activeSymbol}</Text> */}
           </View>
           <View style={styles.stockInfoRight}>
             <Text style={styles.premiumCurrentPrice}>{currentPriceDisplay}</Text>
@@ -656,7 +814,7 @@ export default function TradeOrderScreen({
               {isPositive ? "+" : ""}₹{format2(changeVal)} ({format2(changePct)}%)
             </Text>
           </View>
-        </View> */}
+        </View>
 
         {/* Buy/Sell Toggles & Exchange */}
         <View style={styles.actionRowPremium}>
@@ -802,7 +960,7 @@ export default function TradeOrderScreen({
               style={styles.premiumRefreshBtn}
               onPress={() => {
                 fetchFunds(segment);
-                fetchLtp();
+                fetchLtp(activeSymbol, activeToken);
                 fetchBrokerage();
               }}
             >

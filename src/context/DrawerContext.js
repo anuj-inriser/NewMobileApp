@@ -5,6 +5,8 @@ const DrawerContext = createContext();
 export const DrawerProvider = ({ children }) => {
   const [activeDrawer, setActiveDrawer] = useState(null);
   const [selectedSymbol, setSelectedSymbol] = useState(null);
+  const [selectedToken, setSelectedToken] = useState(null);
+  const [selectedIsin, setSelectedIsin] = useState(null)
   const [defaultTab, setDefaultTab] = useState(null); // which tab to open in StockInfoView
 
   const isProfileDrawerOpen = activeDrawer === 'profile';
@@ -26,8 +28,10 @@ export const DrawerProvider = ({ children }) => {
   const [drawerMetadata, setDrawerMetadata] = useState({});
 
   // tab: optional tab id to open ('placeorder', 'chart', etc.)
-  const openStockInfoDrawer = (symbol, tab = null, metadata = {}) => {
+  const openStockInfoDrawer = (token, symbol, tab = null, isin, metadata = {}) => {
     if (symbol) setSelectedSymbol(symbol);
+    if (token) setSelectedToken(token);
+    if (isin) setSelectedIsin(isin)
     setDefaultTab(tab);
     setDrawerMetadata(metadata);
     setActiveDrawer('stockinfo');
@@ -53,7 +57,11 @@ export const DrawerProvider = ({ children }) => {
         openStockInfoDrawer,
         closeStockInfoDrawer,
         selectedSymbol,
+        selectedToken,
         setSelectedSymbol,
+        setSelectedToken,
+        setSelectedIsin,
+        selectedIsin,
         defaultTab,       // ← which tab StockInfoView should open on
         drawerMetadata,   // ← metadata like entry, target, sl
       }}

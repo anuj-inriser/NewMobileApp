@@ -40,6 +40,7 @@ const TradeCard = ({
   recoPriceLow,
   exitPriceLow,
   isLocked,
+  isin
 }) => {
   const navigation = useNavigation();
   const { openStockInfoDrawer } = useDrawer();
@@ -51,7 +52,8 @@ const TradeCard = ({
   const [bubbleWidth, setBubbleWidth] = useState(0);
 
   const symbolKey = script?.toUpperCase().trim();
-  const rt = prices?.[symbolKey];
+
+  const rt = prices[token];
   // console.log("rt ", rt)
   // const ltp = rt?.price ?? fixedltp;
   let ltp;
@@ -224,12 +226,12 @@ const TradeCard = ({
   const tooltipLeft =
     meterWidth > 0 && bubbleWidth > 0
       ? Math.max(
-          MARGIN,
-          Math.min(
-            (percent / 100) * meterWidth - bubbleWidth / 2,
-            meterWidth - bubbleWidth - MARGIN,
-          ),
-        )
+        MARGIN,
+        Math.min(
+          (percent / 100) * meterWidth - bubbleWidth / 2,
+          meterWidth - bubbleWidth - MARGIN,
+        ),
+      )
       : 0;
 
   /* ---------------- UI ---------------- */
@@ -286,11 +288,11 @@ const TradeCard = ({
 
           <TouchableOpacity style={styles.actionButton}
             onPress={() =>
-              openStockInfoDrawer(script_id, "placeorder", {
-                price: ltp,
+              openStockInfoDrawer(token, script_id, "placeorder", isin, {
+                // price: ltp,
                 target: target,
                 stoploss: stopLoss,
-                quantity: 1, // Default quantity
+                // quantity: 1, 
                 name: script
               })
             }>
@@ -383,7 +385,7 @@ const TradeCard = ({
               {tradepercent > 0 ? "+" : ""}
             </Text>
             {/* Downward arrow */}
-      
+
             <View style={styles.tooltipArrow} />
           </View>
         </View>
@@ -694,7 +696,7 @@ const styles = StyleSheet.create({
   },
   marker: {
     position: "absolute",
-    bottom:-6,
+    bottom: -6,
     width: 2,
     height: 14,
     backgroundColor: global.colors.textPrimary,

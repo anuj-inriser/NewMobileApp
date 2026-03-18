@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Share } from "react-native";
+import { Share2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import TopMenuSlider from "../components/TopMenuSlider";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -16,6 +17,7 @@ const NewsReadingScreen = ({ route }) => {
     const { width } = useWindowDimensions();
     const { item } = route.params;
     const navigate = useNavigation();
+    console.log("item", item)
 
     const titleWords = item.title?.trim().split(/\s+/).length || 0;
     const descriptionWords = item.brief_description?.trim().split(/\s+/).length || 0;
@@ -25,9 +27,38 @@ const NewsReadingScreen = ({ route }) => {
 
     const readTime = Math.ceil(totalWords / 100);
 
+    const handleShare = async () => {
+        try {
+
+            // Prepare the caption
+            const shareMessage = `${item.title}\n\n${item.link}`;
+
+            const result = await Share.share({
+                message: shareMessage,
+            });
+
+            if (result.action === Share.sharedAction) {
+                if (result.activityType) {
+                    // shared with activity type of result.activityType
+                } else {
+                    // shared
+                }
+            } else if (result.action === Share.dismissedAction) {
+                // dismissed
+            }
+        } catch (error) {
+            console.error('Share error:', error.message);
+            showError(
+                "Alert",
+                'Unable to share', error.message
+            );
+        }
+    };
+
     return (
         <>
             <SafeAreaView style={styles.container} edges={["bottom"]}>
+                <View style={styles.headerRow}>
                 <TouchableOpacity
                     style={styles.backButton}
                     onPress={() => {
@@ -39,6 +70,11 @@ const NewsReadingScreen = ({ route }) => {
                     <Ionicons name="arrow-back" size={22} color={global.colors.secondary} />
                     <Text style={styles.backButtonText}>Back</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+                    <Share2 size={17} color={global.colors.textSecondary} />
+                    
+                </TouchableOpacity>
+                </View>
                 <ScrollView
                     style={{ flex: 1 }}
                     contentContainerStyle={styles.scrollContent}
@@ -132,6 +168,13 @@ const NewsReadingScreen = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
+    headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    paddingVertical: 6,
+},
     container: {
         flex: 1,
         backgroundColor: global.colors.background,
@@ -226,6 +269,7 @@ const styles = StyleSheet.create({
         color: {},
         fontWeight: "600",
     },
+    actionButton: { flexDirection: 'row', justifyContent: "flex-end", alignItems: 'center', gap: 6, marginRight: 15 },
 });
 
 

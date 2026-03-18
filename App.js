@@ -338,12 +338,12 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    ScreenCapture.preventScreenCaptureAsync();
-    return () => {
-      ScreenCapture.allowScreenCaptureAsync();
-    };
-  }, []);
+  // useEffect(() => {
+  //   ScreenCapture.preventScreenCaptureAsync();
+  //   return () => {
+  //     ScreenCapture.allowScreenCaptureAsync();
+  //   };
+  // }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

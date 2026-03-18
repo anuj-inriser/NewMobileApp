@@ -14,7 +14,8 @@ import StockInfoView from "./Trade/StockInfoView";
 const { width, height } = Dimensions.get("window");
 
 const StockinfoSlider = () => {
-  const { isStockInfoDrawerOpen, closeStockInfoDrawer, selectedSymbol } = useDrawer();
+  const { isStockInfoDrawerOpen, closeStockInfoDrawer, selectedSymbol, selectedToken , selectedIsin} = useDrawer();
+  
   const insets = useSafeAreaInsets(); // ✅ Safe area hook
 
   const slideAnim = useRef(new Animated.Value(-width)).current;
@@ -88,7 +89,9 @@ const StockinfoSlider = () => {
         ]}
       >
         <StockInfoView
+          token={selectedToken}
           symbol={selectedSymbol || "NSE:SBIN"} // Fallback if needed, though selectedSymbol should be set
+          isin={selectedIsin} // Fallback if needed, though selectedSymbol should be set
           isInsideSlider={true}
           hideOverview={false} // Always show overview in the popup slider
           closeSlider={closeStockInfoDrawer}

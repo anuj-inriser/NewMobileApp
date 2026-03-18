@@ -32,7 +32,7 @@ import { useWatchlistRefresh } from "../context/WatchlistContext";
 
 const mergeWithRealtime = (list, realtimePrices) => {
   return list.map(item => {
-    const rt = realtimePrices[item.token] || realtimePrices[item.script_id];
+    const rt = realtimePrices[item.token];
 
     // ✅ LTP: realtime > item.ltp > 0
     const ltp = rt?.price != null
@@ -120,24 +120,56 @@ export default function TradeOrderListScreen() {
 
 
   // ---------------- WEBSOCKET SUBSCRIPTION ----------------
+  // useEffect(() => {
+  //   const symbols = symbolsRef.current;
+  //   if (symbols.length === 0) return;
+
+  //   const page = "WatchlistPage";
+  //   const context = `Watchlist-${currentWatchlistId}`;
+  //   subscribeSymbols(symbols, page, context);
+
+  //   const appStateSub = AppState.addEventListener("change", (nextState) => {
+  //     if (nextState === "active") {
+  //       subscribeSymbols(symbols, page, context);
+  //     } else {
+  //       unsubscribeDelayed(symbols, page, context);
+  //     }
+  //   });
+
+  //   return () => {
+  //     unsubscribeDelayed(symbols, page, context);
+  //     appStateSub.remove();
+  //   };
+  // }, [enrichedStocks, currentWatchlistId]);
+
   useEffect(() => {
-    const symbols = symbolsRef.current;
-    if (symbols.length === 0) return;
+    // ✅ Use token instead of symbol
+    const tokens = enrichedStocks
+      .map(item => item.token)      // take token
+      .filter(Boolean);             // remove null/undefined
+
+    if (tokens.length === 0) return;
 
     const page = "WatchlistPage";
     const context = `Watchlist-${currentWatchlistId}`;
-    subscribeSymbols(symbols, page, context);
+
+    // Subscribe and log
+    console.log("🔹 Subscribing tokens:", tokens);
+    subscribeSymbols(tokens, page, context);
 
     const appStateSub = AppState.addEventListener("change", (nextState) => {
       if (nextState === "active") {
-        subscribeSymbols(symbols, page, context);
+        console.log("🔹 App active – resubscribing tokens:", tokens);
+        subscribeSymbols(tokens, page, context);
       } else {
-        unsubscribeDelayed(symbols, page, context);
+        console.log("🔹 App inactive – unsubscribing tokens:", tokens);
+        unsubscribeDelayed(tokens, page, context);
       }
     });
 
     return () => {
-      unsubscribeDelayed(symbols, page, context);
+      console.log("🔹 Component unmount – unsubscribing tokens:", tokens);
+      unsubscribeDelayed(tokens, page, context);
       appStateSub.remove();
     };
   }, [enrichedStocks, currentWatchlistId]);
@@ -279,7 +311,7 @@ export default function TradeOrderListScreen() {
               })
             }
             onRemoveItem={removeStockFromWatchlist}
-             isFetching={isFetching}
+            isFetching={isFetching}
             refetch={refetch}
           />
         )}

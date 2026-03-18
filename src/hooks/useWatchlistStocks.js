@@ -28,7 +28,8 @@ export const useWatchlistStocks = (wishlistId) => {
                 analysis: item.news_description || item.description || "",
                 news_title: item.news_title || "",
                 news_date: item.news_date,
-                news_items: item.news_items || []
+                news_items: item.news_items || [],
+                isin: item.isin
             }));
 
             return formatted;

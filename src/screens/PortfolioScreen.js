@@ -79,26 +79,11 @@ const PortfolioScreen = () => {
         setOrders(filtered);
     };
 
-    // Calculate Portfolio Totals
-    // const portfolioTotals = orders.reduce((acc, item) => {
-    //     const realisedQty = Number(item.realisedquantity) || 0;
-    //     const ltp = realtimePrices[item.tradingsymbol]?.price || Number(item.ltp) || 0;
-    //     const avg = Number(item.averageprice) || 0;
-    //     const invested = avg * realisedQty;
-    //     const currentValue = ltp * realisedQty;
-    //     const profit = currentValue - invested;
-
-    //     acc.totalCurrent += currentValue;
-    //     acc.totalInvested += invested;
-    //     acc.totalProfit += profit;
-
-    //     return acc;
-    // }, { totalCurrent: 0, totalInvested: 0, totalProfit: 0 });
-
     const portfolioTotals = orders.reduce((acc, item) => {
+        // console.log('item :>> ', item);
         const qty = Number(item.realisedquantity) || 0;
 
-        const rt = getRealtimeData(item.tradingsymbol);
+        const rt = getRealtimeData(item.symboltoken);
         const ltp = rt?.price ?? Number(item.ltp || 0);
         const prevClose = rt?.prevClose ?? Number(item.close || 0);
         const avg = Number(item.averageprice) || 0;
@@ -213,12 +198,12 @@ const PortfolioScreen = () => {
     };
 
     useEffect(() => {
-        if (selectedTab === 1) {
-            fetchOrders();
-        }
+        if (!authToken) return;
+        fetchOrders();
     }, [selectedTab]);
 
     const onRefresh = async () => {
+        if (!authToken) return;
         setRefreshing(true);
         await fetchOrders();
     };
@@ -227,7 +212,6 @@ const PortfolioScreen = () => {
         const fetchBrokers = async () => {
             try {
                 const userId = await AsyncStorage.getItem("userId");
-                const deviceId = await getDeviceId();
 
                 const response = await fetch(`${apiUrl}/api/portfolio/getAllBrokers`, {
                     method: "GET",
@@ -426,73 +410,73 @@ const PortfolioScreen = () => {
                 </Modal>
 
                 {/* ORDERS LIST */}
-                <View style={{flex: 1}}>
+                <View style={{ flex: 1 }}>
 
-                {loading ? (
-                    <View style={styles.loaderBox}>
-                        <Text style={styles.loaderText}>Loading...</Text>
-                    </View>
-                ) : (
-                    <>
-                        <FlatList
-                            data={orders}
-                            keyExtractor={(item, index) => item.symboltoken + "-" + index}
-                            renderItem={({ item }) => {
-                                const rt = getRealtimeData(item.tradingsymbol);
-                                const ltp = rt?.price ?? Number(item.ltp || 0);
-                                const prevClose = rt?.prevClose ?? Number(item.close || 0);
+                    {loading ? (
+                        <View style={styles.loaderBox}>
+                            <Text style={styles.loaderText}>Loading...</Text>
+                        </View>
+                    ) : (
+                        <>
+                            <FlatList
+                                data={orders}
+                                keyExtractor={(item, index) => item.symboltoken + "-" + index}
+                                renderItem={({ item }) => {
+                                    const rt = getRealtimeData(item.symboltoken);
+                                    const ltp = rt?.price ?? Number(item.ltp || 0);
+                                    const prevClose = rt?.prevClose ?? Number(item.close || 0);
 
-                                return (
-                                    <PortfolioCard
-                                        name={item.tradingsymbol}
-                                        shares={Number(item.realisedquantity || 0)}
-                                        invested={Number(
-                                            Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
-                                        )}
-                                        price={Number(
-                                            Number(item.averageprice || 0).toFixed(2)
-                                        )}
-                                        currentValue={Number(
-                                            Number(ltp || 0).toFixed(2)
-                                        )}
-                                        profit={(Number(ltp).toFixed(2) * item.realisedquantity).toFixed(2)}
-                                        profitPercent={Number(
-                                            (
-                                                (Number(ltp || 0) * Number(item.realisedquantity || 0)) -
-                                                (Number(item.averageprice || 0) * Number(item.realisedquantity || 0))
-                                            ) /
-                                            (Number(item.averageprice || 0) * Number(item.realisedquantity || 0)) * 100
-                                        ).toFixed(2)}
-                                        today={(
-                                            (Number(ltp || 0) - Number(prevClose || 0)) *
-                                            Number(item.realisedquantity || 0)
-                                        )}
-                                        todayPercent={(((
-                                            (Number(ltp || 0) - Number(prevClose || 0)) *
-                                            Number(item.realisedquantity || 0)
-                                        ) / Number(
-                                            Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
-                                        )) * 100).toFixed(2)}
-                                    />
-                                );
+                                    return (
+                                        <PortfolioCard
+                                            name={item.tradingsymbol}
+                                            shares={Number(item.realisedquantity || 0)}
+                                            invested={Number(
+                                                Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
+                                            )}
+                                            price={Number(
+                                                Number(item.averageprice || 0).toFixed(2)
+                                            )}
+                                            currentValue={Number(
+                                                Number(ltp || 0).toFixed(2)
+                                            )}
+                                            profit={(Number(ltp).toFixed(2) * item.realisedquantity).toFixed(2)}
+                                            profitPercent={Number(
+                                                (
+                                                    (Number(ltp || 0) * Number(item.realisedquantity || 0)) -
+                                                    (Number(item.averageprice || 0) * Number(item.realisedquantity || 0))
+                                                ) /
+                                                (Number(item.averageprice || 0) * Number(item.realisedquantity || 0)) * 100
+                                            ).toFixed(2)}
+                                            today={(
+                                                (Number(ltp || 0) - Number(prevClose || 0)) *
+                                                Number(item.realisedquantity || 0)
+                                            )}
+                                            todayPercent={(((
+                                                (Number(ltp || 0) - Number(prevClose || 0)) *
+                                                Number(item.realisedquantity || 0)
+                                            ) / Number(
+                                                Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
+                                            )) * 100).toFixed(2)}
+                                        />
+                                    );
                                 }}
                                 ListHeaderComponent={
-                                      <PortfolioHoldingsCard
-                            totalCurrent={portfolioTotals.totalCurrent}
-                            totalInvested={portfolioTotals.totalInvested}
-                            profit={portfolioTotals.totalToday}
-                            profitPercent={todayPercent}
-                            compactMode={true}
-                        />
+                                    <PortfolioHoldingsCard
+                                        totalCurrent={portfolioTotals.totalCurrent}
+                                        totalInvested={portfolioTotals.totalInvested}
+                                        profit={portfolioTotals.totalToday}
+                                        profitPercent={todayPercent}
+                                        compactMode={true}
+                                    />
                                 }
-                                    // style={{ marginTop: 10 }}
-                                    contentContainerStyle={{  paddingBottom: 100 }}
-                            showsVerticalScrollIndicator={false}
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                        />
-                    </>
-                )}
+                                // style={{ marginTop: 10 }}
+                                contentContainerStyle={{ paddingBottom: 100 }}
+                                showsVerticalScrollIndicator={false}
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                            />
+                        </>
+                    )}
 
                 </View>
             </SafeAreaView>

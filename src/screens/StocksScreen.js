@@ -161,11 +161,11 @@ const StocksScreen = () => {
   // 🔁 Dynamic fetch based on category + filter
   const fetchStocks = useCallback(async () => {
     let url = "";
-
+    const group_token = headerData.token;
     url =
       selectedExchange === "BSE"
-        ? `${apiUrl}/api/indicesNew/bseStocks?filterIndex=${filterIndex}&category=${selectedCategory}`
-        : `${apiUrl}/api/indicesNew/nseStocks?filterIndex=${filterIndex}&category=${selectedCategory}`;
+        ? `${apiUrl}/api/indicesNew/bseStocks?filterIndex=${group_token}&category=${selectedCategory}`
+        : `${apiUrl}/api/indicesNew/nseStocks?filterIndex=${group_token}&category=${selectedCategory}`;
 
     try {
       const response = await axiosInstance.get(url);
@@ -211,6 +211,8 @@ const StocksScreen = () => {
       subscribedRef.current = true;
     },
   });
+
+
 
   // 📱 Subscription sync
   useFocusEffect(
@@ -259,7 +261,7 @@ const StocksScreen = () => {
     let sorted = [...data];
 
     const getChangePercent = (item) => {
-      const value = Number(realtimePrices[item.symbol]?.price || item.ltp || 0);
+      const value = Number(realtimePrices[item.token]?.price || item.ltp || 0);
       const prevClose = Number(item.prev_close || 0);
       const change = prevClose > 0 ? value - prevClose : 0;
       const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
@@ -289,37 +291,7 @@ const StocksScreen = () => {
 
     return sorted;
   };
-  // const applySortToData = (sortType, data) => {
-  //   let sorted = [...data];
-
-  //   if (sortType === "A-Z") {
-  //     sorted.sort((a, b) => {
-  //       const nameA = (a.symbol || "").toUpperCase();
-  //       const nameB = (b.symbol || "").toUpperCase();
-  //       return nameA.localeCompare(nameB);
-  //     });
-  //   } else if (sortType === "Z-A") {
-  //     sorted.sort((a, b) => {
-  //       const nameA = (a.symbol || "").toUpperCase();
-  //       const nameB = (b.symbol || "").toUpperCase();
-  //       return nameB.localeCompare(nameA);
-  //     });
-  //   } else if (sortType === "High-Low") {
-  //     sorted.sort((a, b) => {
-  //       const priceA = Number(realtimePrices[a.symbol]?.price || a.ltp || 0);
-  //       const priceB = Number(realtimePrices[b.symbol]?.price || b.ltp || 0);
-  //       return priceB - priceA;
-  //     });
-  //   } else if (sortType === "Low-High") {
-  //     sorted.sort((a, b) => {
-  //       const priceA = Number(realtimePrices[a.symbol]?.price || a.ltp || 0);
-  //       const priceB = Number(realtimePrices[b.symbol]?.price || b.ltp || 0);
-  //       return priceA - priceB;
-  //     });
-  //   }
-
-  //   return sorted;
-  // };
+ 
 
   const handleSort = (sortType) => {
     setSelectedSort(sortType);
@@ -333,8 +305,9 @@ const StocksScreen = () => {
     }
 
     return data.filter((stock) => {
-      const price = Number(realtimePrices[stock.symbol]?.price || stock.ltp || 0);
-      const prevClose = Number(realtimePrices[stock.symbol]?.prevClose || stock.prev_close || price);
+     
+      const price = Number(realtimePrices[stock.token]?.price || stock.ltp || 0);
+      const prevClose = Number(realtimePrices[stock.token]?.prevClose || stock.prev_close || price);
       const change = price - prevClose;
 
       if (filterType === "Gainers") return change > 0;
@@ -358,11 +331,12 @@ const StocksScreen = () => {
   const counts = useMemo(() => {
     let g = 0, l = 0, n = 0;
     displayStocks.forEach((stock) => {
+      //  console.log("filter876 ", stock)
       const price = Number(
-        realtimePrices[stock.symbol]?.price || stock.ltp || 0
+        realtimePrices[stock.token]?.price || stock.ltp || 0
       );
       const prevClose = Number(
-        realtimePrices[stock.symbol]?.prevClose || stock.prev_close || price
+        realtimePrices[stock.token]?.prevClose || stock.prev_close || price
       );
       const change = price - prevClose;
       if (change > 0) g++;
@@ -467,7 +441,7 @@ const StocksScreen = () => {
               <View style={{ paddingHorizontal: 8, marginTop: 12, marginBottom: 10 }}>
                 <AdvancedHeaderCard
                   item={headerData}
-                  realtime={realtimePrices[headerData.symbol] || realtimePrices[headerData.name]}
+                  realtime={realtimePrices[headerData.token] || realtimePrices[headerData.name]}
                   counts={counts}
                 />
               </View>
@@ -478,11 +452,11 @@ const StocksScreen = () => {
         renderItem={({ item }) => (
           <StockListCard
             stock={item}
-            realtime={realtimePrices[item.symbol]}
-            onPress={() => openStockInfoDrawer(item.symbol, null, {
+            realtime={realtimePrices[item.token]}
+            onPress={() => openStockInfoDrawer(item.token, item.symbol, null, item.isin, {
               name: item.name || item.symbol,
-              price: Number(realtimePrices[item.symbol]?.price || item.ltp || 0),
-              exchange: item.exchange || selectedExchange
+              price: 0,
+              exchange: item.exchange || selectedExchange,
             })}
           />
         )}

@@ -12,12 +12,13 @@ export const useRealtimePrices = () => {
       // ✅ Handle v2 format
       if (msg?.type?.toLowerCase() !== "price") return;
       const data = msg.data;
+      //  console.log("data", data)
       if (!data) return;
 
-      const { symbol, value: price, close: prevClose, open, timestamp, exchange_timestamp } = data;
-      if (!symbol || price == null) return;
+      const { token, symbol, value: price, close: prevClose, open, timestamp, exchange_timestamp } = data;
+      if (!token || price == null) return;
 
-      const prev = bufferRef.current[symbol] || latestPrices[symbol];
+      const prev = bufferRef.current[token] || latestPrices[token];
       const base = prev?.prevClose ?? prevClose ?? open ?? prev?.price ?? price;
 
       const newPriceData = {
@@ -29,10 +30,10 @@ export const useRealtimePrices = () => {
         exchange_timestamp: exchange_timestamp || timestamp,
         __ui_ts: Date.now(), // for flash
       };
-      bufferRef.current[symbol] = newPriceData;
+      bufferRef.current[token] = newPriceData;
 
       // Update global cache immediately (so other screens get fresh data)
-      latestPrices[symbol] = newPriceData;
+      latestPrices[token] = newPriceData;
     });
 
     const flush = setInterval(() => {
