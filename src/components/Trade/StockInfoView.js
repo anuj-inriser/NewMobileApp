@@ -27,6 +27,8 @@ const COLLAPSED_HEIGHT = 30;
 const EXPANDED_HEIGHT = SCREEN_HEIGHT * 0.75;
 
 const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlider = false, closeSlider, onFullScreenToggle, isFullScreen }) => {
+
+  // console.log("isin - > Stockinforview", isin)
   const navigation = useNavigation();
   const { prices } = useRealtimePrices();
   const { selectedSymbol, defaultTab, drawerMetadata } = useDrawer();
@@ -57,12 +59,6 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
   const [chartInterval, setChartInterval] = useState(null);
   const [injectionScript, setInjectionScript] = useState("");
   const [isChartReady, setIsChartReady] = useState(false);
-
-  useEffect(() => {
-    console.log("isInsideSlider", isInsideSlider);
-    console.log("isFullScreen", isFullScreen);
-
-  }, [isInsideSlider]);
 
   useEffect(() => {
     const prepareChart = async () => {

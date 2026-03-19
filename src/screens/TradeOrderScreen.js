@@ -29,6 +29,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import OrderInputNew from "../components/OrderInputNew";
 import axiosInstance from "../api/axios";
+import { useDrawer } from "../context/DrawerContext";
 // import DublearrowRight from "../../assets/dublearrowright.png";
 export default function TradeOrderScreen({
   navigation,
@@ -45,7 +46,11 @@ export default function TradeOrderScreen({
   internaltype: propInternalType,
   orderid: propOrderId,
   exchange: propExchange,
+  tradeable: propTradeable,
 }) {
+  // console.log("porpSymobol", propSymbol)
+  // console.log("porptoken", propToken)
+  // console.log("porpisin", propIsin)
   const route = useRoute();
   const hideHeader = propHideHeader || route.params?.hideHeader;
 
@@ -54,6 +59,21 @@ export default function TradeOrderScreen({
   const { prices } = useRealtimePrices();
   const [validationErrors, setValidationErrors] = useState([]);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [exchangeAvailability, setExchangeAvailability] = useState({
+    NSE: false,
+    BSE: false,
+  });
+
+  const {
+    selectedIsin,
+    drawerMetadata
+  } = useDrawer();
+
+  const { stoploss, name, tradeable } = drawerMetadata;
+  const [tradeableState, setTradeableState] = useState(
+    propTradeable ?? tradeable
+  );
+  // console.log('tradeable :>> ', tradeable);
 
   const runValidations = () => {
     const errors = [];
@@ -175,7 +195,8 @@ export default function TradeOrderScreen({
 
   const passedSymbol = propSymbol || params.symbol;
   const passedToken = propToken || params.token;
-  const passedIsin = propIsin || params.isin;
+  const passedIsin = propIsin || params.isin || selectedIsin;
+  const passedTradeable = propTradeable || params.tradeable
   const passedName = propName || params.name;
   const passedPrice = propPrice || params.price;
   const passedQuantity = propQuantity || params.quantity;
@@ -185,6 +206,16 @@ export default function TradeOrderScreen({
   const internaltype = propInternalType || params.internaltype;
   const passedOrderId = propOrderId || params.orderid;
   const swipeRef = useRef(null);
+
+  useEffect(() => {
+    if (propTradeable != null) {
+      setTradeableState(propTradeable);
+      return;
+    }
+    if (tradeable != null) {
+      setTradeableState(tradeable);
+    }
+  }, [propTradeable, tradeable]);
   const [selectedMenu, setSelectedMenu] = useState("Intraday");
   const [transactionType, setTransactionType] = useState("BUY"); // BUY or SELL
   const [selected, setSelected] = useState(propExchange || "NSE");
@@ -224,6 +255,7 @@ export default function TradeOrderScreen({
 
   const [selectedExchange, setSelectedExchange] = useState("NSE");
 
+  // console.log("passedSymbo", passedSymbol)
   const [activeSymbol, setActiveSymbol] = useState(
     passedSymbol || "WELENT-EQ",
   );
@@ -231,7 +263,6 @@ export default function TradeOrderScreen({
 
   const symbol = passedSymbol || "WELENT-EQ";
   const token = passedToken;
-  const isin = passedIsin;
   useEffect(() => {
     if (propExchange) {
       setSelected(propExchange);
@@ -548,17 +579,14 @@ export default function TradeOrderScreen({
     const fetchtokenbyisin = async () => {
       try {
 
-        if (!apiUrl || !isin || !selected) return;
+        if (!apiUrl || !passedIsin || !selected) return;
 
-        console.log("apirul", apiUrl)
-        console.log("isin", isin)
-        console.log("selected", selected)
 
         const url = `${apiUrl}/api/buyshare/gettokenbyisin`;
 
         const response = await axiosInstance.get(url, {
           params: {
-            isin: isin,
+            isin: passedIsin,
             exchange: selected
           },
           headers: {
@@ -566,16 +594,20 @@ export default function TradeOrderScreen({
           }
         });
 
-        console.log("API response:", response.data);
 
         const data = response?.data?.data?.[0] || {};
+
+        console.log("data&&&&&&&&", data)
 
         const newSymbol =
           data.symbol || data.tradingsymbol || data.tradingSymbol || data.script;
         const newToken = data.token || data.symboltoken || data.symbolToken;
+        const newTradeable =
+          data.tradeable ?? data.isTradeable ?? data.tradeable_flag;
 
         if (newSymbol) setActiveSymbol(newSymbol);
         if (newToken) setActiveToken(newToken);
+        if (newTradeable != null) setTradeableState(!!newTradeable);
 
         if (newSymbol || newToken) {
           fetchLtp(newSymbol || activeSymbol, newToken || activeToken);
@@ -587,11 +619,40 @@ export default function TradeOrderScreen({
     };
 
     fetchtokenbyisin();
-  }, [selected, isin]);
+  }, [selected]);
+
+  useEffect(() => {
+    const checkIsinExchange = async (exch) => {
+      const url = `${apiUrl}/api/buyshare/gettokenbyisin`;
+      const response = await axiosInstance.get(url, {
+        params: {
+          isin: passedIsin,
+          exchange: exch,
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      const data = response?.data?.data?.[0];
+      return !!(data?.token || data?.symboltoken || data?.symbolToken);
+    };
+
+    const initAvailability = async () => {
+      if (!passedIsin) return;
+      try {
+        const nseOk = await checkIsinExchange("NSE");
+        const bseOk = await checkIsinExchange("BSE");
+        setExchangeAvailability({ NSE: nseOk, BSE: bseOk });
+      } catch (err) {
+        // Keep previous availability on error
+      }
+    };
+
+    initAvailability();
+  }, [passedIsin]);
 
   // Autofill passed values when screen loads
   useEffect(() => {
-    if (passedPrice) setPrice(String(passedPrice));
     if (passedQuantity) setQty(String(passedQuantity));
     if (passedTarget) setTarget(String(passedTarget));
     if (passedStopLoss) setStopLoss(String(passedStopLoss));
@@ -606,11 +667,6 @@ export default function TradeOrderScreen({
       else if (mappedSeg === "MARGIN") setSelectedMenu("Margin");
     }
 
-    // Prevent LTP from overriding the initial price immediately
-    if (passedPrice) {
-      setIsUserTypedPrice(true);
-      setUserTypedTime(Date.now());
-    }
   }, []);
 
   const fetchFunds = async (segmentType) => {
@@ -765,17 +821,17 @@ export default function TradeOrderScreen({
   }, [stockInfo, prices]);
 
   // Realtime data for stock card
- const rtData = displayPrices[activeToken];
+  const rtData = displayPrices[activeToken];
   const changeVal = rtData?.change || 0;
   const changePct = rtData?.changePercent || 0;
   const isPositive = changeVal >= 0;
   // const currentPriceDisplay = selected === "NSE" ? nseLtp : bseLtp;
   const currentPriceDisplay =
-  rtData?.price != null
-    ? `₹${Number(rtData?.price || 0).toFixed(2)}`
-    : selected === "NSE"
-    ? nseLtp
-    : bseLtp;
+    rtData?.price != null
+      ? `₹${Number(rtData?.price || 0).toFixed(2)}`
+      : selected === "NSE"
+        ? nseLtp
+        : bseLtp;
 
   // Swipe button dynamic values
   const swipeTitle = isModifyMode
@@ -790,16 +846,21 @@ export default function TradeOrderScreen({
   const content = (
     <View style={{ flex: 1 }}>
       {/* Header */}
-      {/* {!hideHeader && (
-        <View style={styles.premiumHeader}>
-          <Text style={styles.premiumHeaderTitle}>{isModifyMode ? "Modify Order" : "Place Order"}</Text>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.premiumCloseBtn}>
-            <Ionicons name="close" size={24} color={global.colors.textPrimary} />
-          </TouchableOpacity>
+      {!tradeableState && (
+        <View style={styles.accessBanner}>
+          <Ionicons name="warning" size={18} color={global.colors.error} />
+          <Text style={styles.accessBannerText}>
+            You have no access to Buy or Sell
+          </Text>
         </View>
-      )} */}
+      )}
 
-      <View style={styles.premiumScrollContent}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.premiumScrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        extraScrollHeight={120}
+      >
         {/* Stock Info Card */}
         <View style={styles.premiumStockCard}>
           <View style={styles.stockInfoLeft}>
@@ -823,13 +884,16 @@ export default function TradeOrderScreen({
               style={[
                 styles.toggleBtnPremium,
                 transactionType === "BUY" && styles.buyActivePremium,
+                !tradeableState && styles.disabledButton,
               ]}
-              onPress={() => setTransactionType("BUY")}
+              onPress={() => tradeableState && setTransactionType("BUY")}
+              disabled={!tradeableState}
             >
               <Text
                 style={[
                   styles.toggleTextPremium,
                   transactionType === "BUY" && styles.activeTextPremium,
+                  !tradeableState && styles.disabledText,
                 ]}
               >
                 Buy
@@ -841,6 +905,7 @@ export default function TradeOrderScreen({
                 transactionType === "SELL" && styles.sellActivePremium,
               ]}
               onPress={() => setTransactionType("SELL")}
+              disabled={!tradeableState}
             >
               <Text
                 style={[
@@ -856,6 +921,7 @@ export default function TradeOrderScreen({
           <TouchableOpacity
             style={styles.exchangeSelectorPremium}
             onPress={() => setSelected(selected === "NSE" ? "BSE" : "NSE")}
+            disabled={!exchangeAvailability[selected === "NSE" ? "BSE" : "NSE"]}
           >
             <Text style={styles.exchangeTextPremium}>{selected}</Text>
             <Ionicons
@@ -972,7 +1038,7 @@ export default function TradeOrderScreen({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAwareScrollView>
 
       {/* Footer */}
       <View style={styles.premiumFooter}>
@@ -983,6 +1049,7 @@ export default function TradeOrderScreen({
               borderWidth: 0,
               borderColor: "transparent",
             }}
+            disabled={!tradeableState}
             railStyles={{
               borderWidth: 0,
               borderColor: "transparent",
@@ -1172,7 +1239,7 @@ export default function TradeOrderScreen({
   }
 
   return (
-    <SafeAreaView edges={["left", "top"]} style={styles.container}>
+    <SafeAreaView edges={["left"]} style={styles.container}>
       {content}
     </SafeAreaView>
   );
@@ -1281,8 +1348,9 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   premiumScrollContent: {
-    flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 10,
+    // paddingBottom: 40,
   },
   premiumStockCard: {
     backgroundColor: "#FFF",
@@ -1510,5 +1578,32 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#FFF",
+  },
+  accessBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#FCECEC",
+    borderWidth: 1,
+    borderColor: "#F3B8B8",
+  },
+  accessBannerText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: global.colors.textPrimary,
+  },
+  disabledButton: {
+    opacity: 0.5,
+    backgroundColor: '#cccccc',
+  },
+  disabledText: {
+    opacity: 0.6,
+    color: '#999999',
   },
 });

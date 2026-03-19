@@ -435,6 +435,8 @@ const TradeScreen = () => {
                   recoPriceLow={recommendation.recoPriceLow}
                   isLocked={Number(role) === 1}
                   isin={recommendation.isin}
+                  tradeable={recommendation.tradeable}
+                  exchange={recommendation.exchange}
                 />
               );
             })

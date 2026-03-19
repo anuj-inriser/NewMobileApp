@@ -85,6 +85,7 @@ const WatchlistItemCard = ({
     const symbol = item.symbol || item.script_symbol || String(item.script_id);
     const token = item.token;
     const isin = item.isin;
+    const tradeable = item.tradeable
     const rt = realtimePrices[token];
 
     const ltp = Number(rt?.price || item.value || item.ltp || 0);
@@ -134,7 +135,9 @@ const WatchlistItemCard = ({
           activeOpacity={0.9}
           onPress={() => openStockInfoDrawer(token, symbol, null, isin, {
             name: item.name,
-            price: ltp
+            price: ltp,
+            tradeable,
+            exchange: item.exchange,
           })}
         >
           <LinearGradient

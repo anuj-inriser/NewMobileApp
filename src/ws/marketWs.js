@@ -62,7 +62,6 @@ const connect = () => {
   const protocol = getWsProtocol(wsUrl);
   const url = `${protocol}://${wsUrl}/ws/prices`;
 
-  console.log("uuuuuuuu",url);
   console.log("🔌 [MarketWS] Connecting...");
 
   ws = new WebSocket(url);

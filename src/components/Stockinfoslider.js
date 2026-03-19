@@ -15,6 +15,9 @@ const { width, height } = Dimensions.get("window");
 
 const StockinfoSlider = () => {
   const { isStockInfoDrawerOpen, closeStockInfoDrawer, selectedSymbol, selectedToken , selectedIsin} = useDrawer();
+  console.log("selectedSymbol", selectedSymbol)
+  console.log("selectedToken", selectedToken)
+  console.log("selectedIsin", selectedIsin)
   
   const insets = useSafeAreaInsets(); // ✅ Safe area hook
 

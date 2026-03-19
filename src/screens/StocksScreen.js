@@ -213,7 +213,6 @@ const StocksScreen = () => {
   });
 
 
-
   // 📱 Subscription sync
   useFocusEffect(
     useCallback(() => {
@@ -457,6 +456,7 @@ const StocksScreen = () => {
               name: item.name || item.symbol,
               price: 0,
               exchange: item.exchange || selectedExchange,
+              tradeable: item.tradeable
             })}
           />
         )}

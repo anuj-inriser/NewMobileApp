@@ -40,8 +40,12 @@ const TradeCard = ({
   recoPriceLow,
   exitPriceLow,
   isLocked,
-  isin
+  isin,
+  tradeable,
+  exchange
 }) => {
+
+
   const navigation = useNavigation();
   const { openStockInfoDrawer } = useDrawer();
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -293,7 +297,9 @@ const TradeCard = ({
                 target: target,
                 stoploss: stopLoss,
                 // quantity: 1, 
-                name: script
+                name: script,
+                tradeable: tradeable,
+                exchange: exchange
               })
             }>
             <View

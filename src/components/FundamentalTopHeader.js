@@ -375,9 +375,9 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
                   {/* LEFT: Script Name */}
 
                   <Text
-                    onPress={() => openStockInfoDrawer(item.script_id, null, {
-                      name: item.script_name
-                    })}
+                    // onPress={() => openStockInfoDrawer(item.script_id, null, {
+                    //   name: item.script_name
+                    // })}
                     style={styles.dropdownText}
                     numberOfLines={1}
                   >
@@ -405,7 +405,9 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
                     <TouchableOpacity
                       onPress={() => {
                         openStockInfoDrawer(item.token, item.script_id, "placeorder", item.isin, {
-                          name: item.script_name
+                          name: item.script_name,
+                          tradeable: item.tradeable,
+                          exchange: item.exchange
                         });
                       }}
                       // navigation.navigate("TradeOrder", {

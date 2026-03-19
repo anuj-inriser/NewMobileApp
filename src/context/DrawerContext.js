@@ -31,7 +31,10 @@ export const DrawerProvider = ({ children }) => {
   const openStockInfoDrawer = (token, symbol, tab = null, isin, metadata = {}) => {
     if (symbol) setSelectedSymbol(symbol);
     if (token) setSelectedToken(token);
-    if (isin) setSelectedIsin(isin)
+    if (isin) { setSelectedIsin(isin) }
+    else {
+      setSelectedIsin(null)
+    }
     setDefaultTab(tab);
     setDrawerMetadata(metadata);
     setActiveDrawer('stockinfo');

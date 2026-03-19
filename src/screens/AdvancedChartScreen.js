@@ -12,7 +12,6 @@ import TradeOrderTabs from "../components/Trade/TradeOrderTabs";
 import OrdersList from "../components/OrdersList";
 import PositionsList from "../components/PositionsList";
 import PortfolioScreen from "./PortfolioScreen";
-import StockInfoView from "../components/Trade/StockInfoView";
 import TradeOrderScreen from "./TradeOrderScreen";
 import AccountScreen from "./AccountScreen";
 
