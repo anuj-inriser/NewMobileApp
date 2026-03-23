@@ -36,6 +36,4 @@ files.forEach(f => {
   });
 });
 
-console.log('=== useEffect WITHOUT dep array ===');
 results.forEach(r => console.log(r));
-console.log('\nTotal:', results.length);

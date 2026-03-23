@@ -434,7 +434,6 @@ const TradeScreen = () => {
 
             displayStocks.map((recommendation) => {
               const liveData = prices[recommendation.token];
-              {/* console.log("recommedation", recommendation ) */}
               return (
                 <TradeCard
                   key={recommendation.tradeId}

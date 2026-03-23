@@ -29,7 +29,6 @@ export default function TradeOrderFormNew({
   exchange = "NSE",
   onOrderPlaced,
 }) {
-  console.log("token ", token)
   const navigation = useNavigation();
   const { authToken } = useAuth();
   const { showSuccess, showError } = useAlert();
@@ -141,12 +140,9 @@ export default function TradeOrderFormNew({
 
   const tokens = [token];
 
-  console.log("🟢 SUBSCRIBE TradeOrderForm:", tokens);
-
   subscribeSymbols(tokens, "TradeOrderForm", "OrderScreen");
 
   return () => {
-    console.log("🔴 UNSUBSCRIBE TradeOrderForm:", tokens);
     unsubscribeDelayed(tokens, "TradeOrderForm", "OrderScreen");
   };
 }, [token]);

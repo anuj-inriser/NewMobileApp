@@ -531,21 +531,17 @@ export default function EquityScreen() {
 
       if (!tokens.length) return;
 
-      console.log("[Subscribe] Tokens on focus:", tokens);
-
       subscribeSymbols(tokens, page, context);
 
       const appStateSub = AppState.addEventListener("change", (state) => {
         if (state !== "active") {
           unsubscribeDelayed(tokens, page, context);
         } else {
-          console.log("[Resubscribe] Tokens on foreground:", tokens);
           subscribeSymbols(tokens, page, context);
         }
       });
 
       return () => {
-        console.log("[Unsubscribe delayed] Tokens:", tokens);
         unsubscribeDelayed(tokens, page, context);
         appStateSub?.remove();
       };

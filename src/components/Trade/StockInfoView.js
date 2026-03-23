@@ -37,7 +37,6 @@ const EXPANDED_HEIGHT = SCREEN_HEIGHT * 0.75;
 
 const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlider = false, closeSlider, onFullScreenToggle, isFullScreen }) => {
 
-  // console.log("isin - > Stockinforview", isin)
   const { prices } = useRealtimePrices();
   const { selectedSymbol, defaultTab, drawerMetadata, openStockInfoDrawer } = useDrawer();
   const [stockInfo, setStockInfo] = useState([])

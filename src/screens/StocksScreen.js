@@ -352,7 +352,6 @@ const StocksScreen = () => {
   const counts = useMemo(() => {
     let g = 0, l = 0, n = 0;
     displayStocks.forEach((stock) => {
-      //  console.log("filter876 ", stock)
       const price = Number(
         realtimePrices[stock.token]?.price || stock.ltp || 0
       );

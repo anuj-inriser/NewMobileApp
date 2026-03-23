@@ -154,21 +154,17 @@ export default function TradeOrderListScreen() {
     const context = `Watchlist-${currentWatchlistId}`;
 
     // Subscribe and log
-    console.log("🔹 Subscribing tokens:", tokens);
     subscribeSymbols(tokens, page, context);
 
     const appStateSub = AppState.addEventListener("change", (nextState) => {
       if (nextState === "active") {
-        console.log("🔹 App active – resubscribing tokens:", tokens);
         subscribeSymbols(tokens, page, context);
       } else {
-        console.log("🔹 App inactive – unsubscribing tokens:", tokens);
         unsubscribeDelayed(tokens, page, context);
       }
     });
 
     return () => {
-      console.log("🔹 Component unmount – unsubscribing tokens:", tokens);
       unsubscribeDelayed(tokens, page, context);
       appStateSub.remove();
     };

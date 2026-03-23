@@ -28,7 +28,6 @@ const NewsCardLarge = ({ item, onPress }) => {
     const { showSuccess, showError } = useAlert();
     const { userId } = useAuth(); // Get userId
 
-    // console.log('item', item.news_content)
     const [menuVisible, setMenuVisible] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
     const moreButtonRef = useRef(null);

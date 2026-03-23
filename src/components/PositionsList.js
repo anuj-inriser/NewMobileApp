@@ -142,7 +142,6 @@ const PositionsList = () => {
       const tokens = getTokens();
       if (!tokens.length) return;
 
-      console.log(`🟢 SUBSCRIBE → ${page}`, tokens);
       subscribeSymbols(tokens, page, context);
 
       const appStateSub = AppState.addEventListener("change", (state) => {

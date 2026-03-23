@@ -50,9 +50,6 @@ export default function TradeOrderScreen({
   tradeable: propTradeable,
 }) {
   const navigation = useNavigation();
-  // console.log("porpSymobol", propSymbol)
-  // console.log("porptoken", propToken)
-  // console.log("porpisin", propIsin)
   const { closeStockInfoDrawer } = useDrawer();
   const route = useRoute();
   const hideHeader = propHideHeader || route.params?.hideHeader;
@@ -76,7 +73,6 @@ export default function TradeOrderScreen({
   const [tradeableState, setTradeableState] = useState(
     propTradeable ?? tradeable
   );
-  // console.log('tradeable :>> ', tradeable);
 
   const runValidations = () => {
     const errors = [];

@@ -82,7 +82,6 @@ const PortfolioScreen = () => {
     };
 
     const portfolioTotals = orders.reduce((acc, item) => {
-        // console.log('item :>> ', item);
         const qty = Number(item.realisedquantity) || 0;
 
         const rt = getRealtimeData(item.symboltoken);

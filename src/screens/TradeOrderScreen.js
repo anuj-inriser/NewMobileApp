@@ -51,9 +51,6 @@ export default function TradeOrderScreen({
   tradeable: propTradeable,
 }) {
   const navigation = useNavigation();
-  // console.log("porpSymobol", propSymbol)
-  // console.log("porptoken", propToken)
-  // console.log("porpisin", propIsin)
   const { closeStockInfoDrawer } = useDrawer();
   const route = useRoute();
   const hideHeader = propHideHeader || route.params?.hideHeader;
@@ -78,7 +75,6 @@ export default function TradeOrderScreen({
   const [tradeableState, setTradeableState] = useState(
     propTradeable ?? tradeable
   );
-  // console.log('tradeable :>> ', tradeable);
 
   const runValidations = () => {
     const errors = [];
@@ -94,7 +90,6 @@ export default function TradeOrderScreen({
     const tg = parseFloat(target?.trim() || "0");
     const sl = parseFloat(stopLoss?.trim() || "0");
     const ltp = cleanLtp(selected === "NSE" ? nseLtp : bseLtp);
-    console.log("ltp>>>>>>>>>", ltp);
     const br = parseFloat(brokerage || 0);
     const ch = parseFloat(charges || 0);
     const tx = parseFloat(taxes || 0);
@@ -436,7 +431,6 @@ export default function TradeOrderScreen({
 
   const [selectedExchange, setSelectedExchange] = useState("NSE");
 
-  // console.log("passedSymbo", passedSymbol)
   const [activeSymbol, setActiveSymbol] = useState(
     passedSymbol || "WELENT-EQ",
   );
@@ -785,9 +779,6 @@ export default function TradeOrderScreen({
         return; // Do NOT update price from LTP
       }
 
-      // console.log("ex", selected)
-       console.log("sym", sym)
-      // console.log("tok", tok)
       const ex = selected;
       const res = await fetch(
         `${apiUrl}/api/buyshare/search?symbol=${sym}&exchange=${ex}&token=${tok}`,
@@ -859,8 +850,6 @@ export default function TradeOrderScreen({
 
 
         const data = response?.data?.data?.[0] || {};
-
-        console.log("data&&&&&&&&", data)
 
         const newSymbol =
           data.symbol || data.tradingsymbol || data.tradingSymbol || data.script;
@@ -1025,7 +1014,6 @@ export default function TradeOrderScreen({
 
   // const mergeWithRealtime = (list, prices) => {
   //   return list.map((item) => {
-  //     // console.log("item", item)
   //     const rt = prices[item.token] || item.ltp;
   //     if (!rt) return item;
 

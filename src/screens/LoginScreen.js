@@ -124,8 +124,6 @@ export default function LoginScreen({ navigation }) {
         body: JSON.stringify({ phone }),
       });
 
-      console.log("response ", response)
-
       if (!response.ok) {
         throw new Error("Failed to send OTP");
       }
@@ -164,7 +162,6 @@ export default function LoginScreen({ navigation }) {
       });
 
       const data = await res.json();
-      console.log('data', data)
 
       if (!data.success) {
         setPhoneOtpError("Invalid OTP");
@@ -288,7 +285,6 @@ export default function LoginScreen({ navigation }) {
       setLoading(false);
 
       if (result.status && result.data?.userId) {
-        // console.log("******888")
         ChartPrefetchService.prefetchWatchlist();
         const { userId, name, email, phone, userimage, token, permission } =
         result.data;
@@ -316,7 +312,6 @@ export default function LoginScreen({ navigation }) {
         setErrors({ password: result.message || "Invalid password" });
       }
 
-      // console.log("control coming here")
     } catch (e) {
       loginMeta.message = e?.response?.data?.message || "Login failure";
       setLoading(false);

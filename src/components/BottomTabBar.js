@@ -62,7 +62,6 @@ const BottomTabBar = ({ state, descriptors, navigation, forceShow = false }) => 
         {tabs.map((tab) => {
           const currentRoute = state.routes[state.index] ?? {};
           const isActive = currentRoute.name === tab.component;
-          // console.log("isActive", isActive)
           return (
             <TouchableOpacity
               key={tab.name}

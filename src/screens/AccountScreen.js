@@ -20,7 +20,6 @@ import { apiUrl } from "../utils/apiUrl";
 
 const AccountScreen = () => {
   const { authToken, setAuthData, clearAuth, disconnectBroker, clientId } = useAuth();
-  // console.log("authtoken ", authToken)
   const { showSuccess, showError } = useAlert();
   const [showAngelOneModal, setShowAngelOneModal] = useState(false);
   const [balance, setBalance] = useState(0)
@@ -134,7 +133,6 @@ const AccountScreen = () => {
 
       const data = await res.json();
       if (data.success) {
-        // console.log("data.amountAvail", data)
         setBalance(data.amountAvail || 0);
       }
     } catch (err) {

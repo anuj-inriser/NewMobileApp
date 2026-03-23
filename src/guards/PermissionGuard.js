@@ -5,7 +5,6 @@ import { ActivityIndicator } from "react-native";
 
 export default function PermissionGuard({ permission, children }) {
     const allowed = usePermission(permission);
-    console.log("allowed ", allowed)
 
     if (allowed === null) {
         return (

@@ -380,10 +380,8 @@ export default function App() {
     }
 
     if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      console.log('App opened');
       logAppEvent("Open");
     } else if (nextAppState.match(/inactive|background/)) {
-      console.log('App closed');
       logAppEvent("Close");
     }
 
@@ -399,12 +397,13 @@ export default function App() {
   const SCREEN_EVENT_MAP = {
     NewsScreen: "News",
     Portfolio: "Portfolio",
-    TradeOrderList: "Ideas",
+    TradeOrderList: "WatchList",
     Trade: "Trade",
     EquityHome: "Equity",
     StockTimelineScreen: "StockTimelineScreen",
     AdvancedChart: "Portfolio",
-    Profile: "Profile"
+    Profile: "Profile",
+    Learning: "Learning"
   };
 
   function getActiveRouteName(state) {
@@ -467,10 +466,9 @@ export default function App() {
                       if (!navigationRef.isReady()) return;
                       const route = navigationRef.getRootState();
                       const currentRoute = getActiveRouteName(route);
+                      console.log("currentroute", currentRoute)
 
                       if (!currentRoute) return;
-                      console.log("currentRoute", currentRoute)
-                      console.log("routeNameRef.current", routeNameRef.current)
                       if (routeNameRef.current !== currentRoute) {
                         routeNameRef.current = currentRoute;
 

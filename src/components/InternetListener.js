@@ -15,7 +15,6 @@ export default function InternetListener() {
 
       const connected = state.isConnected && state.isInternetReachable;
 
-      console.log("Internet state:", connected);
 
       if (!connected) {
 

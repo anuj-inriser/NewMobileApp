@@ -58,8 +58,6 @@ const TradeCard = ({
   const symbolKey = script?.toUpperCase().trim();
 
   const rt = prices[token];
-  // console.log("rt ", rt)
-  // const ltp = rt?.price ?? fixedltp;
   let ltp;
   if (status === "Live") {
     ltp = rt?.price ?? fixedltp;

@@ -322,7 +322,6 @@ const OrdersList = () => {
               //   });
               // }}
               onModify={() => {
-                console.log("FULL ITEM 👉", item);
                 openStockInfoDrawer(
                   item.symbol_token,
                   item.trading_symbol,

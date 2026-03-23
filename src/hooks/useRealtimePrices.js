@@ -12,7 +12,6 @@ export const useRealtimePrices = () => {
       // ✅ Handle v2 format
       if (msg?.type?.toLowerCase() !== "price") return;
       const data = msg.data;
-      //  console.log("data", data)
       if (!data) return;
 
       const { token, symbol, value: price, close: prevClose, open, timestamp, exchange_timestamp } = data;
