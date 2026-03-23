@@ -154,8 +154,8 @@ const Indices = ({
       return true;
     });
     return filtered.map((index) => {
-      const rt = realtimePrices[index.token] ;
-      //  console.log("rt", rt)
+      const rt = realtimePrices[index.token];
+      // console.log("rt", rt)
       if (!rt) return index; // Stable DB data
 
       const prevClose =

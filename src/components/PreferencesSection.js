@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Animated } from 'react-native';
 import axios from 'axios';
+import * as Device from "expo-device";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axiosInstance from "../api/axios";
 import { apiUrl } from '../utils/apiUrl';
 import { Success } from '../ui/models/success';
 
@@ -42,6 +44,7 @@ const PreferencesSection = () => {
     const [preferences, setPreferences] = useState([]);
     const [loading, setLoading] = useState(true);
     const [successIssueModalOpen, setSuccessIssueModalOpen] = useState(false);
+    const originalPreferencesRef = useRef([]);
     const [ModalResponse, setModalResponse] = useState({
         title: '',
         message: '',
@@ -68,6 +71,7 @@ const PreferencesSection = () => {
                 }));
                 if (mappedData.length > 0) {
                     setPreferences(mappedData);
+                    originalPreferencesRef.current = mappedData;
                 }
             }
         } catch (error) {
@@ -90,9 +94,30 @@ const PreferencesSection = () => {
     };
 
     const handleSave = async () => {
+        let prefMeta = {
+            success: false,
+            message: "",
+            userid: ""
+        };
+
         try {
             const userId = await AsyncStorage.getItem("userId");
             if (!userId) return;
+            prefMeta.userid = userId;
+
+            const originalById = new Map(
+                (originalPreferencesRef.current || []).map(p => [p.id, p])
+            );
+            const changedItems = preferences
+                .filter(p => {
+                    const original = originalById.get(p.id);
+                    return !original || original.isEnabled !== p.isEnabled;
+                })
+                .map(p => `${p.title} ${p.isEnabled ? "enabled" : "disabled"}`);
+            const changeMessage =
+                changedItems.length > 0
+                    ? `${changedItems.join(", ")}`
+                    : "No changes";
 
             const payload = {
                 userId: userId,
@@ -110,6 +135,9 @@ const PreferencesSection = () => {
                     message: 'Your preferences have been saved successfully.'
                 })
                 setSuccessIssueModalOpen(true);
+                prefMeta.success = true;
+                prefMeta.message = changeMessage;
+                originalPreferencesRef.current = preferences;
             } else {
                 setModalResponse({
                     status: false,
@@ -117,6 +145,7 @@ const PreferencesSection = () => {
                     message: 'Failed to save preferences'
                 })
                 setSuccessIssueModalOpen(true);
+                prefMeta.message = res?.data?.message || "Failed to save preferences";
             }
         } catch (error) {
             console.log("Error saving preferences:", error);
@@ -126,6 +155,25 @@ const PreferencesSection = () => {
                 message: "Something went wrong"
             })
             setSuccessIssueModalOpen(true);
+            prefMeta.message =
+                error?.response?.data?.message || "Failed to save preferences";
+        } finally {
+            try {
+                const deviceId =
+                    Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+                await axiosInstance.post("/eventlog", {
+                    user_id: prefMeta.userid,
+                    success: prefMeta.success,
+                    device_id: deviceId,
+                    event_group_id: 1,
+                    event_type: "Preferences Save",
+                    content: prefMeta.message,
+                    app_version: "1.0.0"
+                });
+            } catch (err) {
+                console.log("Logging failed", err);
+            }
         }
     };
 

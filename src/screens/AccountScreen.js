@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -13,11 +13,17 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import { useAlert } from "../context/AlertContext";
 import { WebView } from "react-native-webview";
+import * as Device from "expo-device";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axiosInstance from "../api/axios";
+import { apiUrl } from "../utils/apiUrl";
 
 const AccountScreen = () => {
   const { authToken, setAuthData, clearAuth, disconnectBroker, clientId } = useAuth();
+  // console.log("authtoken ", authToken)
   const { showSuccess, showError } = useAlert();
   const [showAngelOneModal, setShowAngelOneModal] = useState(false);
+  const [balance, setBalance] = useState(0)
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const webViewRef = useRef(null);
   const isProcessingAuth = useRef(false);
@@ -53,7 +59,13 @@ const AccountScreen = () => {
     const { url } = navState;
     if (url.includes("auth_token") && url.includes("feed_token") && !isProcessingAuth.current) {
       isProcessingAuth.current = true; // Prevent multiple triggers
-      
+
+      let angelOneMeta = {
+        success: false,
+        message: "",
+        userid: "",
+      };
+
       // Stop WebView immediately to prevent flash of admin/success page
       webViewRef.current?.stopLoading();
       setShowAngelOneModal(false);
@@ -69,7 +81,7 @@ const AccountScreen = () => {
           const payloadSnippet = auth_token.split(".")[1];
           const decoded = JSON.parse(atob(payloadSnippet));
           cId = decoded.username;
-        } catch (e) {}
+        } catch (e) { }
 
         await setAuthData({
           authToken: auth_token,
@@ -79,18 +91,102 @@ const AccountScreen = () => {
         });
 
         showSuccess("Success", "Angel One connected successfully.");
+        angelOneMeta.success = true;
+        angelOneMeta.message = "AngelOne login success";
       } catch (e) {
         showError("Error", "Failed to connect Angel One.");
+        angelOneMeta.message = "AngelOne login failed";
       } finally {
+        try {
+          const userId = await AsyncStorage.getItem("userId");
+          angelOneMeta.userid = userId || "";
+
+          const deviceId =
+            Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+          await axiosInstance.post("/eventlog", {
+            user_id: angelOneMeta.userid,
+            success: angelOneMeta.success,
+            device_id: deviceId,
+            event_group_id: 1,
+            event_type: "AngelOne Login",
+            content: angelOneMeta.message,
+            app_version: "1.0.0"
+          });
+        } catch (err) {
+          console.log("Logging failed", err);
+        }
         isProcessingAuth.current = false;
       }
     }
   };
 
+  const fetchFunds = async (segmentType) => {
+    try {
+      const res = await fetch(
+        `${apiUrl}/api/fundandmargin/get?segment=${segmentType}`,
+        {
+          headers: {
+            Authorization: "Bearer " + authToken,
+          },
+        },
+      );
+
+      const data = await res.json();
+      if (data.success) {
+        // console.log("data.amountAvail", data)
+        setBalance(data.amountAvail || 0);
+      }
+    } catch (err) {
+      console.log("Fund API error:", err.message);
+    }
+  };
+
+  useEffect(() => {
+    if (!authToken) return;
+
+    fetchFunds("FETCHFUNDS");
+  }, [authToken]);
+
+
+
   const handleLogout = async () => {
-    await disconnectBroker();
-    setShowDisconnectConfirm(false);
-    showSuccess("Success", "Broker disconnected successfully.");
+    let angelOneMeta = {
+      success: false,
+      message: "",
+      userid: "",
+    };
+
+    try {
+      await disconnectBroker();
+      setShowDisconnectConfirm(false);
+      showSuccess("Success", "Broker disconnected successfully.");
+      angelOneMeta.success = true;
+      angelOneMeta.message = "AngelOne logout success";
+    } catch (e) {
+      showError("Error", "Failed to disconnect broker.");
+      angelOneMeta.message = "AngelOne logout failed";
+    } finally {
+      try {
+        const userId = await AsyncStorage.getItem("userId");
+        angelOneMeta.userid = userId || "";
+
+        const deviceId =
+          Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+        await axiosInstance.post("/eventlog", {
+          user_id: angelOneMeta.userid,
+          success: angelOneMeta.success,
+          device_id: deviceId,
+          event_group_id: 1,
+          event_type: "AngelOne Logout",
+          content: angelOneMeta.message,
+          app_version: "1.0.0"
+        });
+      } catch (err) {
+        console.log("Logging failed", err);
+      }
+    }
   };
 
   const renderBrokerRow = (broker) => (
@@ -103,9 +199,11 @@ const AccountScreen = () => {
       </View>
       <View style={styles.brokerRight}>
         <View style={styles.balanceBadge}>
-          <Text style={styles.balanceText}>{broker.balance}</Text>
+          <Text style={styles.balanceText}>₹ {Number(balance).toFixed(2)}</Text>
           <TouchableOpacity style={styles.refreshBtn}>
-            <Ionicons name="refresh-outline" size={18} color="#333" />
+            <Ionicons name="refresh-outline" size={18} color="#333" onPress={async () => {
+              await fetchFunds("FETCHFUNDS")
+            }}/>
           </TouchableOpacity>
         </View>
         <TouchableOpacity
@@ -123,7 +221,7 @@ const AccountScreen = () => {
     <View style={styles.container}>
       {authToken ? (
         <View style={styles.connectedView}>
-                <Text style={styles.accountTitle2}>Connected Accounts</Text>
+          <Text style={styles.accountTitle2}>Connected Accounts</Text>
           <ScrollView contentContainerStyle={styles.listContent}>
             {/* When connected, show only AngleOne as per user instruction */}
             {brokers
@@ -134,28 +232,28 @@ const AccountScreen = () => {
       ) : (
         <View style={styles.emptyState}>
           {/* Top Card for Broker Connection */}
-           <Text style={styles.accountTitle}>Connect your existing DEMAT</Text>
+          <Text style={styles.accountTitle}>Connect your existing DEMAT</Text>
           <View style={styles.connectCard}>
-             <View style={styles.brokerLeft}>
-                <View style={styles.iconContainer}>
-                   <Image source={require("../../assets/angelone.png")} style={styles.brokerIcon} />
-                </View>
-                <Text style={styles.brokerName}>AngleOne</Text>
-             </View>
-             <TouchableOpacity 
-                style={styles.inlineConnectBtn}
-                onPress={() => setShowAngelOneModal(true)}
-             >
-                <Text style={styles.inlineConnectBtnText}>Add DEMAT</Text>
-             </TouchableOpacity>
+            <View style={styles.brokerLeft}>
+              <View style={styles.iconContainer}>
+                <Image source={require("../../assets/angelone.png")} style={styles.brokerIcon} />
+              </View>
+              <Text style={styles.brokerName}>AngleOne</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.inlineConnectBtn}
+              onPress={() => setShowAngelOneModal(true)}
+            >
+              <Text style={styles.inlineConnectBtnText}>Add DEMAT</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.emptyTextContainer}>
-          
+
             <Text style={styles.accountSubtitle}>
-                Sync your portfolio, take trades, check fund status & more through
-                secure connection to your Broker. We do not charge anything extra
-                for your trades.
+              Sync your portfolio, take trades, check fund status & more through
+              secure connection to your Broker. We do not charge anything extra
+              for your trades.
             </Text>
           </View>
         </View>

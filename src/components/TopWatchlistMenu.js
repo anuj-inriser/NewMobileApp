@@ -30,6 +30,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
   const [showPopup, setShowPopup] = useState(false);
   const [lists, setLists] = useState([]);
   // const [loading, setLoading] = useState(true);
+  const [limitModalVisible, setLimitModalVisible] = useState(false);
   const [inputVisible, setInputVisible] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [userId, setUserId] = useState(null);
@@ -39,7 +40,7 @@ const TopWatchlistMenu = ({ onWatchlistChange }) => {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const deleteScale = useRef(new Animated.Value(0.5)).current;
   const lastNotifiedWatchlistIdRef = useRef(undefined);
-const loadShowState = async (uid) => {
+  const loadShowState = async (uid) => {
     // const saved = await AsyncStorage.getItem(SHOW_KEY);
     // if (saved === "true") {
     //   setShowContent(true);
@@ -59,7 +60,7 @@ const loadShowState = async (uid) => {
   const loadUserId = async () => {
     try {
       const uid = await AsyncStorage.getItem("userId");
-    if (uid) {
+      if (uid) {
         setUserId(uid);
         fetchLists(uid);
         loadShowState(uid)
@@ -245,7 +246,7 @@ const loadShowState = async (uid) => {
               name="dots-three-vertical"
               size={14}
               color={global.colors.textSecondary}
-              style={{ paddingHorizontal: 10, marginHorizontal: 15, paddingTop:12 }}
+              style={{ paddingHorizontal: 10, marginHorizontal: 15, paddingTop: 12 }}
             />
           </TouchableOpacity>
         </View>
@@ -266,125 +267,133 @@ const loadShowState = async (uid) => {
           }}
         >
           <Animated.View style={{ transform: [{ translateY }] }}>
-          <Pressable style={styles.popupBox}>
-            <View style={styles.titleBar}>
-              <Text style={styles.titleText}>Manage Watchlists</Text>
-            </View>
-
-            {loading && (
-              <View style={{ padding: 20, alignItems: "center" }}>
-                <ActivityIndicator size="small" color={global.colors.secondary} />
+            <Pressable style={styles.popupBox}>
+              <View style={styles.titleBar}>
+                <Text style={styles.titleText}>Manage Watchlists</Text>
               </View>
-            )}
 
-            {!loading &&
-              lists.map((item, index) => (
-                <View style={styles.row} key={item.id ?? index}>
-                  <Text style={styles.rowLabel}>
-                    {index + 1}. {item.name}
-                  </Text>
-
-                  <View style={styles.rowIcons}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setInputVisible(true);
-                        setInputValue(item.name);
-                        setEditIndex(index);
-                      }}
-                    >
-                      <Feather
-                        name="edit"
-                        size={16}
-                        color={global.colors.textSecondary}
-                        style={{ marginRight: 12 }}
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => setDeleteIndex(index)}>
-                      <Feather name="trash-2" size={16} color={global.colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
+              {loading && (
+                <View style={{ padding: 20, alignItems: "center" }}>
+                  <ActivityIndicator size="small" color={global.colors.secondary} />
                 </View>
-              ))}
+              )}
 
-            {!inputVisible && !loading && (
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: 'space-around' }}>
-                <TouchableOpacity
-                  onPress={async () => {
-                    const newValue = !showContent;
-                    setShowContent(newValue);
-                   await axiosInstance.put(`${API}/updateShowNames`, {
+              {!loading &&
+                lists.map((item, index) => (
+                  <View style={styles.row} key={item.id ?? index}>
+                    <Text style={styles.rowLabel}>
+                      {index + 1}. {item.name}
+                    </Text>
+
+                    <View style={styles.rowIcons}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setInputVisible(true);
+                          setInputValue(item.name);
+                          setEditIndex(index);
+                        }}
+                      >
+                        <Feather
+                          name="edit"
+                          size={16}
+                          color={global.colors.textSecondary}
+                          style={{ marginRight: 12 }}
+                        />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity onPress={() => setDeleteIndex(index)}>
+                        <Feather name="trash-2" size={16} color={global.colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+
+              {!inputVisible && !loading && (
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: 'space-around' }}>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const newValue = !showContent;
+                      setShowContent(newValue);
+                      await axiosInstance.put(`${API}/updateShowNames`, {
                         user_id: userId,
                         watchlist_eye: newValue
                       });
-                  }}
+                    }}
 
-                  style={{ marginTop: 16 }}
-                >
-                  <Ionicons
-                    name={showContent ? "eye-outline" : "eye-off-outline"}
-                    size={19}
-                    color={global.colors.background}
-                    style={{ backgroundColor: global.colors.secondary, borderRadius: 50, padding: 10 }}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.addMoreBtn}
-                  onPress={() => {
-                    setInputVisible(true);
-                    setInputValue("");
-                    setEditIndex(null);
-                  }}
-                >
-                  <Text style={styles.addMoreText}>Add More</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {inputVisible && (
-              <Animated.View
-                style={[
-                  styles.inputArea,
-                  {
-                    opacity: slideAnim,
-                    transform: [
-                      {
-                        translateY: slideAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [-10, 0],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              >
-                <TextInput
-                  placeholder="Enter watchlist name"
-                  value={inputValue}
-                  onChangeText={setInputValue}
-                  style={styles.input}
-                />
-
-                <View style={styles.inputButtonRow}>
+                    style={{ marginTop: 16 }}
+                  >
+                    <Ionicons
+                      name={showContent ? "eye-outline" : "eye-off-outline"}
+                      size={19}
+                      color={global.colors.background}
+                      style={{ backgroundColor: global.colors.secondary, borderRadius: 50, padding: 10 }}
+                    />
+                  </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.inputBtn, { backgroundColor: global.colors.disabled, }]}
+                    style={[
+                      styles.addMoreBtn,
+                      lists.length === 5 && { opacity: 0.5 }
+                    ]}
                     onPress={() => {
-                      setInputVisible(false);
+
+                      if (lists.length === 5) {
+                        setLimitModalVisible(true);
+                        return;
+                      }
+                      setInputVisible(true);
                       setInputValue("");
                       setEditIndex(null);
                     }}
                   >
-                    <Text>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.inputBtn} onPress={handleSave}>
-                    <Text style={{ color: global.colors.background, }}>
-                      {editIndex !== null ? "Update" : "Add"}
-                    </Text>
+                    <Text style={styles.addMoreText}>Add More</Text>
                   </TouchableOpacity>
                 </View>
-              </Animated.View>
-            )}
-          </Pressable>
+              )}
+
+              {inputVisible && (
+                <Animated.View
+                  style={[
+                    styles.inputArea,
+                    {
+                      opacity: slideAnim,
+                      transform: [
+                        {
+                          translateY: slideAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-10, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <TextInput
+                    placeholder="Enter watchlist name"
+                    value={inputValue}
+                    onChangeText={setInputValue}
+                    style={styles.input}
+                  />
+
+                  <View style={styles.inputButtonRow}>
+                    <TouchableOpacity
+                      style={[styles.inputBtn, { backgroundColor: global.colors.disabled, }]}
+                      onPress={() => {
+                        setInputVisible(false);
+                        setInputValue("");
+                        setEditIndex(null);
+                      }}
+                    >
+                      <Text>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.inputBtn} onPress={handleSave}>
+                      <Text style={{ color: global.colors.background, }}>
+                        {editIndex !== null ? "Update" : "Add"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </Animated.View>
+              )}
+            </Pressable>
           </Animated.View>
         </Pressable>
       </Modal>
@@ -412,6 +421,27 @@ const loadShowState = async (uid) => {
           </Animated.View>
         </Pressable>
       </Modal>
+
+      {/* wathclist limit modal */}
+      <Modal transparent visible={limitModalVisible} animationType="fade">
+        <Pressable
+          style={styles.overlay}
+          onPress={() => setLimitModalVisible(false)}
+        >
+          <View style={styles.limitBox}>
+            <Text style={styles.limitText}>
+              You cannot add more than 5 watchlists.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.okBtn}
+              onPress={() => setLimitModalVisible(false)}
+            >
+              <Text style={styles.okText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </>
   );
 };
@@ -423,34 +453,34 @@ const styles = StyleSheet.create({
   },
   paginationContainer: {
     flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 0,
-        paddingVertical: 0,
-        backgroundColor: global.colors.background,
-        zIndex: 2,
-        shadowColor: global.colors.textPrimary,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.08,
-        shadowRadius: 3,
+    alignItems: 'center',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    backgroundColor: global.colors.background,
+    zIndex: 2,
+    shadowColor: global.colors.textPrimary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
   },
   bottomShadow: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: -5,
-        height: 3,
-        zIndex: 1,
-    },
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: -5,
+    height: 3,
+    zIndex: 1,
+  },
 
 
-    
+
   pagination: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 15,
     backgroundColor: global.colors.background,
     paddingHorizontal: 16,
-    
+
   },
   pageBtn: {
     minWidth: 28,
@@ -462,18 +492,18 @@ const styles = StyleSheet.create({
   },
 
   activePage: {
-        backgroundColor: global.colors.primary,
-        borderRadius: 20,
-        paddingVertical: 6,
-        paddingHorizontal: 16,
-        elevation: 5,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
+    backgroundColor: global.colors.primary,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-  
-  
+
+
 
   pageText: {
     fontSize: 13,
@@ -580,6 +610,32 @@ const styles = StyleSheet.create({
   },
   noText: { color: global.colors.textPrimary, fontWeight: "600" },
   yesText: { color: global.colors.background, fontWeight: "600" },
+  limitBox: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    alignItems: "center",
+    width: 280,
+  },
+
+  limitText: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+
+  okBtn: {
+    backgroundColor: global.colors.secondary,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+  },
+
+  okText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
 });
 
 export default TopWatchlistMenu;

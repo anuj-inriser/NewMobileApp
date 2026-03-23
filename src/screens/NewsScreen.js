@@ -6,6 +6,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import NewsCardLarge from '../components/News/NewsCardLarge';
 import NewsCardSmall from '../components/News/NewsCardSmall';
 import { useNews, useNewsCategories } from '../hooks/useCachedQueries';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Device from "expo-device";
+import axiosInstance from "../api/axios";
 
 const NewsScreen = () => {
 
@@ -74,6 +77,31 @@ const NewsScreen = () => {
         return false;
     });
 
+    const logRefresh = async () => {
+        try {
+            const userId = await AsyncStorage.getItem("userId");
+            const deviceId =
+                Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+            await axiosInstance.post("/eventlog", {
+                user_id: userId || "",
+                success: true,
+                device_id: deviceId,
+                event_group_id: 3,
+                event_type: "News",
+                content: "Refreshed",
+                app_version: "1.0.0"
+            });
+        } catch (err) {
+            console.log("Logging failed", err);
+        }
+    };
+
+    const handleRefresh = async () => {
+        await refetch();
+        logRefresh();
+    };
+
 
     return (
         <>
@@ -95,13 +123,13 @@ const NewsScreen = () => {
                         <ActivityIndicator size="large" color={global.colors.secondary} />
                     </View>
                 ) : (
-                    <ScrollView
+                        <ScrollView
                         contentContainerStyle={styles.scrollContainer}
                         showsVerticalScrollIndicator={false}
                          refreshControl={
                             <RefreshControl
                                 refreshing={isFetching}
-                                onRefresh={refetch}
+                                onRefresh={handleRefresh}
                             />
                         }
                     >

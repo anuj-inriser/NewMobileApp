@@ -398,8 +398,6 @@ const StockTimelineScreen = () => {
                       );
                       return (
                         <View style={{ height: ITEM_HEIGHT }}>
-                          {/* DEBUG LOG */}
-                          {/* {console.log(`Rendering Item ${index}: News Items Count:`, item.news_items?.length)} */}
                           <StockCard
                             stock={{
                               id: item.content_id,
@@ -447,6 +445,8 @@ const StockTimelineScreen = () => {
                                 dislikes: item.dislikes_count || 0,
                                 comments: item.comments_count || 0,
                               },
+                              isin: item.isin,
+                              tradeable: item.tradeable
                             }}
                             postNumber={`${index + 1}/${sequencePosts.length
                               }`}

@@ -241,6 +241,15 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
     };
 
     try {
+      const stocksRes = await axiosInstance.get(`${apiUrl}/api/wishlistcontrol/stocks`, {
+        params: { wishlist_id: parseInt(wishlist.id, 10) },
+      });
+      const count = Array.isArray(stocksRes?.data?.data) ? stocksRes.data.data.length : 0;
+      if (count >= 20) {
+        showError("Error", "Each watchlist can have maximum 20 stocks.");
+        return;
+      }
+
       const response = await axiosInstance.post(
         `${apiUrl}/api/wishlistcontrol/add`,
         payload,

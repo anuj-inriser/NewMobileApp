@@ -22,6 +22,7 @@ import axiosInstance from "../api/axios";
 import { getPushToken } from "../../src/utils/pushToken";
 import { ChartPrefetchService } from "../services/ChartPrefetchService";
 import { useKeyboardAvoidingShift } from "../hooks/useKeyboardAvoidingShift";
+import { setWSUser } from "../ws/marketWs";
 
 export default function LoginScreen({ navigation }) {
   const translateY = useKeyboardAvoidingShift();
@@ -49,6 +50,8 @@ export default function LoginScreen({ navigation }) {
   const [phoneOtpTimer, setPhoneOtpTimer] = useState(30);
   const [canResendPhoneOtp, setCanResendPhoneOtp] = useState(false);
   const [phoneOtpVerified, setPhoneOtpVerified] = useState(false);
+
+
   useEffect(() => {
     let interval;
 
@@ -259,6 +262,11 @@ export default function LoginScreen({ navigation }) {
     setErrors({});
     setLoading(true);
 
+    let loginMeta = {
+      success: false,
+      message: "",
+    };
+
     try {
       const fcmToken = await getPushToken();
       const deviceId =
@@ -273,12 +281,17 @@ export default function LoginScreen({ navigation }) {
       });
 
       const result = response.data;
+      if (result.status && result.data?.userId) {
+        loginMeta.success = true;
+        loginMeta.message = result.message || "Login successful";
+      }
       setLoading(false);
 
       if (result.status && result.data?.userId) {
+        // console.log("******888")
         ChartPrefetchService.prefetchWatchlist();
         const { userId, name, email, phone, userimage, token, permission } =
-          result.data;
+        result.data;
         await setAuthData({
           userId: String(userId),
           userData: { name, email, phone, userimage },
@@ -286,6 +299,7 @@ export default function LoginScreen({ navigation }) {
           fcmToken,
           role: permission,
         });
+        setWSUser(result.data?.userId);
 
         const res = await axiosInstance.get(`/me/permissions`);
 
@@ -301,9 +315,29 @@ export default function LoginScreen({ navigation }) {
       } else {
         setErrors({ password: result.message || "Invalid password" });
       }
+
+      // console.log("control coming here")
     } catch (e) {
+      loginMeta.message = e?.response?.data?.message || "Login failure";
       setLoading(false);
       setErrors({ password: e?.response?.data?.message || "Incorrect password" });
+    } finally {
+      try {
+        const deviceId =
+          Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+        await axiosInstance.post("/eventlog", {
+          phone,
+          success: loginMeta.success,
+          device_id: deviceId,
+          event_group_id: 1,
+          event_type: 'Login',
+          content: loginMeta.message,
+          app_version: "1.0.0"
+        });
+      } catch (err) {
+        console.log("Logging failed", err);
+      }
     }
   };
 

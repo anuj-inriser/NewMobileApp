@@ -35,6 +35,7 @@ import {
 import TextInput from "../components/TextInput";
 import { LineChart } from 'react-native-gifted-charts';
 import * as ImagePicker from 'expo-image-picker';
+import * as Device from "expo-device";
 import { useIntervalData } from '../hooks/useIntervalData';
 import axios from 'axios';
 import axiosInstance from '../api/axios';
@@ -114,6 +115,15 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
     };
 
     try {
+      const stocksRes = await axiosInstance.get(`${apiUrl}/api/wishlistcontrol/stocks`, {
+        params: { wishlist_id: parseInt(wishlist.id, 10) }
+      });
+      const count = Array.isArray(stocksRes?.data?.data) ? stocksRes.data.data.length : 0;
+      if (count >= 20) {
+        Alert.alert("Alert", "Each watchlist can have maximum 20 stocks.");
+        return;
+      }
+
       const response = await axiosInstance.post(`${apiUrl}/api/wishlistcontrol/add`, payload);
 
       if (response.status === 201 || response.status === 200 || response.status === 409) {
@@ -193,6 +203,14 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   }, [userReaction]);
 
   const handleReaction = async (type) => {
+
+    let reactionMeta = {
+      success: false,
+      message: "",
+      userid: "",
+    };
+
+
     if (!userId) {
       showError(
         "Alert",
@@ -200,6 +218,8 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
       );
       return;
     }
+    reactionMeta.userid = userId || "";
+
     const isLike = type === 'like';
     const current = reaction;
     // Optimistic Update
@@ -234,7 +254,23 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
         // Removing reaction
         await axios.delete(`${apiUrl}/api/likesdislikes/user/${userId}/content/${stock.id}/type/${contentType}`);
       }
+
+      reactionMeta.success = true;
+
+      if (newReaction === null) {
+        reactionMeta.message = isLike ? "Like revoked" : "Dislike revoked";
+      } else {
+        reactionMeta.message = isLike ? "Like submitted" : "Dislike submitted";
+      }
+
+
     } catch (err) {
+      if (newReaction === null) {
+        reactionMeta.message = isLike ? "Like revoke failed" : "Dislike revoke failed";
+      } else {
+        reactionMeta.message = isLike ? "Like failed" : "Dislike failed";
+      }
+
       console.error('Reaction failed error:', err);
       if (err.response) {
         console.error('Response data:', err.response.data);
@@ -250,7 +286,26 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
       }
       // Revert optimistic update
       setReaction(current);
+    } finally {
+      try {
+        const deviceId =
+          Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+        await axiosInstance.post("/eventlog", {
+          user_id: reactionMeta.userid,
+          content_id: stock.id,
+          success: reactionMeta.success,
+          device_id: deviceId,
+          event_group_id: 2,
+          event_type: isLike ? "Like" : "Dislike",
+          content: reactionMeta.message,
+          app_version: "1.0.0"
+        });
+      } catch (err) {
+        console.log("Logging failed", err);
+      }
     }
+
   };
 
 
@@ -474,6 +529,15 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
   const displayData = chartData.map(d => ({ ...d, value: Math.max(0, d.value - yAxisMin) }));
 
   const handleShare = async () => {
+    let shareMeta = {
+      success: false,
+      message: "",
+      userid: "",
+    };
+
+    const userId = await AsyncStorage.getItem("userId");
+    shareMeta.userid = userId || "";
+
     try {
 
       // Prepare the caption
@@ -484,6 +548,8 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
       });
 
       if (result.action === Share.sharedAction) {
+        shareMeta.success = true;
+        shareMeta.message = "Share submitted";
         if (result.activityType) {
           // shared with activity type of result.activityType
         } else {
@@ -491,14 +557,35 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
         }
       } else if (result.action === Share.dismissedAction) {
         // dismissed
+        shareMeta.message = "Share dismissed";
       }
     } catch (error) {
+      shareMeta.message = "Share failed";
       console.error('Share error:', error.message);
       showError(
         "Alert",
         'Unable to share', error.message
       );
+    } finally {
+      try {
+        const deviceId =
+          Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+        await axiosInstance.post("/eventlog", {
+          user_id: shareMeta.userid,
+          content_id: stock.id,
+          success: shareMeta.success,
+          device_id: deviceId,
+          event_group_id: 2,
+          event_type: "Share",
+          content: shareMeta.message,
+          app_version: "1.0.0"
+        });
+      } catch (err) {
+        console.log("Logging failed", err);
+      }
     }
+
   };
 
   return (
@@ -611,7 +698,13 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
             {/* Overlay Maximize Icon */}
             <TouchableOpacity
               style={{ position: 'absolute', right: 10, bottom: 10 }}
-              onPress={() => openStockInfoDrawer(stock.symbol)}
+              onPress={() =>
+                openStockInfoDrawer(stock.token, stock.symbol, "placeorder", stock.isin, {
+                  name: stock.name,
+                  tradeable: stock.tradeable,
+                  exchange: stock.exchange
+                })
+              }
             >
               <Maximize2 size={20} color={global.colors.textSecondary} />
             </TouchableOpacity>
@@ -676,8 +769,10 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}
           onPress={() =>
-            openStockInfoDrawer(stock.symbol, "placeorder", {
-              name: stock.name
+            openStockInfoDrawer(stock.token, stock.symbol, "placeorder", stock.isin, {
+              name: stock.name,
+              tradeable: item.tradeable,
+              exchange: stock.exchange
             })
           }
         >
@@ -700,7 +795,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
         animationType="fade"
         onRequestClose={() => setReportModalOpen(false)}
       >
-       <Animated.View style={[styles.modalOverlay, { transform: [{ translateY }] }]}>
+        <Animated.View style={[styles.modalOverlay, { transform: [{ translateY }] }]}>
           <View style={styles.reportCard}>
             <TouchableOpacity
               style={styles.reportClose}

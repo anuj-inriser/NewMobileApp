@@ -18,6 +18,8 @@ import { useAlert } from "../context/AlertContext";
 import TextInput from "../components/TextInput";
 import { X, Send, MoreVertical, Trash2, Edit2, Check } from 'lucide-react-native'; // Added icons
 import axios from 'axios';
+import axiosInstance from '../api/axios';
+import * as Device from "expo-device";
 import { apiUrl } from '../utils/apiUrl';
 import { useAuth } from '../context/AuthContext';
 import { useKeyboardAvoidingShift } from '../hooks/useKeyboardAvoidingShift';
@@ -79,6 +81,12 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
             return;
         }
 
+        let commentMeta = {
+            success: false,
+            message: "",
+            userid: userId || "",
+        };
+
         const newComment = {
             id: Date.now(),
             content_id: contentId,
@@ -104,20 +112,46 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
                 date: new Date().toISOString().split('T')[0],
                 time: new Date().toLocaleTimeString('en-GB')
             });
+            commentMeta.success = true;
+            commentMeta.message = "Comment submitted";
             fetchComments(false); // Silent refresh
         } catch (error) {
             console.error("Failed to send comment", error);
+            commentMeta.message = "Comment failed";
             showError(
                 "Error",
                 "Failed to send comment"
             );
         } finally {
             setSending(false);
+            try {
+                const deviceId =
+                    Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+                await axiosInstance.post("/eventlog", {
+                    user_id: commentMeta.userid,
+                    content_id: contentId,
+                    success: commentMeta.success,
+                    device_id: deviceId,
+                    event_group_id: 1,
+                    event_type: "Comment",
+                    content: commentMeta.message,
+                    app_version: "1.0.0"
+                });
+            } catch (err) {
+                console.log("Logging failed", err);
+            }
         }
     };
 
     const handleUpdateComment = async () => {
         if (!editingCommentId || !text.trim()) return;
+
+        let commentMeta = {
+            success: false,
+            message: "",
+            userid: userId || "",
+        };
 
         const originalComments = [...comments];
         const updatedComments = comments.map(c =>
@@ -131,11 +165,14 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
                 comment: text,
                 comment_user_id: userId // verify ownership in backend if needed
             });
+            commentMeta.success = true;
+            commentMeta.message = "Comment updated";
             setText('');
             setEditingCommentId(null);
             fetchComments(false); // Silent refresh
         } catch (error) {
             console.error("Failed to update comment", error);
+            commentMeta.message = "Comment update failed";
             showError(
                 "Error",
                 "Failed to update comment"
@@ -143,6 +180,23 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
             setComments(originalComments);
         } finally {
             setSending(false);
+            try {
+                const deviceId =
+                    Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+                await axiosInstance.post("/eventlog", {
+                    user_id: commentMeta.userid,
+                    content_id: contentId,
+                    success: commentMeta.success,
+                    device_id: deviceId,
+                    event_group_id: 2,
+                    event_type: "Comment",
+                    content: commentMeta.message,
+                    app_version: "1.0.0"
+                });
+            } catch (err) {
+                console.log("Logging failed", err);
+            }
         }
     };
 
@@ -156,19 +210,45 @@ const CommentOverlay = ({ visible, onClose, contentId, contentType = 'post', onC
                     text: "Delete",
                     style: "destructive",
                     onPress: async () => {
+                        let commentMeta = {
+                            success: false,
+                            message: "",
+                            userid: userId || "",
+                        };
                         const originalComments = [...comments];
                         setComments(comments.filter(c => c.id !== id));
                         try {
                             await axios.delete(`${apiUrl}/api/comments/${id}`);
+                            commentMeta.success = true;
+                            commentMeta.message = "Comment deleted";
                             if (onCommentDeleted) onCommentDeleted();
                             fetchComments(false); // Silent refresh
                         } catch (error) {
                             console.error("Failed to delete comment", error);
+                            commentMeta.message = "Comment delete failed";
                             showError(
                                 "Error",
                                 "Failed to delete comment."
                             );
                             setComments(originalComments);
+                        } finally {
+                            try {
+                                const deviceId =
+                                    Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+                                await axiosInstance.post("/eventlog", {
+                                    user_id: commentMeta.userid,
+                                    content_id: contentId,
+                                    success: commentMeta.success,
+                                    device_id: deviceId,
+                                    event_group_id: 2,
+                                    event_type: "Comment",
+                                    content: commentMeta.message,
+                                    app_version: "1.0.0"
+                                });
+                            } catch (err) {
+                                console.log("Logging failed", err);
+                            }
                         }
                     }
                 }

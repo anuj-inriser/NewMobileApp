@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Share } from "react-native";
 import { Share2 } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -12,12 +12,14 @@ import RenderHTML from "react-native-render-html";
 import { useWindowDimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import DefaultNewsImage from "../../assets/Newspaper.jpg";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from "expo-device";
+import axiosInstance from "../api/axios";
 
 const NewsReadingScreen = ({ route }) => {
     const { width } = useWindowDimensions();
     const { item } = route.params;
     const navigate = useNavigation();
-    console.log("item", item)
 
     const titleWords = item.title?.trim().split(/\s+/).length || 0;
     const descriptionWords = item.brief_description?.trim().split(/\s+/).length || 0;
@@ -26,6 +28,59 @@ const NewsReadingScreen = ({ route }) => {
     const totalWords = titleWords + descriptionWords + contentWords;
 
     const readTime = Math.ceil(totalWords / 100);
+
+    useEffect(() => {
+        const logNewsCardView = async () => {
+            try {
+                const userId = await AsyncStorage.getItem("userId");
+                const deviceId =
+                    Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+                await axiosInstance.post("/eventlog", {
+                    user_id: userId || "",
+                    success: true,
+                    device_id: deviceId,
+                    event_group_id: 4,
+                    event_type: "News",
+                    content: "Open",
+                    content_id: item.news_id,
+                    app_version: "1.0.0"
+                });
+            } catch (err) {
+                console.log("Logging failed", err);
+            }
+        };
+
+        logNewsCardView();
+    }, []);
+
+    const logNewsBack = async () => {
+        try {
+            const userId = await AsyncStorage.getItem("userId");
+            const deviceId =
+                Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+            await axiosInstance.post("/eventlog", {
+                user_id: userId || "",
+                success: true,
+                device_id: deviceId,
+                event_group_id: 4,
+                event_type: "News",
+                content: "Back",
+                content_id: item.news_id,
+                app_version: "1.0.0"
+            });
+        } catch (err) {
+            console.log("Logging failed", err);
+        }
+    };
+
+    const handleBack = async () => {
+        await logNewsBack();
+        if (navigate.canGoBack()) {
+            navigate.goBack();
+        }
+    };
 
     const handleShare = async () => {
         try {
@@ -59,21 +114,17 @@ const NewsReadingScreen = ({ route }) => {
         <>
             <SafeAreaView style={styles.container} edges={["bottom"]}>
                 <View style={styles.headerRow}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => {
-                        if (navigate.canGoBack()) {
-                            navigate.goBack();
-                        }
-                    }}
-                >
-                    <Ionicons name="arrow-back" size={22} color={global.colors.secondary} />
-                    <Text style={styles.backButtonText}>Back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-                    <Share2 size={17} color={global.colors.textSecondary} />
-                    
-                </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={handleBack}
+                    >
+                        <Ionicons name="arrow-back" size={22} color={global.colors.secondary} />
+                        <Text style={styles.backButtonText}>Back</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+                        <Share2 size={17} color={global.colors.textSecondary} />
+
+                    </TouchableOpacity>
                 </View>
                 <ScrollView
                     style={{ flex: 1 }}
@@ -169,12 +220,12 @@ const NewsReadingScreen = ({ route }) => {
 
 const styles = StyleSheet.create({
     headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 15,
-    paddingVertical: 6,
-},
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 15,
+        paddingVertical: 6,
+    },
     container: {
         flex: 1,
         backgroundColor: global.colors.background,
