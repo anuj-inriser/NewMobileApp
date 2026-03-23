@@ -16,6 +16,7 @@ import {
   RefreshControl,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Device from "expo-device";
 // import TopHeader from "../components/TopHeader";
 import TopMenuSlider from "../components/TopMenuSlider";
 import { useRoute } from "@react-navigation/native";
@@ -303,6 +304,31 @@ const TradeScreen = () => {
 
   const renderdata = () => { };
 
+  const logRefresh = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const deviceId =
+        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+      await axiosInstance.post("/eventlog", {
+        user_id: userId || "",
+        success: true,
+        device_id: deviceId,
+        event_group_id: 3,
+        event_type: "Trade",
+        content: "Refreshed",
+        app_version: "1.0.0"
+      });
+    } catch (err) {
+      console.log("Logging failed", err);
+    }
+  };
+
+  const handleRefresh = async () => {
+    await refetch();
+    logRefresh();
+  };
+
   return (
     <>
       <SafeAreaView edges={["bottom"]} style={styles.container}>
@@ -381,7 +407,7 @@ const TradeScreen = () => {
           refreshControl={
             <RefreshControl
               refreshing={isFetching}
-              onRefresh={refetch}
+              onRefresh={handleRefresh}
             />
           }
         >

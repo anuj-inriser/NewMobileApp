@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
     View,
     Text,
@@ -10,6 +10,7 @@ import {
     Alert, // Added import
 } from "react-native";
 import { useAlert } from "../../context/AlertContext";
+
 import TextInput from "../../components/TextInput";
 import {
     AlertCircle
@@ -49,6 +50,7 @@ const NewsCardLarge = ({ item, onPress }) => {
     //         setAttachment(result.assets[0]);
     //     }
     // };
+
 
     const handleReport = () => {
         if (!userId) {

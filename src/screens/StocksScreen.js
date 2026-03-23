@@ -10,6 +10,8 @@ import {
   Modal,
   Image,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Device from "expo-device";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   useFocusEffect,
@@ -144,6 +146,25 @@ const StocksScreen = () => {
   const [originalStocks, setOriginalStocks] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  const logRefresh = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const deviceId =
+        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+      await axiosInstance.post("/eventlog", {
+        user_id: userId || "",
+        success: true,
+        device_id: deviceId,
+        event_group_id: 3,
+        event_type: "Stocks",
+        content: "Refreshed",
+        app_version: "1.0.0"
+      });
+    } catch (err) {
+      console.log("Logging failed", err);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -153,6 +174,7 @@ const StocksScreen = () => {
 
     } finally {
       setRefreshing(false);
+      logRefresh();
     }
   };
   const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];

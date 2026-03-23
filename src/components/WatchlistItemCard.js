@@ -10,6 +10,9 @@ import Swipeable from "react-native-gesture-handler/Swipeable";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useDrawer } from "../context/DrawerContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Device from "expo-device";
+import axiosInstance from "../api/axios";
 
 
 const UNDO_TIMEOUT = 2000;
@@ -81,6 +84,31 @@ const WatchlistItemCard = ({
     setUndoItem(null);
   };
 
+  const logRefresh = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const deviceId =
+        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+      await axiosInstance.post("/eventlog", {
+        user_id: userId || "",
+        success: true,
+        device_id: deviceId,
+        event_group_id: 3,
+        event_type: "Watchlist",
+        content: "Refreshed",
+        app_version: "1.0.0"
+      });
+    } catch (error) {
+      console.log("Logging failed", error);
+    }
+  };
+
+  const handleRefresh = async () => {
+    await refetch?.();
+    logRefresh();
+  };
+
   const renderItem = ({ item }) => {
     const symbol = item.symbol || item.script_symbol || String(item.script_id);
     const token = item.token;
@@ -89,7 +117,7 @@ const WatchlistItemCard = ({
     const rt = realtimePrices[token];
 
     const ltp = Number(rt?.price || item.value || item.ltp || 0);
-    const prev = Number(rt?.prevClose || item.prevClose || item.prev_close || ltp);
+    const prev = Number(rt?.prevClose || item.prevClose || item.prev_close);
 
     const change = ltp - prev;
     const changePercent = prev !== 0 ? (change / prev) * 100 : 0;
@@ -179,7 +207,7 @@ const WatchlistItemCard = ({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 90 }}
         refreshing={isFetching}
-        onRefresh={refetch}
+        onRefresh={handleRefresh}
       />
 
       {undoItem && (

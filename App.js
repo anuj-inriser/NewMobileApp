@@ -1,11 +1,12 @@
 import "react-native-gesture-handler";
-import React, { useEffect } from "react";
-import { Platform } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Platform, AppState } from "react-native";
 import "./src/theme/colors";
 import { apiUrl } from "./src/utils/apiUrl";
 import { AlertProvider } from "./src/context/AlertContext";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // SDK 54 fix: Use legacy for downloadAsync compatibility
+import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ScreenCapture from 'expo-screen-capture';
 import * as Notifications from "expo-notifications";
@@ -13,6 +14,7 @@ import messaging from "@react-native-firebase/messaging";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { createNavigationContainerRef } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import InternetListener from "./src/components/InternetListener";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -55,12 +57,14 @@ import AdvancedChartScreen from "./src/screens/AdvancedChartScreen";
 import NotificationScreen from "./src/screens/NotificationScreen";
 import PermissionGuard from "./src/guards/PermissionGuard";
 import TradeOrderNativeScreen from "./src/screens/TradeOrderNativeScreen";
+import axiosInstance from "./src/api/axios";
 
 const RootStack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
 const AppStack = createNativeStackNavigator();
 
 const Stack = createNativeStackNavigator();
+
 
 function EquityStack() {
   return (
@@ -133,8 +137,8 @@ function MainTabNavigator() {
         component={StockTimelineScreen}
       />
       <Tab.Screen name="Trade" component={TradeScreen} />
-      {/* <Tab.Screen name="OrdersScreen" component={OrdersScreen} /> */}
-      <Tab.Screen name="Profile" component={Profile} />
+      <Tab.Screen name="OrdersScreen" component={OrdersScreen} />
+      <Tab.Screen name="Profile" component={Profile}  />
       <Tab.Screen name="Portfolio">
         {() => (
           <PermissionGuard permission="VIEW_PORTFOLIO">
@@ -224,7 +228,15 @@ Notifications.setNotificationHandler({
 });
 
 export default function App() {
+  const navigationRef = createNavigationContainerRef();
+  const routeNameRef = useRef();
+  const appState = useRef(AppState.currentState);
+  const isFirstStateChange = useRef(true);
+
   useEffect(() => {
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    // logAppEvent("Open");
+
     const setupNotifications = async () => {
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') console.log("Permission not granted!");
@@ -334,9 +346,49 @@ export default function App() {
     return () => {
       if (fcmUnsubscribe) fcmUnsubscribe();
       openSub.remove();
+      subscription.remove();
       if (wsUnsubscribe) wsUnsubscribe();
     };
   }, []);
+
+  const logAppEvent = async (eventType) => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const deviceId =
+        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+      await axiosInstance.post("/eventlog", {
+        user_id: userId || "",
+        success: true,
+        device_id: deviceId,
+        event_group_id: 5,
+        event_type: "App",
+        content: eventType,
+        app_version: "1.0.0"
+      });
+    } catch (err) {
+      console.log("Logging failed", err);
+    }
+  };
+
+   const handleAppStateChange = async (nextAppState) => {
+    // Skip the first state change (it's just the listener attaching)
+    if (isFirstStateChange.current) {
+      isFirstStateChange.current = false;
+      appState.current = nextAppState;
+      return;
+    }
+
+    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      console.log('App opened');
+      logAppEvent("Open");
+    } else if (nextAppState.match(/inactive|background/)) {
+      console.log('App closed');
+      logAppEvent("Close");
+    }
+
+    appState.current = nextAppState;
+  };
 
   // useEffect(() => {
   //   ScreenCapture.preventScreenCaptureAsync();
@@ -344,6 +396,58 @@ export default function App() {
   //     ScreenCapture.allowScreenCaptureAsync();
   //   };
   // }, []);
+  const SCREEN_EVENT_MAP = {
+    NewsScreen: "News",
+    Portfolio: "Portfolio",
+    TradeOrderList: "Ideas",
+    Trade: "Trade",
+    EquityHome: "Equity",
+    StockTimelineScreen: "StockTimelineScreen",
+    AdvancedChart: "Portfolio",
+    Profile: "Profile"
+  };
+
+  function getActiveRouteName(state) {
+    if (!state || !state.routes || state.index == null) {
+      return null;
+    }
+
+    const route = state.routes[state.index];
+
+    // Dive into nested navigators
+    if (route.state) {
+      return getActiveRouteName(route.state);
+    }
+
+    return route.name;
+  }
+
+  const logScreenVisit = async (currentRoute) => {
+    
+    const navigationMeta = {
+      success: false,
+      message: '',
+      userid: ''
+    }
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      navigationMeta.userid = userId
+      const deviceId =
+        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+      await axiosInstance.post("/eventlog", {
+        user_id: navigationMeta.userid,
+        success: true,
+        device_id: deviceId,
+        event_group_id: 3,
+        event_type: currentRoute,
+        content: "Page Visited",
+        app_version: "1.0.0"
+      });
+    } catch (err) {
+      console.log("Logging failed", err);
+    }
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -353,7 +457,29 @@ export default function App() {
             <DrawerProvider>
               <WatchlistProvider>
                 <AlertProvider>
-                  <NavigationContainer>
+                  <NavigationContainer
+                    ref={navigationRef}
+                    onReady={() => {
+                      const state = navigationRef.getRootState();
+                      routeNameRef.current = getActiveRouteName(state);
+                    }}
+                    onStateChange={() => {
+                      if (!navigationRef.isReady()) return;
+                      const route = navigationRef.getRootState();
+                      const currentRoute = getActiveRouteName(route);
+
+                      if (!currentRoute) return;
+                      console.log("currentRoute", currentRoute)
+                      console.log("routeNameRef.current", routeNameRef.current)
+                      if (routeNameRef.current !== currentRoute) {
+                        routeNameRef.current = currentRoute;
+
+                        if (SCREEN_EVENT_MAP[currentRoute]) {
+                          logScreenVisit(SCREEN_EVENT_MAP[currentRoute]);
+                        }
+                      }
+                    }}
+                  >
                     <InternetListener />
                     <RootNavigator />
                   </NavigationContainer>

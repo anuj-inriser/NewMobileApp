@@ -12,6 +12,7 @@ import {
   Platform,
   Animated,
 } from "react-native";
+import * as Device from "expo-device";
 import { useAlert } from "../context/AlertContext";
 import TextInput from "../components/TextInput";
 import axiosInstance from "../api/axios";
@@ -433,6 +434,10 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
   const getImageSource = (img) => {
     if (!img) return Profile;
 
+    if (img.startsWith("data:")) {
+      return { uri: img };
+    }
+
     if (img.startsWith("file://") || img.startsWith("content://")) {
       return { uri: img };
     }
@@ -530,6 +535,21 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
 
     setEditErrors({});
 
+    const normalize = (value) => (value ?? "").toString().trim();
+    const updatedFields = [];
+    if (normalize(editName) !== normalize(name)) updatedFields.push("name");
+    if (normalize(editUsername) !== normalize(username))
+      updatedFields.push("username");
+    if (normalize(editMobile) !== normalize(mobile)) updatedFields.push("phone");
+    if (normalize(editEmail) !== normalize(email)) updatedFields.push("email");
+    if (editImage && editImage !== profileImage) updatedFields.push("image");
+
+    let updateMeta = {
+      success: false,
+      message: "",
+      userid: "",
+    };
+
     try {
       let imageBase64 = null;
 
@@ -546,10 +566,16 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
       };
 
       const userId = await AsyncStorage.getItem("userId");
+      updateMeta.userid = userId || "";
       await axiosInstance.put(`${apiUrl}/api/users/users/${userId}`, payload);
 
       setEditOpen(false);
       getUserById();
+      updateMeta.success = true;
+      updateMeta.message =
+        updatedFields.length > 0
+          ? `${updatedFields.join(", ")} changed`
+          : "No changes in Profile";
     } catch (err) {
       if (err?.response?.status === 409 && err?.response?.data?.message) {
         const msg = err.response.data.message.toLowerCase();
@@ -570,9 +596,28 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
         }
       }
 
+      updateMeta.message =
+        err?.response?.data?.message || "Failed to update profile";
       setEditErrors({
         general: "Failed to update profile",
       });
+    } finally {
+      try {
+        const deviceId =
+          Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+        await axiosInstance.post("/eventlog", {
+          user_id: updateMeta.userid,
+          success: updateMeta.success,
+          device_id: deviceId,
+          event_group_id: 1,
+          event_type: "Profile Update",
+          content: updateMeta.message,
+          app_version: "1.0.0"
+        });
+      } catch (err) {
+        console.log("Logging failed", err);
+      }
     }
   };
 
@@ -711,6 +756,26 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
       console.log("API Error:", err);
     }
   };
+
+  const logEvent = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const deviceId =
+        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+      await axiosInstance.post("/eventlog", {
+        user_id: userId || "",
+        success: true,
+        device_id: deviceId,
+        event_group_id: 3,
+        event_type: "Profile",
+        content: "Page Visited",
+        app_version: "1.0.0"
+      });
+    } catch (err) {
+      console.log("Logging failed", err);
+    }
+  };
   const profitColor =
     Number(totalProfit) >= 0 ? global.colors.success : global.colors.error;
   const percentColor =
@@ -749,6 +814,7 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
     fetchPortfolioBalance();
     getUserById();
     loadKycData();
+    logEvent()
   }, []);
 
   const handleChangePassword = async () => {
@@ -780,8 +846,15 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
 
     setPasswordErrors({});
 
+    let passwordMeta = {
+      success: false,
+      message: "",
+      userid: "",
+    };
+
     try {
       const userId = await AsyncStorage.getItem("userId");
+      passwordMeta.userid = userId
 
       const res = await axiosInstance.put(`${apiUrl}/api/users/change-password/${userId}`, {
         currentPassword: currentPassword,
@@ -793,6 +866,7 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
         setPasswordErrors({
           general: res.data?.message || "Failed to change password",
         });
+        passwordMeta.message = res.data?.message || "Password change Failed";
         return;
       }
 
@@ -802,27 +876,65 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
       setPasswordErrors({
         success: "Password changed successfully",
       });
+
+      passwordMeta.success = true;
+      passwordMeta.message = "Password changed";
     } catch (err) {
+      const msg = err?.response?.data?.message || "Password change Failed";
       setPasswordErrors((prev) => ({
         ...prev,
         general: err?.response?.data?.message || "Failed to change password",
       }));
+      passwordMeta.message = msg;
+    } finally {
+      try {
+        const deviceId =
+          Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+        await axiosInstance.post("/eventlog", {
+          user_id: passwordMeta.userid,
+          success: passwordMeta.success,
+          device_id: deviceId,
+          event_group_id: 1,
+          event_type: "Password Change",
+          content: passwordMeta.message,
+          app_version: "1.0.0"
+        });
+      } catch (err) {
+        console.log("Logging failed", err);
+      }
     }
   };
 
   const handleLogout = async () => {
+
+    let logoutMeta = {
+      success: false,
+      message: "",
+      userid: ""
+    };
+
     try {
       const userIdStored = await AsyncStorage.getItem("userId");
-      const authTokenStored = await AsyncStorage.getItem("authToken");
-      const clientIdStored = await AsyncStorage.getItem("clientId");
+      logoutMeta.userid = userIdStored
+      const authTokenStored = await AsyncStorage.getItem("@angelone_auth_token");
+      const clientIdStored = await AsyncStorage.getItem("@angelone_client_id");
+
 
       if (!userIdStored || !authTokenStored || !clientIdStored) {
         if (userIdStored) {
-          await fetch(`${apiUrl}/api/check-user/update-fcm`, {
+          const res = await fetch(`${apiUrl}/api/check-user/update-fcm`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId: userIdStored, fcmToken: "" }),
           });
+
+          const data = await res.json()
+          if (data.status) {
+            logoutMeta.success = true,
+              logoutMeta.message = 'Logout successful',
+              logoutMeta.userid = data.userId
+          }
         }
         await clearAuth();
         // Reset to Auth stack
@@ -846,6 +958,9 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
       const data = await res.json();
 
       if (data.status) {
+        logoutMeta.success = true;
+        logoutMeta.message = "Logout successful";
+
         await clearAuth();
         // Reset to Auth stack
         // navigation.reset({
@@ -861,7 +976,25 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
         // });
       }
     } catch (err) {
+      logoutMeta.message = err?.response?.data?.message || "Logout failure";
       console.log("Logout Failed:", err);
+    } finally {
+      try {
+        const deviceId =
+          Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+        await axiosInstance.post("/eventlog", {
+          user_id: logoutMeta.userid,
+          success: logoutMeta.success,
+          device_id: deviceId,
+          event_group_id: 1,
+          event_type: 'Logout',
+          content: logoutMeta.message,
+          app_version: "1.0.0"
+        });
+      } catch (err) {
+        console.log("Logging failed", err);
+      }
     }
   };
   const getSingleBase64 = async (files = []) => {
@@ -989,6 +1122,12 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
   };
 
   const submitReportIssue = async () => {
+    let issueMeta = {
+      success: false,
+      message: "",
+      userid: "",
+    };
+
     try {
       if (!issueCategory || !issueDescription) {
         showError("Error", "Please select category and description");
@@ -996,6 +1135,7 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
       }
 
       const userId = await AsyncStorage.getItem("userId");
+      issueMeta.userid = userId || "";
       const formData = new FormData();
       formData.append("complaint_type", "Issue");
       formData.append("complaint_status", "Opened");
@@ -1030,8 +1170,28 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
       setIssueCategory("");
       setIssueDescription("");
       setAttachment(null);
+      issueMeta.success = true;
+      issueMeta.message = "Report an Issue submitted";
     } catch (err) {
       showError("Error", "Failed to submit issue");
+      issueMeta.message = "Report an Issue failed";
+    } finally {
+      try {
+        const deviceId =
+          Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+        await axiosInstance.post("/eventlog", {
+          user_id: issueMeta.userid,
+          success: issueMeta.success,
+          device_id: deviceId,
+          event_group_id: 1,
+          event_type: "Report Issue",
+          content: issueMeta.message,
+          app_version: "1.0.0"
+        });
+      } catch (err) {
+        console.log("Logging failed", err);
+      }
     }
   };
 

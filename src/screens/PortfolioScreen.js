@@ -10,6 +10,8 @@ import { apiUrl } from '../utils/apiUrl';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDeviceId } from "../utils/deviceId";
 import { useRoute } from '@react-navigation/native';
+import * as Device from "expo-device";
+import axiosInstance from "../api/axios";
 import {
     subscribeSymbols,
     unsubscribeDelayed
@@ -202,10 +204,31 @@ const PortfolioScreen = () => {
         fetchOrders();
     }, [selectedTab]);
 
+    const logRefresh = async () => {
+        try {
+            const userId = await AsyncStorage.getItem("userId");
+            const deviceId =
+                Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+            await axiosInstance.post("/eventlog", {
+                user_id: userId || "",
+                success: true,
+                device_id: deviceId,
+                event_group_id: 3,
+                event_type: "Portfolio",
+                content: "Refreshed",
+                app_version: "1.0.0"
+            });
+        } catch (err) {
+            console.log("Logging failed", err);
+        }
+    };
+
     const onRefresh = async () => {
         if (!authToken) return;
         setRefreshing(true);
         await fetchOrders();
+        logRefresh();
     };
 
     useEffect(() => {

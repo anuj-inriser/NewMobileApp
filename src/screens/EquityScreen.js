@@ -31,6 +31,9 @@ import Swipeable from "react-native-gesture-handler/Swipeable";
 import { useDrawer } from "../context/DrawerContext";
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
 import SparklineChart from "../components/Sparkline";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Device from "expo-device";
+
 
 const Sparkline = ({ color, isPositive }) => {
   // A simple smooth curve that either goes up or down
@@ -262,6 +265,26 @@ export default function EquityScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
 
+  const logRefresh = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const deviceId =
+        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+      await axiosInstance.post("/eventlog", {
+        user_id: userId || "",
+        success: true,
+        device_id: deviceId,
+        event_group_id: 3,
+        event_type: "Equity",
+        content: "Refreshed",
+        app_version: "1.0.0"
+      });
+    } catch (err) {
+      console.log("Logging failed", err);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -279,7 +302,7 @@ export default function EquityScreen() {
 
     } finally {
       setRefreshing(false);
-
+      logRefresh();
     }
   };
   // Only apply route.params if they represent an EXTERNAL navigation intent

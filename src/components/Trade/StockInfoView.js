@@ -8,19 +8,28 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   ScrollView,
+  Image,
+  Modal,
+  Pressable,
+  ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView } from "react-native-webview";
-import { useNavigation } from "@react-navigation/native";
 import { apiUrl } from "../../utils/apiUrl";
 import TradeOrderScreen from "../../screens/TradeOrderScreen";
-import { X, Info as InfoIcon, Search } from 'lucide-react-native';
 import GlobalSubTabMenu from "../GlobalSubTabMenu";
 import { useRealtimePrices } from "../../hooks/useRealtimePrices";
 import { Ionicons } from "@expo/vector-icons";
 import { useDrawer } from "../../context/DrawerContext";
 import TradeOrderFormNative from "../TradeOrderFormNative";
 import axiosInstance from "../../api/axios";
+import TextInput from "../TextInput";
+import { useWatchlistRefresh } from "../../context/WatchlistContext";
+import { useAlert } from "../../context/AlertContext";
+import CancelIcon from "../../../assets/cancelicon.png";
+import watchlistIcon from "../../../assets/dropdownwatchlist.png";
+import rupeeIcon from "../../../assets/trademenu.png";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const COLLAPSED_HEIGHT = 30;
@@ -29,10 +38,25 @@ const EXPANDED_HEIGHT = SCREEN_HEIGHT * 0.75;
 const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlider = false, closeSlider, onFullScreenToggle, isFullScreen }) => {
 
   // console.log("isin - > Stockinforview", isin)
-  const navigation = useNavigation();
   const { prices } = useRealtimePrices();
-  const { selectedSymbol, defaultTab, drawerMetadata } = useDrawer();
+  const { selectedSymbol, defaultTab, drawerMetadata, openStockInfoDrawer } = useDrawer();
   const [stockInfo, setStockInfo] = useState([])
+  const { showError } = useAlert();
+  const { triggerRefresh } = useWatchlistRefresh();
+
+  const [masterData, setMasterData] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [watchlistModalVisible, setWatchlistModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [watchlists, setWatchlists] = useState([]);
+  const [loadingWatchlists, setLoadingWatchlists] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [addingToWishlist, setAddingToWishlist] = useState({});
+  const [searchText, setSearchText] = useState("");
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 
   // Tabs State
   const subTabs = [
@@ -54,7 +78,10 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
   }, [defaultTab]);
 
   // Chart Logic
-  const chartSymbol = symbol;
+  const chartSymbol = selectedSymbol?.symbol || symbol;
+  const tokenValue = selectedSymbol?.token || token;
+  const isinValue = selectedSymbol?.isin || isin;
+
   const webViewRef = useRef(null);
   const [chartInterval, setChartInterval] = useState(null);
   const [injectionScript, setInjectionScript] = useState("");
@@ -156,6 +183,137 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
     fetchStockInfoData();
   }, [])
 
+  const loadUserId = async () => {
+    try {
+      const uid = await AsyncStorage.getItem("userId");
+      setUserId(uid);
+    } catch (err) {
+      console.log("User ID load error:", err);
+    }
+  };
+
+  const fetchMaster = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/scripts`);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+
+      if (data.status === true && Array.isArray(data.data)) {
+        setMasterData(data.data);
+      } else {
+        setMasterData([]);
+      }
+    } catch (err) {
+      console.error("Master Load Error:", err.message || err);
+      setMasterData([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchMaster();
+    loadUserId();
+  }, []);
+
+  const searchFilter = (text) => {
+    setSearchText(text);
+    if (!text.trim()) {
+      setFiltered([]);
+      return;
+    }
+
+    const lower = text.toLowerCase();
+    const results = masterData.filter((item) => {
+      return (
+        (item.script_name && item.script_name.toLowerCase().includes(lower)) ||
+        (item.script_id && item.script_id.toLowerCase().includes(lower)) ||
+        (item.exchange && item.exchange.toLowerCase().includes(lower))
+      );
+    });
+
+    setFiltered(results.slice(0, 8));
+  };
+
+  const fetchWatchlists = async () => {
+    if (!userId) return;
+    setLoadingWatchlists(true);
+    try {
+      const res = await axiosInstance.get(`${WISHLIST_API}?user_id=${userId}`);
+      const listData = res?.data?.data || [];
+      setWatchlists(
+        listData.map((item) => ({
+          id: item.wishlist_id,
+          name: item.wishlist_name,
+          user: item.user_id,
+        })),
+      );
+    } catch (err) {
+      console.log("Watchlist fetch error:", err);
+      setWatchlists([]);
+    }
+    setLoadingWatchlists(false);
+  };
+
+  const closeWatchlistModal = () => {
+    setWatchlistModalVisible(false);
+    setSelectedItem(null);
+  };
+
+  const handleAddToWatchlist = async (wishlist) => {
+    if (!selectedItem || !wishlist || !userId) return;
+
+    if (addingToWishlist[wishlist.id]) return;
+    setAddingToWishlist((prev) => ({ ...prev, [wishlist.id]: true }));
+
+    const payload = {
+      script_id: selectedItem.script_id,
+      user_id: parseInt(userId, 10),
+      wishlist_id: parseInt(wishlist.id, 10),
+    };
+
+    try {
+      const stocksRes = await axiosInstance.get(`${apiUrl}/api/wishlistcontrol/stocks`, {
+        params: { wishlist_id: parseInt(wishlist.id, 10) },
+      });
+      const count = Array.isArray(stocksRes?.data?.data) ? stocksRes.data.data.length : 0;
+      if (count >= 20) {
+        showError("Error", "Each watchlist can have maximum 20 stocks.");
+        return;
+      }
+
+      const response = await axiosInstance.post(
+        `${apiUrl}/api/wishlistcontrol/add`,
+        payload,
+      );
+
+      if (response.status === 201 || response.status === 200 || response.status === 409) {
+        const msg = response.data.message || "Added to watchlist";
+        if (msg === "Added to watchlist") {
+          triggerRefresh(parseInt(wishlist.id, 10));
+        } else {
+          showError("Error", msg);
+        }
+        closeWatchlistModal();
+      } else {
+        showError("Error", response.data.message || "Failed");
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to add";
+      showError("Error", msg);
+    } finally {
+      setAddingToWishlist((prev) => ({ ...prev, [wishlist.id]: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (watchlistModalVisible) {
+      fetchWatchlists();
+    }
+  }, [watchlistModalVisible, userId, addingToWishlist]);
+
   const mergeWithRealtime = (list, prices) => {
     const mergedPrices = {};
 
@@ -198,13 +356,13 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
 
 
   // Info Content Logic
-  const stockData = displayPrices[token];
+  const stockData = displayPrices[tokenValue];
 
   const price = stockData?.price || 0;
   const change = stockData?.change || 0;
   const changePercent = stockData?.changePercent || 0;
   const isPositive = change >= 0;
-  
+
   return (
     <View style={styles.container}>
       {/* Fullscreen Minimize Button */}
@@ -223,7 +381,10 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
 
       {/* Custom Header (Slider only) */}
       {!isFullScreen && isInsideSlider && (
-        <View style={styles.sliderHeader}>
+        <View
+          style={styles.sliderHeader}
+          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+        >
           <TouchableOpacity onPress={closeSlider} style={styles.headerBtn}>
             <Ionicons name="arrow-back" size={24} color={global.colors.textPrimary} />
           </TouchableOpacity>
@@ -236,12 +397,111 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
               </Text>
             </View>
           </View>
-          {/* <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate("Search")}>
+          {/* <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => {
+              const next = !searchVisible;
+              setSearchVisible(next);
+              if (!next) {
+                setFiltered([]);
+                setSearchText("");
+                Keyboard.dismiss();
+              }
+            }}
+          >
             <Ionicons name="search" size={24} color={global.colors.textPrimary} />
           </TouchableOpacity> */}
         </View>
       )}
 
+      {!isFullScreen && isInsideSlider && searchVisible && (
+        <View
+          style={[
+            styles.searchArea,
+            headerHeight ? { top: headerHeight } : null,
+          ]}
+        >
+          <View style={styles.searchRow}>
+            <View style={styles.searchContainer}>
+              <Ionicons
+                name="search"
+                size={16}
+                color={global.colors.textSecondary}
+                style={styles.searchIcon}
+              />
+              <TextInput
+                placeholder="Search"
+                placeholderTextColor={global.colors.textSecondary}
+                style={styles.searchInput}
+                value={searchText}
+                onChangeText={searchFilter}
+                autoFocus={true}
+              />
+              {(filtered.length > 0 || searchText.length > 0) && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setFiltered([]);
+                    setSearchText("");
+                    Keyboard.dismiss();
+                  }}
+                >
+                  <Image source={CancelIcon} style={styles.iconImage} resizeMode="contain" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {filtered.length > 0 && (
+            <View style={styles.dropdownWrapper}>
+              <ScrollView style={styles.dropdownScroll}>
+                {filtered.map((item) => (
+                  <TouchableOpacity
+                    key={item.script_id}
+                    style={styles.dropdownRow}
+                  >
+                    <Text style={styles.dropdownText} numberOfLines={1}>
+                      {item.exchange}
+                      {item.script_id ? ` : ${item.script_id}` : ""}
+                    </Text>
+
+                    <View style={styles.rightIcons}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setSelectedItem(item);
+                          setWatchlistModalVisible(true);
+                        }}
+                      >
+                        <Image
+                          source={watchlistIcon}
+                          style={styles.iconImage2}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <View>
+                      <TouchableOpacity
+                        onPress={() => {
+                          openStockInfoDrawer(item.token, item.script_id, "placeorder", item.isin, {
+                            name: item.script_name,
+                            tradeable: item.tradeable,
+                            exchange: item.exchange
+                          });
+                        }}
+                      >
+                        <Image
+                          source={rupeeIcon}
+                          style={[styles.iconImage]}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      )}
       {/* Sub Menu */}
 
       {!isFullScreen && (
@@ -352,7 +612,7 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
         {/* Place Order Tab */}
         {!isFullScreen && activeSubTab.tradeTypeId === 'placeorder' && (
           <View style={styles.orderFormContainer}>
-            <TradeOrderScreen
+            {/* <TradeOrderScreen
               symbol={symbol}
               token={token}
               isin={isin}
@@ -360,6 +620,20 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
               price={drawerMetadata.price || 0}
               internaltype="Place"
               exchange={drawerMetadata.exchange}
+            /> */}
+            <TradeOrderScreen
+              symbol={chartSymbol}
+              token={tokenValue}
+              isin={isinValue}
+              name={drawerMetadata?.name || chartSymbol}
+              price={drawerMetadata?.price || 0}
+              quantity={drawerMetadata?.quantity}
+              stoploss={drawerMetadata?.stoploss}
+              internaltype={drawerMetadata?.internaltype || "Place"}
+              exchange={drawerMetadata?.exchange}
+              orderid={drawerMetadata?.orderid}
+              producttype={drawerMetadata?.producttype}
+              transactiontype={drawerMetadata?.transactiontype}
             />
             {/* <TradeOrderFormNative
               symbol={symbol}
@@ -395,6 +669,73 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
   </View>
       </Animated.View>
       )} */}
+
+      <Modal
+        transparent
+        visible={watchlistModalVisible}
+        animationType="fade"
+        onRequestClose={closeWatchlistModal}
+      >
+        <Pressable
+          style={styles.watchlistOverlay}
+          onPress={closeWatchlistModal}
+        >
+          <Pressable
+            style={styles.watchlistPopup}
+            onStartShouldSetResponder={() => true}
+            onResponderTerminationRequest={() => false}
+          >
+            <View style={styles.watchlistTitleBar}>
+              <Text style={styles.watchlistTitleText}>Add to Watchlist</Text>
+            </View>
+
+            {loadingWatchlists ? (
+              <View style={{ padding: 20, alignItems: "center" }}>
+                <ActivityIndicator
+                  size="small"
+                  color={global.colors.secondary}
+                />
+              </View>
+            ) : watchlists.length > 0 ? (
+              <ScrollView style={{ maxHeight: 300 }}>
+                {watchlists.map((wl) => (
+                  <TouchableOpacity
+                    key={wl.id}
+                    style={[
+                      styles.watchlistRow,
+                      addingToWishlist[wl.id] && { opacity: 0.6 },
+                    ]}
+                    disabled={addingToWishlist[wl.id]}
+                    onPress={() => handleAddToWatchlist(wl)}
+                  >
+                    <Text style={styles.watchlistRowText}>
+                      {wl.name}
+                      {addingToWishlist[wl.id] && (
+                        <ActivityIndicator
+                          size="small"
+                          color={global.colors.secondary}
+                          style={{ marginLeft: 8 }}
+                        />
+                      )}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={{ padding: 20, alignItems: "center" }}>
+                <Text
+                  style={{
+                    color: global.colors.textSecondary,
+                    textAlign: "center",
+                  }}
+                >
+                  No watchlists found. Please create one from your profile.
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -424,6 +765,81 @@ const styles = StyleSheet.create({
   headerPriceRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 2 },
   headerPrice: { fontSize: 13, fontWeight: '700', color: global.colors.textPrimary, marginRight: 6 },
   headerChange: { fontSize: 11, fontWeight: '600' },
+  searchArea: {
+    backgroundColor: "#F8F8F8",
+    zIndex: 10,
+    elevation: 10,
+    position: "absolute",
+    left: 0,
+    right: 0,
+  },
+  searchRow: {
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingBottom: 6,
+    backgroundColor: "#F8F8F8",
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: global.colors.background,
+    borderRadius: 30,
+    marginHorizontal: 10,
+    paddingHorizontal: 10,
+    elevation: 1,
+    height: 35,
+    borderWidth: 1,
+    borderColor: global.colors.border,
+  },
+  searchIcon: {
+    marginRight: 6,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: global.colors.textPrimary,
+    paddingVertical: 0,
+  },
+  dropdownWrapper: {
+    backgroundColor: global.colors.background,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: global.colors.border,
+    zIndex: 11,
+    elevation: 11,
+  },
+  dropdownScroll: {
+    maxHeight: 300,
+  },
+  dropdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: global.colors.border,
+  },
+  dropdownText: {
+    fontSize: 15,
+    color: global.colors.textPrimary,
+    flex: 1,
+  },
+  rightIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 25,
+  },
+  iconImage: {
+    width: 20,
+    height: 20,
+  },
+  iconImage2: {
+    width: 20,
+    height: 20,
+    marginRight: 20,
+  },
 
   infoScroll: { paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 100 },
   rangeCard: {
@@ -466,6 +882,37 @@ const styles = StyleSheet.create({
   },
   statsLabel: { fontSize: 14, color: global.colors.textSecondary, fontWeight: '500' },
   statsValue: { fontSize: 14, color: global.colors.textPrimary, fontWeight: '700' },
+  watchlistOverlay: {
+    flex: 1,
+    backgroundColor: global.colors.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  watchlistPopup: {
+    width: 280,
+    backgroundColor: global.colors.background,
+    borderRadius: 12,
+    padding: 16,
+    maxHeight: 400,
+  },
+  watchlistTitleBar: {
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  watchlistTitleText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  watchlistRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: global.colors.border,
+  },
+  watchlistRowText: {
+    fontSize: 15,
+    color: global.colors.textPrimary,
+  },
 
   bottomSheet: {
     position: "absolute",

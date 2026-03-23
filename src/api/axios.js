@@ -73,6 +73,26 @@ axiosInstance.interceptors.response.use(
       });
     }
 
+    if (status >= 500) {
+      return Promise.resolve({
+        data: {
+          success: false,
+          message: "Server error. Please try again later.",
+        },
+        statusCode: status,
+      });
+    }
+
+    if (!status) {
+      return Promise.resolve({
+        data: {
+          success: false,
+          message: error?.message || "Network request failed",
+        },
+        isNetworkError: true,
+      });
+    }
+
     return Promise.reject(error);
   }
 );

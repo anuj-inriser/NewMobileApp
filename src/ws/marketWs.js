@@ -1,9 +1,13 @@
 import { wsUrl } from '../utils/apiUrl';
+import axiosInstance from '../api/axios';
+import * as Device from "expo-device";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 let ws = null;
 let listeners = new Set();
 let reconnectTimeout = null;
 let marketTimer = null;
+let currentUserId = null;
 
 let isConnecting = false;
 let reconnectDelay = 1000; // 1 sec start
@@ -12,6 +16,37 @@ const MAX_RECONNECT_DELAY = 10000; // 10 sec max
 /* -------------------------------------------------- */
 /* 🔹 Helpers */
 /* -------------------------------------------------- */
+
+const logEvent = async ({
+  user_id,
+  success = true,
+  event_group_id = 1,
+  event_type,
+  content,
+}) => {
+  try {
+    if (!user_id) return;
+    const deviceId =
+      Device.osBuildId ||
+  Device.modelId ||
+      Device.deviceName ||
+      "Unknown";
+
+    await axiosInstance.post("/eventlog", {
+      user_id,
+      success,
+      device_id: deviceId,
+      event_group_id,
+      event_type,
+      content,
+      app_version: "1.0.0"
+    });
+  } catch (e) {
+    const status = e?.response?.status;
+    const message = e?.response?.data?.message || e?.message;
+    console.log("WS Log API failed", { status, message });
+  }
+};
 
 const getWsProtocol = (host) => {
   if (
@@ -68,6 +103,21 @@ const connect = () => {
 
   ws.onopen = () => {
     console.log("✅ [MarketWS] Connected");
+    (async () => {
+      if (!currentUserId) {
+        try {
+          const storedUserId = await AsyncStorage.getItem("userId");
+          if (storedUserId) currentUserId = storedUserId;
+        } catch (e) {
+          // ignore storage read failure; we'll just skip logging
+        }
+      }
+      logEvent({
+        user_id: currentUserId,
+        event_type: "WebSocket",
+        content: "Connected",
+      });
+    })();
     isConnecting = false;
     reconnectDelay = 1000; // reset delay
   };
@@ -88,6 +138,21 @@ const connect = () => {
 
   ws.onclose = () => {
     console.log("🔌 [MarketWS] Closed");
+    (async () => {
+      if (!currentUserId) {
+        try {
+          const storedUserId = await AsyncStorage.getItem("userId");
+          if (storedUserId) currentUserId = storedUserId;
+        } catch (e) {
+          // ignore storage read failure; we'll just skip logging
+        }
+      }
+      logEvent({
+        user_id: currentUserId,
+        event_type: "WebSocket",
+        content: "Disconnected",
+      });
+    })();
     ws = null;
     isConnecting = false;
     scheduleReconnect();
@@ -164,4 +229,8 @@ export const sendMarketMessage = (payload) => {
 export const onMarketMessage = (fn) => {
   listeners.add(fn);
   return () => listeners.delete(fn);
+};
+
+export const setWSUser = (userId) => {
+  currentUserId = userId;
 };
