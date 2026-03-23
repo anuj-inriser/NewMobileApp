@@ -21,6 +21,8 @@ import {
   subscribeSymbols,
   unsubscribeDelayed,
 } from "../ws/marketSubscriptions";
+import * as Device from "expo-device";
+import axiosInstance from "../api/axios";
 
 const filterOptions = ["All", "Equity", "F&O"];
 const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
@@ -36,8 +38,29 @@ const PositionsList = () => {
 
   const { authToken } = useAuth();
 
+  
+  const logRefresh = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const deviceId =
+        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+      await axiosInstance.post("/eventlog", {
+        user_id: userId || "",
+        success: true,
+        device_id: deviceId,
+        event_group_id: 3,
+        event_type: "Positions",
+        content: "Refreshed",
+        app_version: "1.0.0"
+      });
+    } catch (error) {
+      console.log("Logging failed", error);
+    }
+  };
 
   const onRefresh = async () => {
+    if (!authToken) return;
     setRefreshing(true);
     try {
       await fetchPositions()
@@ -45,15 +68,17 @@ const PositionsList = () => {
       console.log("Refresh error:", error);
     } finally {
       setRefreshing(false);
+      logRefresh();
     }
   };
 
   const fetchPositions = async () => {
     try {
+       if (!authToken) return;
       setLoading(true);
       const userId = await AsyncStorage.getItem("userId");
       const deviceId = await getDeviceId();
-
+     
       const response = await fetch(`${apiUrl}/api/position/get`, {
         method: "GET",
         headers: {
@@ -104,7 +129,9 @@ const PositionsList = () => {
 
   useFocusEffect(
     useCallback(() => {
+      if (authToken) {
       fetchPositions();
+      }
     }, []),
   );
 
@@ -112,7 +139,7 @@ const PositionsList = () => {
     useCallback(() => {
       const page = "PositionsList";
       const context = "LiveUpdates";
-     const tokens = getTokens();
+      const tokens = getTokens();
       if (!tokens.length) return;
 
       console.log(`🟢 SUBSCRIBE → ${page}`, tokens);

@@ -230,7 +230,7 @@ const OrdersScreen = () => {
 
   return (
     <>
-      <SafeAreaView style={[styles.container]}>
+      <SafeAreaView edges={["bottom"]} style={[styles.container]}>
         {/* Tabs */}
         <View style={styles.topSliders}>
           <TradeOrderTabs
@@ -263,7 +263,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     marginTop: -3,
-    paddingTop: 3,
+    paddingTop: 10,
+    paddingBottom: 10,
     marginBottom: 10,
   },
   loaderBox: {

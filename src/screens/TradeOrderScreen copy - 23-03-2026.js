@@ -32,7 +32,6 @@ import OrderInputNew from "../components/OrderInputNew";
 import axiosInstance from "../api/axios";
 import { useDrawer } from "../context/DrawerContext";
 // import DublearrowRight from "../../assets/dublearrowright.png";
-import * as Device from "expo-device";
 export default function TradeOrderScreen({
   hideHeader: propHideHeader,
   symbol: propSymbol,
@@ -63,7 +62,6 @@ export default function TradeOrderScreen({
   const { prices } = useRealtimePrices();
   const [validationErrors, setValidationErrors] = useState([]);
   const [showTooltip, setShowTooltip] = useState(false);
-  const isProcessingAuth = useRef(false);
   const [exchangeAvailability, setExchangeAvailability] = useState({
     NSE: false,
     BSE: false,
@@ -83,7 +81,7 @@ export default function TradeOrderScreen({
   const runValidations = () => {
     const errors = [];
 
-    // -------- CLEAN LTP ----------
+    // Clean numeric LTP
     const cleanLtp = (raw) => {
       if (!raw) return 0;
       return Number(String(raw).replace(/[^\d.]/g, "")) || 0;
@@ -93,204 +91,55 @@ export default function TradeOrderScreen({
     const q = parseInt(qty?.trim() || "0");
     const tg = parseFloat(target?.trim() || "0");
     const sl = parseFloat(stopLoss?.trim() || "0");
+
     const ltp = cleanLtp(selected === "NSE" ? nseLtp : bseLtp);
-    console.log("ltp>>>>>>>>>", ltp);
+
     const br = parseFloat(brokerage || 0);
     const ch = parseFloat(charges || 0);
     const tx = parseFloat(taxes || 0);
     const bal = parseFloat(balance || 0);
 
-    // ⭐ MARKET order = p is 0, use LTP as effective price
-    const effectivePrice = p === 0 ? ltp : p;
-
-    // -----------------------------
-    // 0. LTP GUARD
-    //    nseLtp/bseLtp "₹0.00" format mein aata hai.
-    //    Agar clean karne ke baad bhi 0 hai → data nahi aaya.
-    //    Baaki saari LTP-based checks galat ho jaayengi → early return.
-    // -----------------------------
-    if (ltp === 0) {
-      errors.push("Live price (LTP) not available. Please wait and try again.");
-      setValidationErrors(errors);
-      return false;
-    }
-
-    // -----------------------------
-    // 1. PRICE
-    // -----------------------------
+    // PRICE cannot be negative
     if (p < 0) {
       errors.push("Price cannot be negative.");
     }
 
-    // LIMIT order range check — MARKET (p===0) skip hoga
+    // LIMIT PRICE validation (Market order allowed)
     if (p > 0) {
       const lower = ltp * 0.8;
       const upper = ltp * 1.2;
+
       if (p < lower || p > upper) {
         errors.push(
-          `Limit price must be within ±20% of LTP (₹${lower.toFixed(2)} – ₹${upper.toFixed(2)}).`
+          `Limit price must be within 20% of LTP (${lower.toFixed(2)} - ${upper.toFixed(2)})`,
         );
       }
     }
 
-    // -----------------------------
-    // 2. QUANTITY
-    // -----------------------------
-    if (q <= 0) {
-      errors.push("Quantity must be greater than 0.");
-    }
+    // QUANTITY
+    if (q <= 0) errors.push("Quantity must be greater than 0.");
 
-    // -----------------------------
-    // 3. BUY / SELL SPECIFIC
-    // -----------------------------
-    if (transactionType === "BUY") {
-      // Target strictly above LTP
-      if (tg > 0 && tg <= ltp) {
-        errors.push(`Target must be above LTP (₹${ltp}). Current: ₹${tg}`);
-      }
-      // Stop Loss strictly below LTP
-      if (sl > 0 && sl >= ltp) {
-        errors.push(`Stop Loss must be below LTP (₹${ltp}). Current: ₹${sl}`);
-      }
-    }
-
-    if (transactionType === "SELL") {
-      // Target strictly below LTP
-      if (tg > 0 && tg >= ltp) {
-        errors.push(`Target must be below LTP (₹${ltp}). Current: ₹${tg}`);
-      }
-      // Stop Loss strictly above LTP
-      if (sl > 0 && sl <= ltp) {
-        errors.push(`Stop Loss must be above LTP (₹${ltp}). Current: ₹${sl}`);
-      }
-    }
-
-    // -----------------------------
-    // 4. TARGET vs STOP LOSS RELATION
-    // -----------------------------
-    if (tg > 0 && sl > 0) {
-      if (transactionType === "BUY" && sl >= tg) {
-        errors.push("Stop Loss must be less than Target for a BUY order.");
-      }
-      if (transactionType === "SELL" && sl <= tg) {
-        errors.push("Stop Loss must be greater than Target for a SELL order.");
-      }
-    }
-
-    // -----------------------------
-    // 5. BALANCE CHECK
-    //    BUY: effectivePrice use karo taaki MARKET order (p=0)
-    //         mein bhi sahi cost calculate ho.
-    //    SELL Intraday/Margin: broker side margin check hoti hai,
-    //         client side skip karo.
-    //    SELL Delivery: balance check relevant nahi (tum shares bech rahe ho),
-    //         lekin order value sanity check rakh sakte hain.
-    // -----------------------------
-    if (transactionType === "BUY") {
-      const totalCost = effectivePrice * q + br + ch + tx;
-      if (totalCost > bal) {
-        errors.push(
-          `Insufficient balance. Required: ₹${totalCost.toFixed(2)}, Available: ₹${bal.toFixed(2)}.`
-        );
-      }
-    }
-
-    // -----------------------------
-    // 6. SELL — segment-wise check
-    //    Intraday/Margin: koi client-side check nahi (broker handle karta hai).
-    //    Delivery: order value > balance means user ke paas funds nahi hain
-    //              credit/proceeds ke liye — basic sanity check.
-    // -----------------------------
-    if (transactionType === "SELL" && segment === "DELIVERY") {
-      // Agar order value bilkul 0 hai → qty ya LTP kuch toh galat hai
-      const sellValue = effectivePrice * q;
-      if (sellValue <= 0) {
-        errors.push("Invalid sell order. Check quantity and price.");
-      }
-    }
-    if ((tg > 0 || sl > 0) && segment !== "INTRADAY") {
+    const totalCost = p * q + br + ch + tx;
+    if (totalCost > bal)
       errors.push(
-        "Target and Stop Loss are only supported for Intraday orders. Please switch to Intraday or remove Target/SL."
+        "Insufficient balance. Order value + charges exceed available funds.",
       );
-    }
-    // -----------------------------
-    // DONE
-    // -----------------------------
+
+    // TARGET
+    if (tg > 0 && tg < ltp) errors.push(`Target cannot be below LTP (${ltp}).`);
+
+    // STOP LOSS
+    if (sl > 0 && sl > ltp)
+      errors.push(`Stop Loss cannot be above LTP (${ltp}).`);
+
     setValidationErrors(errors);
     return errors.length === 0;
   };
-  // const runValidations = () => {
-  //   const errors = [];
-
-  //   // Clean numeric LTP
-  //   const cleanLtp = (raw) => {
-  //     if (!raw) return 0;
-  //     return Number(String(raw).replace(/[^\d.]/g, "")) || 0;
-  //   };
-
-  //   const p = parseFloat(price?.trim() || "0");
-  //   const q = parseInt(qty?.trim() || "0");
-  //   const tg = parseFloat(target?.trim() || "0");
-  //   const sl = parseFloat(stopLoss?.trim() || "0");
-
-  //   const ltp = cleanLtp(selected === "NSE" ? nseLtp : bseLtp);
-
-  //   const br = parseFloat(brokerage || 0);
-  //   const ch = parseFloat(charges || 0);
-  //   const tx = parseFloat(taxes || 0);
-  //   const bal = parseFloat(balance || 0);
-
-  //   // PRICE cannot be negative
-  //   if (p < 0) {
-  //     errors.push("Price cannot be negative.");
-  //   }
-
-  //   // LIMIT PRICE validation (Market order allowed)
-  //   if (p > 0) {
-  //     const lower = ltp * 0.8;
-  //     const upper = ltp * 1.2;
-
-  //     if (p < lower || p > upper) {
-  //       errors.push(
-  //         `Limit price must be within 20% of LTP (${lower.toFixed(2)} - ${upper.toFixed(2)})`,
-  //       );
-  //     }
-  //   }
-
-  //   // QUANTITY
-  //   if (q <= 0) errors.push("Quantity must be greater than 0.");
-
-  //   const totalCost = p * q + br + ch + tx;
-  //   if (totalCost > bal)
-  //     errors.push(
-  //       "Insufficient balance. Order value + charges exceed available funds.",
-  //     );
-
-  //   // TARGET
-  //   if (tg > 0 && tg < ltp) errors.push(`Target cannot be below LTP (${ltp}).`);
-
-  //   // STOP LOSS
-  //   if (sl > 0 && sl > ltp)
-  //     errors.push(`Stop Loss cannot be above LTP (${ltp}).`);
-
-  //   setValidationErrors(errors);
-  //   return errors.length === 0;
-  // };
 
   const handleAngelOneNavigation = async (navState) => {
     const { url } = navState;
 
-   if (
-      url.includes("auth_token") &&
-      url.includes("feed_token") &&
-      !isProcessingAuth.current
-    ) {
-      isProcessingAuth.current = true;
-      let angelOneMeta = {
-        success: false,
-        message: "",
-        userid: "",
-      };
+    if (url.includes("auth_token") && url.includes("feed_token")) {
       try {
         const urlObj = new URL(url);
         const auth_token = urlObj.searchParams.get("auth_token");
@@ -310,33 +159,8 @@ export default function TradeOrderScreen({
         // Force refresh of page → triggers new token usage
         // setSwipeKey(Date.now());
         showSuccess("Success", "Angel One login successfully.");
-       angelOneMeta.success = true;
-        angelOneMeta.message = "AngelOne login success";
       } catch (e) {
         console.log("Token parse error:", e);
-        angelOneMeta.message = "AngelOne login failed";
-      } finally {
-        try {
-          const userId = await AsyncStorage.getItem("userId");
-          angelOneMeta.userid = userId || "";
-
-          const deviceId =
-            Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
-
-          await axiosInstance.post("/eventlog", {
-            user_id: angelOneMeta.userid,
-            success: angelOneMeta.success,
-            device_id: deviceId,
-            event_group_id: 1,
-            event_type: "AngelOne Login",
-            content: angelOneMeta.message,
-            app_version: "1.0.0"
-          });
-        } catch (err) {
-          console.log("Logging failed", err);
-        } finally {
-          isProcessingAuth.current = false;
-        }
       }
     }
   };
@@ -521,13 +345,11 @@ export default function TradeOrderScreen({
     // QTY
     setIsQtyValid(q > 0);
 
-    if (transactionType === "BUY") {
-      setIsTargetValid(tg === 0 || tg > ltp);
-      setIsStopLossValid(sl === 0 || sl < ltp);
-    } else {
-      setIsTargetValid(tg === 0 || tg < ltp);
-      setIsStopLossValid(sl === 0 || sl > ltp);
-    }
+    // TARGET (must be above LTP if > 0)
+    setIsTargetValid(tg === 0 || tg > ltp);
+
+    // STOP LOSS (must be below LTP if > 0)
+    setIsStopLossValid(sl === 0 || sl < ltp);
   }, [price, qty, target, stopLoss, nseLtp, bseLtp, selected]);
 
   // BROKERAGE AUTO UPDATE
@@ -563,21 +385,14 @@ export default function TradeOrderScreen({
   useEffect(() => {
     if (isSwiping) return;
 
-    const rawLtp = selected === "NSE" ? nseLtp : bseLtp;
-    const ltp = parseFloat(String(rawLtp).replace(/[^\d.]/g, "")) || 0;
-    const p = parseFloat(price) || ltp || 0;
+    const p = parseFloat(price) || parseFloat(selectedExchange === "NSE" ? nseLtp : bseLtp) || 0;
     const q = parseInt(qty) || 0;
     const ov = p * q;
     setOrderValue(ov);
 
-    const br = parseFloat(brokerage) || 0;
-    const ch = parseFloat(charges) || 0;
-    const tx = parseFloat(taxes) || 0;
-    const bal = parseFloat(balance) || 0;
-
-    // ✅ FIX: pehle tha balance - (ov - br - tx - ch) jo galat tha
-    setClosingBalance(bal - ov - br - ch - tx);
-  }, [price, qty, balance, brokerage, charges, taxes, nseLtp, bseLtp, selected, isSwiping]);
+    // const totalCharges = brokerage + charges + taxes;
+    setClosingBalance(balance - (ov - brokerage - taxes - charges));
+  }, [price, qty, balance, brokerage, charges, taxes, nseLtp, bseLtp, selectedExchange, isSwiping]);
 
   const modifyOrder = async () => {
     try {
@@ -592,16 +407,18 @@ export default function TradeOrderScreen({
         tradingsymbol: activeSymbol,
         symboltoken: activeToken,
         exchange: selected,
+
         ordertype: p === 0 ? "MARKET" : "LIMIT",
+
         producttype: segment,
         duration: "DAY",
-        transactiontype: transactionType, // ✅ FIX: "BUY" hardcoded tha
+        transactiontype: "BUY",
         squareoff: 0,
         stoploss: parseFloat(stopLoss || 0),
+
         price: p === 0 ? 0 : p,
         quantity: String(qty),
       };
-
       const res = await fetch(`${apiUrl}/api/order/modify`, {
         method: "POST",
         headers: {
@@ -618,7 +435,7 @@ export default function TradeOrderScreen({
 
       if (data.success) {
         showSuccess("Success", "Order Modified Successfully.");
-        closeStockInfoDrawer();
+        closeStockInfoDrawer(); // 🔥 drawer CLOSE
         navigation.navigate("App", {
           screen: "MainTabs",
           params: { screen: "OrdersScreen", params: { defaultTab: 2 } },
@@ -636,81 +453,30 @@ export default function TradeOrderScreen({
       const userId = await AsyncStorage.getItem("userId");
       const deviceId = await getDeviceId();
 
+      // ⭐ FIX: price empty → 0
       const p = parseFloat(price?.trim() || "0");
-      const tg = parseFloat(target?.trim() || "0");
-      const sl = parseFloat(stopLoss?.trim() || "0");
 
-      // LTP clean karo — "₹102.50" → 102.50
-      const rawLtp = selected === "NSE" ? nseLtp : bseLtp;
-      const ltp = parseFloat(String(rawLtp).replace(/[^\d.]/g, "")) || 0;
+      const payload = {
+        variety: "NORMAL",
+        tradingsymbol: activeSymbol,
+        symboltoken: activeToken,
+        transactiontype: transactionType,
+        exchange: selected,
 
-      // Effective price — MARKET order mein LTP use karo
-      const effectivePrice = p === 0 ? ltp : p;
+        // ⭐ FIXED: now p works properly
+        ordertype: p === 0 ? "MARKET" : "LIMIT",
 
-      // ROBO = Target ya SL dala ho AND segment INTRADAY ho
-      // Angel One mein Bracket Order sirf INTRADAY pe kaam karta hai
-      const isRobo = (tg > 0 || sl > 0) && segment === "INTRADAY";
+        producttype: segment,
+        duration: "DAY",
 
-      let payload;
+        // Market order must send 0 price
+        price: p === 0 ? 0 : p,
 
-      if (isRobo) {
-        // ROBO mein squareoff aur stoploss = POINTS DIFFERENCE (actual price nahi)
-        // BUY:  squareoff = target - effectivePrice
-        //       stoploss  = effectivePrice - SL
-        // SELL: squareoff = effectivePrice - target
-        //       stoploss  = SL - effectivePrice
-
-        let squareoffPoints = 0;
-        let stoplossPoints = 0;
-
-        if (transactionType === "BUY") {
-          squareoffPoints = tg > 0 ? parseFloat((tg - effectivePrice).toFixed(2)) : 1;
-          stoplossPoints = sl > 0 ? parseFloat((effectivePrice - sl).toFixed(2)) : 1;
-        } else {
-          // SELL
-          squareoffPoints = tg > 0 ? parseFloat((effectivePrice - tg).toFixed(2)) : 1;
-          stoplossPoints = sl > 0 ? parseFloat((sl - effectivePrice).toFixed(2)) : 1;
-        }
-
-        // Safety: points negative nahi hone chahiye
-        squareoffPoints = Math.max(squareoffPoints, 0.05);
-        stoplossPoints = Math.max(stoplossPoints, 0.05);
-
-        payload = {
-          variety: "ROBO",
-          tradingsymbol: activeSymbol,
-          symboltoken: activeToken,
-          transactiontype: transactionType,
-          exchange: selected,
-          ordertype: p === 0 ? "MARKET" : "LIMIT",
-          producttype: "BO",
-          duration: "DAY",
-          price: p === 0 ? 0 : p,
-          squareoff: String(squareoffPoints),
-          stoploss: String(stoplossPoints),
-          quantity: parseFloat(qty),
-          scripconsent: "yes",
-        };
-
-      } else {
-        // NORMAL order
-        payload = {
-          variety: "NORMAL",
-          tradingsymbol: activeSymbol,
-          symboltoken: activeToken,
-          transactiontype: transactionType,
-          exchange: selected,
-          ordertype: p === 0 ? "MARKET" : "LIMIT",
-          producttype: segment,
-          duration: "DAY",
-          price: p === 0 ? 0 : p,
-          squareoff: "0",
-          stoploss: "0",
-          quantity: parseFloat(qty),
-          scripconsent: "yes",
-        };
-      }
-
+        squareoff: "0",
+        stoploss: parseFloat(stopLoss || 0),
+        quantity: parseFloat(qty),
+        scripconsent: "yes",
+      };
       const res = await fetch(`${apiUrl}/api/order/place`, {
         method: "POST",
         headers: {
@@ -727,7 +493,7 @@ export default function TradeOrderScreen({
 
       if (data.angelResponse?.message === "SUCCESS") {
         showSuccess("Success", "Order Placed Successfully.");
-        closeStockInfoDrawer();
+        closeStockInfoDrawer(); // 🔥 drawer CLOSE
         navigation.navigate("App", {
           screen: "MainTabs",
           params: { screen: "OrdersScreen", params: { defaultTab: 2 } },
@@ -786,7 +552,7 @@ export default function TradeOrderScreen({
       }
 
       // console.log("ex", selected)
-       console.log("sym", sym)
+      // console.log("sym", sym)
       // console.log("tok", tok)
       const ex = selected;
       const res = await fetch(
@@ -916,30 +682,23 @@ export default function TradeOrderScreen({
 
   // Autofill passed values when screen loads
   useEffect(() => {
-    // transactionType aur segment hamesha set karo
+    if (passedPrice != null) setPrice(String(passedPrice));
+    if (passedQuantity) setQty(String(passedQuantity));
+    if (passedTarget) setTarget(String(passedTarget));
+    if (passedStopLoss) setStopLoss(String(passedStopLoss));
     if (passedTransactionType) {
       setTransactionType(passedTransactionType.toUpperCase());
     }
     if (passedProductType) {
       const mappedSeg = mapProductTypeToSegment(passedProductType);
       setSegment(mappedSeg);
+
+      // ⭐ UI menu ke liye human readable text
       if (mappedSeg === "INTRADAY") setSelectedMenu("Intraday");
       else if (mappedSeg === "DELIVERY") setSelectedMenu("Delivery");
       else if (mappedSeg === "MARGIN") setSelectedMenu("Margin");
     }
 
-    // Price/Qty/Target/SL — sirf MODIFY mode mein prefill
-    const isModify =
-      propInternalType?.toLowerCase() === "modify" ||
-      params?.internaltype?.toLowerCase() === "modify";
-
-    if (isModify) {
-      if (passedPrice != null) setPrice(String(passedPrice));
-      if (passedQuantity != null) setQty(String(passedQuantity));
-      if (passedTarget != null) setTarget(String(passedTarget));
-      if (passedStopLoss != null) setStopLoss(String(passedStopLoss));
-    }
-    // Normal mode mein "0" hi rehega — koi prefill nahi
   }, []);
 
   const fetchFunds = async (segmentType) => {
@@ -1000,9 +759,7 @@ export default function TradeOrderScreen({
     taxes,
     nseLtp,
     bseLtp,
-    isSwiping,
-    transactionType, // ✅ ADD: BUY/SELL switch pe re-validate
-    segment,         // ✅ ADD: Intraday/Delivery switch pe re-validate
+    isSwiping
   ]);
 
   const isModifyMode = internaltype?.toLowerCase() === "modify";

@@ -13,12 +13,15 @@ import {
 } from "react-native";
 import { useAlert } from "../context/AlertContext";
 import { Ionicons } from "@expo/vector-icons";
+import { useDrawer } from "../context/DrawerContext";
 import OrderItemCard from "./OrderItemCard";
 import { apiUrl } from "../utils/apiUrl";
 import { useAuth } from "../context/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getDeviceId } from "../utils/deviceId";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import * as Device from "expo-device";
+import axiosInstance from "../api/axios";
 
 const filterOptions = ["All", "Executed", "Cancelled", "Rejected", "Pending"];
 const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
@@ -30,6 +33,7 @@ const OrdersList = () => {
   const [orders, setOrders] = useState([]);
   const [originalOrders, setOriginalOrders] = useState([]);
   const [sortOpen, setSortOpen] = useState(false);
+  const { openStockInfoDrawer } = useDrawer();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [refreshing, setRefreshing] = useState(false);
@@ -37,6 +41,26 @@ const OrdersList = () => {
 
   const normalizeStatus = (status = "") =>
     status.toString().trim().toLowerCase();
+
+  const logRefresh = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const deviceId =
+        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
+
+      await axiosInstance.post("/eventlog", {
+        user_id: userId || "",
+        success: true,
+        device_id: deviceId,
+        event_group_id: 3,
+        event_type: "Orders",
+        content: "Refreshed",
+        app_version: "1.0.0"
+      });
+    } catch (error) {
+      console.log("Logging failed", error);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -46,6 +70,7 @@ const OrdersList = () => {
       console.log("Refresh error:", error);
     } finally {
       setRefreshing(false);
+      logRefresh();
     }
   };
 
@@ -254,7 +279,6 @@ const OrdersList = () => {
       </Modal>
 
       <ScrollView
-        style={{ marginTop: 10, flex: 1 }}
         contentContainerStyle={styles.scrollContainer}
         scrollEnabled={orders.length > 0}
         refreshControl={
@@ -283,19 +307,40 @@ const OrdersList = () => {
               status={item.status}
               price={`₹ ${Number(item.price).toFixed(2)}`}
               broker={item.broker}
+              // onModify={() => {
+              //   navigation.navigate("TradeOrder", {
+              //     symbol: item.trading_symbol,
+              //     token: item.symbol_token,
+              //     name: item.script,
+              //     price: item.price,
+              //     quantity: item.quantity,
+              //     stoploss: item.stop_loss,
+              //     target: 0,
+              //     producttype: item.product_type,
+              //     internaltype: "Modify",
+              //     orderid: item.orderid,
+              //   });
+              // }}
               onModify={() => {
-                navigation.navigate("TradeOrder", {
-                  symbol: item.trading_symbol,
-                  token: item.symbol_token,
-                  name: item.script,
-                  price: item.price,
-                  quantity: item.quantity,
-                  stoploss: item.stop_loss,
-                  target: 0,
-                  producttype: item.product_type,
-                  internaltype: "Modify",
-                  orderid: item.orderid,
-                });
+                console.log("FULL ITEM 👉", item);
+                openStockInfoDrawer(
+                  item.symbol_token,
+                  item.trading_symbol,
+                  "placeorder", // tab
+                  item.isin,
+                  {
+                    name: item.script,
+                    price: item.price,
+                    quantity: item.quantity,
+                    stoploss: item.stop_loss,
+                    producttype: item.product_type,
+                    orderid: item.orderid,
+                    transactiontype: item.transaction_type,
+                    internaltype: "Modify",
+                    exchange: item.exchange,
+                    tradeable: item.tradeable,
+                  }
+                );
               }}
               onCancel={async () => {
                 Alert.alert(
