@@ -25,6 +25,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import TopHeader from "../components/TopHeader";
 import BottomTabBar from "../components/BottomTabBar";
+import InvoiceScreen from "./InvoiceScreen";
 import DonutChart from "../components/DonutChart";
 import KycChart from "../components/KycChart";
 import PreferencesSection from "../components/PreferencesSection";
@@ -143,6 +144,14 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
   const [phoneOtpError, setPhoneOtpError] = useState("");
   const [phoneOtpTimer, setPhoneOtpTimer] = useState(30);
   const [canResendPhoneOtp, setCanResendPhoneOtp] = useState(false);
+
+    // TRANSACTION STATES
+  const [transactionsOpen, setTransactionsOpen] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [visibleTransactionsCount, setVisibleTransactionsCount] = useState(5);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
 
   useEffect(() => {
     let interval;
@@ -814,8 +823,26 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
     fetchPortfolioBalance();
     getUserById();
     loadKycData();
-    logEvent()
+    logEvent();
+    fetchTransactions();
   }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId) return;
+
+      setLoadingTransactions(true);
+      const res = await axiosInstance.get(`${apiUrl}/api/invoice/user/${userId}`);
+      if (res.data?.status) {
+        setTransactions(res.data.result || []);
+      }
+    } catch (err) {
+      console.log("❌ FETCH TRANSACTIONS ERROR =>", err.message);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
 
   const handleChangePassword = async () => {
     const e = {};
@@ -1897,6 +1924,110 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
                 </View>
               )}
 
+              
+              <TouchableOpacity
+                style={transactionsOpen ? styles.kycHeader : styles.kycHeaderclosed}
+                onPress={() => setTransactionsOpen(!transactionsOpen)}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Ionicons
+                    name="receipt"
+                    size={24}
+                    color={global.colors.secondary}
+                    style={{ marginRight: 12, marginLeft: 4 }}
+                  />
+                  <Text style={styles.kycTitle}>Transactions</Text>
+                </View>
+                <Image
+                  source={transactionsOpen ? ArrowUp : ArrowDown}
+                  style={{ width: 15, height: 8 }}
+                />
+              </TouchableOpacity>
+
+              {transactionsOpen && (
+                <View style={styles.transactionsBody}>
+                  {loadingTransactions && transactions.length === 0 ? (
+                    <Text style={styles.loadingText}>Loading...</Text>
+                  ) : transactions.length === 0 ? (
+                    <Text style={styles.noTransactionsText}>No transactions found</Text>
+                  ) : (
+                    <>
+                      {transactions.slice(0, visibleTransactionsCount).map((item, index) => (
+                        <View key={index} style={styles.transactionItem}>
+                          <View style={styles.transactionInfo}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                              <Text style={styles.transactionName}>{item.plan_name}</Text>
+                              {item.status === 'FAILED' && (
+                                <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 8 }}>
+                                  <Text style={{ color: '#DC2626', fontSize: 10, fontWeight: '700' }}>FAILED</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text style={styles.transactionDate}>
+                              {new Date(item.created_at).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                              })}
+                            </Text>
+                          </View>
+                          <View style={styles.transactionAction}>
+                            <Text style={[styles.transactionAmount, item.status === 'FAILED' && { color: '#9CA3AF', textDecorationLine: 'line-through' }]}>₹{item.total_invoice_amount}</Text>
+                            <TouchableOpacity
+                              style={[styles.downloadBtn, item.status === 'FAILED' && { opacity: 0.5 }]}
+                              onPress={() => {
+                                // Prepare params for InvoiceScreen
+                                const invoiceParams = {
+                                  plan: {
+                                    title: item.plan_name,
+                                    planPrice: item.invoice_amount,
+                                    specialDiscount: 0,
+                                    gst: (Number(item.cgst) || 0) + (Number(item.sgst) || 0) + (Number(item.igst) || 0),
+                                    plan_validity: item.plan_validity,
+                                    payment_id: item.service_provider_tid
+
+                                  },
+                                  couponDiscount: item.discount_amount,
+                                  internal_transaction_id: item.internal_transaction_id,
+                                  status: item.status,
+                                  created_at: item.created_at,
+                                  payment_id: item.service_provider_tid,
+                                  service_provider_tid: item.service_provider_tid,
+                                  user_name: item.user_name || name
+                                };
+                                setSelectedInvoice(invoiceParams);
+                                setInvoiceModalOpen(true);
+                              }}
+                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Text style={{ fontSize: 12, color: item.status === 'FAILED' ? '#DC2626' : global.colors.secondary, marginRight: 4, fontWeight: '600' }}>
+                                  {item.status === 'FAILED' ? 'Failed' : 'Receipt'}
+                                </Text>
+                                <Ionicons
+                                  name={item.status === 'FAILED' ? "close-circle" : "download-outline"}
+                                  size={16}
+                                  color={item.status === 'FAILED' ? "#DC2626" : global.colors.secondary}
+                                />
+                              </View>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))}
+
+                      {visibleTransactionsCount < transactions.length && (
+                        <TouchableOpacity
+                          style={styles.loadMoreBtn}
+                          onPress={() => setVisibleTransactionsCount(prev => prev + 5)}
+                        >
+                          <Text style={styles.loadMoreText}>Load More</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  )}
+                </View>
+              )}
+
               {/* <TouchableOpacity style={linkedAccount ? styles.kycHeader : styles.kycHeaderclosed} onPress={() => setLinkedAccount(!linkedAccount)}>
                         <View style={{ flexDirection: "row", alignItems: "center" }}>
                             <Image source={LinkedAccount} style={{ width: 30, height: 30, marginRight: 8, }} />
@@ -2003,6 +2134,20 @@ const ProfileScreen = ({ isInsideSlider, closeSlider }) => {
               </TouchableOpacity>
             </ScrollView>
           </View>
+
+          
+          <Modal
+            visible={invoiceModalOpen}
+            transparent={false}
+            animationType="slide"
+            onRequestClose={() => setInvoiceModalOpen(false)}
+          >
+            <InvoiceScreen
+              params={selectedInvoice}
+              onClose={() => setInvoiceModalOpen(false)}
+            />
+          </Modal>
+
           <Modal visible={phoneOtpModalOpen} transparent animationType="fade">
             <View style={popupStyles.overlay}>
               <View style={popupStyles.box}>
@@ -3971,6 +4116,75 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: global.colors.textSecondary,
     marginTop: 4,
+  },
+   transactionsBody: {
+    backgroundColor: global.colors.surface,
+    marginHorizontal: 16, // 🔥 ADDED
+    padding: 12, // 🔥 CHANGED to match aboutUsBody
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    marginTop: -8, // 🔥 ADDED to blend with header
+    marginBottom: 10,
+  },
+  transactionItem: {
+    backgroundColor: global.colors.background, // 🔥 ADDED to match aboutItem
+    borderRadius: 14, // 🔥 ADDED to match aboutItem
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16, // 🔥 ADDED
+    marginBottom: 10, // 🔥 ADDED
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: global.colors.textPrimary,
+  },
+  transactionDate: {
+    fontSize: 12,
+    color: global.colors.textSecondary,
+    marginTop: 2,
+  },
+  transactionAction: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  transactionAmount: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: global.colors.secondary,
+    marginRight: 15,
+  },
+  downloadBtn: {
+    padding: 5,
+    backgroundColor: global.colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: global.colors.border,
+  },
+  loadMoreBtn: {
+    alignItems: "center",
+    paddingVertical: 12,
+    marginTop: 5,
+  },
+  loadMoreText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: global.colors.secondary,
+  },
+  loadingText: {
+    textAlign: "center",
+    paddingVertical: 20,
+    color: global.colors.textSecondary,
+  },
+  noTransactionsText: {
+    textAlign: "center",
+    paddingVertical: 20,
+    color: global.colors.textSecondary,
   },
 });
 const popupStyles = StyleSheet.create({

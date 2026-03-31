@@ -229,7 +229,8 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
     const payload = {
       script_id: selectedItem.script_id,
       user_id: parseInt(userId, 10),
-      wishlist_id: parseInt(wishlist.id, 10)
+      wishlist_id: parseInt(wishlist.id, 10),
+      token: selectedItem.token,
     };
 
 

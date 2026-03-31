@@ -14,6 +14,7 @@ import {
   ScrollView,
   AppState,
   RefreshControl,
+  DeviceEventEmitter,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Device from "expo-device";
@@ -27,6 +28,7 @@ import axiosInstance from "../api/axios";
 import GlobalTopMenu from "../components/GlobalTopMenu";
 import TradeCard from "../components/Trade/TradeCard";
 import { useFocusEffect } from "@react-navigation/native";
+import { useActivePlans } from "../hooks/useActivePlans";
 import {
   subscribeSymbols,
   unsubscribeDelayed,
@@ -41,7 +43,10 @@ const filterOptions = ["All", "Live", "Closed", "Target Hit", "Target Miss"];
 const TradeScreen = () => {
   const { prices } = useRealtimePrices();
   const route = useRoute();
-  const { role } = useAuth();
+  const { role, userData } = useAuth();
+  const currentRole = role || userData?.role || 1;
+  const { data: activePlansData } = useActivePlans();
+  const allowedScriptTypes = activePlansData?.allowedScriptTypes || [];
   const didSubscribeRef = useRef(false);
   const ALL_TYPE = { tradeTypeId: null, tradeTypeName: "All" };
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -175,7 +180,6 @@ const TradeScreen = () => {
         return;
       }
 
-      console.log(`🟢 SUBSCRIBE → ${page}::${context}`, symbols);
       subscribeSymbols(symbols, page, context);
 
       const appStateSub = AppState.addEventListener("change", (state) => {
@@ -458,7 +462,10 @@ const TradeScreen = () => {
                   exitTypeId={recommendation.exitTypeId}
                   exitPriceLow={recommendation.exitPriceLow}
                   recoPriceLow={recommendation.recoPriceLow}
-                  isLocked={Number(role) === 1}
+                  isLocked={
+                    Number(currentRole) === 1 &&
+                    !allowedScriptTypes.includes(Number(recommendation.scriptTypeId || selectedCategory?.scriptTypeId))
+                  }
                   isin={recommendation.isin}
                   tradeable={recommendation.tradeable}
                   exchange={recommendation.exchange}

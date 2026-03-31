@@ -234,6 +234,8 @@ const PortfolioScreen = () => {
         const fetchBrokers = async () => {
             try {
                 const userId = await AsyncStorage.getItem("userId");
+                 const deviceId =
+                        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
 
                 const response = await fetch(`${apiUrl}/api/portfolio/getAllBrokers`, {
                     method: "GET",

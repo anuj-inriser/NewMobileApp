@@ -161,13 +161,29 @@ const AccountScreen = () => {
       showSuccess("Success", "Broker disconnected successfully.");
       angelOneMeta.success = true;
       angelOneMeta.message = "AngelOne logout success";
+
+      const userId = await AsyncStorage.getItem("userId");
+      angelOneMeta.userid = userId || "";
+
+      // Delete portfolio records only after successful broker logout
+      if (angelOneMeta.userid) {
+        try {
+          await axiosInstance.delete("/portfolio", {
+            data: { user_id: angelOneMeta.userid },
+          });
+        } catch (deleteErr) {
+          console.log("Portfolio delete failed", deleteErr);
+        }
+      }
     } catch (e) {
       showError("Error", "Failed to disconnect broker.");
       angelOneMeta.message = "AngelOne logout failed";
     } finally {
       try {
-        const userId = await AsyncStorage.getItem("userId");
-        angelOneMeta.userid = userId || "";
+        if (!angelOneMeta.userid) {
+          const userId = await AsyncStorage.getItem("userId");
+          angelOneMeta.userid = userId || "";
+        }
 
         const deviceId =
           Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";

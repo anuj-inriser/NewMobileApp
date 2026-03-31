@@ -2,8 +2,33 @@ import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import { Audio } from "expo-av";
 import messaging from "@react-native-firebase/messaging";
+import { apiUrl } from "./apiUrl";
 
 let soundObject = null;
+
+const normalizeSoundUrl = (rawUrl) => {
+  if (!rawUrl || typeof rawUrl !== "string") return null;
+
+  const cleaned = rawUrl.trim().replace(/\\/g, "/");
+  if (!cleaned) return null;
+
+  if (/^https?:\/\//i.test(cleaned)) {
+    return encodeURI(cleaned);
+  }
+
+  const normalizedPath = cleaned.startsWith("/") ? cleaned : `/${cleaned}`;
+  return encodeURI(`${apiUrl}${normalizedPath}`);
+};
+
+const canPlayRemoteSound = async (resolvedUrl) => {
+  try {
+    const response = await fetch(resolvedUrl, { method: "HEAD" });
+    return response.ok;
+  } catch (error) {
+    console.log("Sound URL check failed:", resolvedUrl, error?.message || error);
+    return false;
+  }
+};
 
 // Notification handler
 Notifications.setNotificationHandler({
@@ -18,6 +43,14 @@ Notifications.setNotificationHandler({
 export async function playNotificationSound(soundUrl) {
   try {
     if (!soundUrl) return;
+    const resolvedUrl = normalizeSoundUrl(soundUrl);
+    if (!resolvedUrl) return;
+
+    const exists = await canPlayRemoteSound(resolvedUrl);
+    if (!exists) {
+      console.log("Sound file not found:", resolvedUrl);
+      return;
+    }
 
     if (soundObject) {
       await soundObject.unloadAsync();
@@ -33,7 +66,7 @@ export async function playNotificationSound(soundUrl) {
     });
 
     const { sound } = await Audio.Sound.createAsync(
-      { uri: soundUrl },
+      { uri: resolvedUrl },
       { shouldPlay: true }
     );
 

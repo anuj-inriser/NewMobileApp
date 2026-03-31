@@ -275,7 +275,7 @@ export default function TradeOrderScreen({
   const handleAngelOneNavigation = async (navState) => {
     const { url } = navState;
 
-   if (
+    if (
       url.includes("auth_token") &&
       url.includes("feed_token") &&
       !isProcessingAuth.current
@@ -305,7 +305,7 @@ export default function TradeOrderScreen({
         // Force refresh of page → triggers new token usage
         // setSwipeKey(Date.now());
         showSuccess("Success", "Angel One login successfully.");
-       angelOneMeta.success = true;
+        angelOneMeta.success = true;
         angelOneMeta.message = "AngelOne login success";
       } catch (e) {
         console.log("Token parse error:", e);
@@ -580,10 +580,17 @@ export default function TradeOrderScreen({
 
       const p = parseFloat(price?.trim() || "0");
 
+      let finalSymbol = activeSymbol;
+
+      // 👉 NSE case me "-EQ" add karo
+      if (selected === "NSE" && !activeSymbol.endsWith("-EQ")) {
+        finalSymbol = `${activeSymbol}-EQ`;
+      }
+
       const payload = {
         variety: "NORMAL",
         orderid: passedOrderId,
-        tradingsymbol: activeSymbol,
+        tradingsymbol: finalSymbol,
         symboltoken: activeToken,
         exchange: selected,
         ordertype: p === 0 ? "MARKET" : "LIMIT",
@@ -646,6 +653,12 @@ export default function TradeOrderScreen({
       const isRobo = (tg > 0 || sl > 0) && segment === "INTRADAY";
 
       let payload;
+      let finalSymbol = activeSymbol;
+
+      // 👉 NSE case me "-EQ" add karo
+      if (selected === "NSE" && !activeSymbol.endsWith("-EQ")) {
+        finalSymbol = `${activeSymbol}-EQ`;
+      }
 
       if (isRobo) {
         // ROBO mein squareoff aur stoploss = POINTS DIFFERENCE (actual price nahi)
@@ -672,7 +685,7 @@ export default function TradeOrderScreen({
 
         payload = {
           variety: "ROBO",
-          tradingsymbol: activeSymbol,
+          tradingsymbol: finalSymbol,
           symboltoken: activeToken,
           transactiontype: transactionType,
           exchange: selected,
@@ -690,7 +703,7 @@ export default function TradeOrderScreen({
         // NORMAL order
         payload = {
           variety: "NORMAL",
-          tradingsymbol: activeSymbol,
+          tradingsymbol: finalSymbol,
           symboltoken: activeToken,
           transactiontype: transactionType,
           exchange: selected,

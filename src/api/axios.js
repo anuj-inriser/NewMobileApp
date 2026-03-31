@@ -1,29 +1,3 @@
-
-// import axios from "axios";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
-// import { apiUrl } from '../utils/apiUrl';
-
-// const axiosInstance = axios.create({
-//     baseURL: `${apiUrl}/api`,
-//     timeout: 10000,
-// });
-
-// // Attach token if exists (optional but recommended)
-// axiosInstance.interceptors.request.use(async (config) => {
-//     try {
-//         const token = await AsyncStorage.getItem("token");
-//         if (token) {
-//             config.headers.Authorization = `Bearer ${token}`;
-//         }
-//     } catch (err) {
-//         console.log("Error retrieving token:", err);
-//     }
-//     return config;
-// });
-
-// export default axiosInstance;
-
-
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiUrl } from "../utils/apiUrl";

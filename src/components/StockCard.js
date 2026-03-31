@@ -111,7 +111,8 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
     const payload = {
       script_id: isNaN(stock.symbol) ? stock.symbol : (stock.token || stock.symbol),
       user_id: parseInt(userId, 10),
-      wishlist_id: parseInt(wishlist.id, 10)
+      wishlist_id: parseInt(wishlist.id, 10),
+      token: stock.token,
     };
 
     try {
@@ -771,7 +772,7 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
           onPress={() =>
             openStockInfoDrawer(stock.token, stock.symbol, "placeorder", stock.isin, {
               name: stock.name,
-              tradeable: item.tradeable,
+              tradeable: stock.tradeable,
               exchange: stock.exchange
             })
           }

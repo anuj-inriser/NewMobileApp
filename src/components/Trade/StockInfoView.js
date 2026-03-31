@@ -30,6 +30,7 @@ import { useAlert } from "../../context/AlertContext";
 import CancelIcon from "../../../assets/cancelicon.png";
 import watchlistIcon from "../../../assets/dropdownwatchlist.png";
 import rupeeIcon from "../../../assets/trademenu.png";
+import OrderDepthView from "./OrderDepthView";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const COLLAPSED_HEIGHT = 30;
@@ -40,6 +41,7 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
   const { prices } = useRealtimePrices();
   const { selectedSymbol, defaultTab, drawerMetadata, openStockInfoDrawer } = useDrawer();
   const [stockInfo, setStockInfo] = useState([])
+  const [staticDepth, setStaticDepth] = useState(null);
   const { showError } = useAlert();
   const { triggerRefresh } = useWatchlistRefresh();
 
@@ -182,6 +184,98 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
     fetchStockInfoData();
   }, [])
 
+  const normalizeDepthResponse = (payload) => {
+    if (!payload) return null;
+
+    // Already in expected shape
+    if (Array.isArray(payload.bestFiveData)) return payload;
+
+    const src = payload.data || payload.depth || payload;
+    if (!src) return null;
+
+    // If it already contains bestFiveData
+    if (Array.isArray(src.bestFiveData)) return src;
+
+    // Your API returns a flat array of rows with side = Buy/Sell
+    if (Array.isArray(src)) {
+      const rows = src;
+      const first = rows[0] || {};
+
+      const bestFiveData = rows.map((item) => ({
+        side: item.side,
+        price: item.price ?? 0,
+        qty: item.qty ?? 0,
+        orders: item.orders ?? null,
+      }));
+
+      return {
+        bestFiveData,
+        totalBuyQty:
+          first.total_buy_qty ?? first.totalBuyQty ?? first.totalBuy ?? null,
+        totalSellQty:
+          first.total_sell_qty ?? first.totalSellQty ?? first.totalSell ?? null,
+        token: first.token,
+      };
+    }
+
+    const buy = Array.isArray(src.Buy)
+      ? src.Buy
+      : Array.isArray(src.buy)
+        ? src.buy
+        : [];
+    const sell = Array.isArray(src.Sell)
+      ? src.Sell
+      : Array.isArray(src.sell)
+        ? src.sell
+        : [];
+
+    // Map possible fields from API into the expected structure
+    const mapSide = (arr, side) =>
+      arr.map((item) => ({
+        side,
+        price: item.price ?? 0,
+        qty: item.qty ?? 0,
+        orders: item.orders ?? item.noOfOrders ?? item.count ?? null,
+      }));
+
+    const bestFiveData = [
+      ...mapSide(buy, "Buy"),
+      ...mapSide(sell, "Sell"),
+    ];
+
+    return {
+      bestFiveData,
+      totalBuyQty:
+        src.totalBuyQty ?? src.total_buy_qty ?? src.totalBuy ?? null,
+      totalSellQty:
+        src.totalSellQty ?? src.total_sell_qty ?? src.totalSell ?? null,
+      token: src.token,
+      symbol: src.symbol,
+    };
+  };
+
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!tokenValue) return;
+      const res = await axiosInstance.get("/orderdepth", {
+        params: { token: tokenValue },
+      }).catch((err) => {
+        console.log("Order depth fetch error:", err?.message || err);
+        return null;
+      });
+
+      if (!active) return;
+      const normalized = normalizeDepthResponse(res?.data);
+      setStaticDepth(normalized);
+    };
+
+    run();
+    return () => {
+      active = false;
+    };
+  }, [tokenValue]);
+
   const loadUserId = async () => {
     try {
       const uid = await AsyncStorage.getItem("userId");
@@ -271,6 +365,7 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
       script_id: selectedItem.script_id,
       user_id: parseInt(userId, 10),
       wishlist_id: parseInt(wishlist.id, 10),
+      token: selectedItem.token,
     };
 
     try {
@@ -353,8 +448,6 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
     return mergeWithRealtime(stockInfo, prices);
   }, [stockInfo, prices]);
 
-
-  // Info Content Logic
   const stockData = displayPrices[tokenValue];
 
   const price = stockData?.price || 0;
@@ -396,7 +489,7 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
               </Text>
             </View>
           </View>
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={styles.headerBtn}
             onPress={() => {
               const next = !searchVisible;
@@ -409,7 +502,7 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
             }}
           >
             <Ionicons name="search" size={24} color={global.colors.textPrimary} />
-          </TouchableOpacity> */}
+          </TouchableOpacity>
         </View>
       )}
 
@@ -644,6 +737,17 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
               stoploss={drawerMetadata.stoploss}
               onClose={() => setActiveSubTab(subTabs[0])}
             /> */}
+          </View>
+        )}
+
+        {/* Order Depth Tab */}
+        {!isFullScreen && activeSubTab.tradeTypeId === 'orderdepth' && (
+          <View style={styles.orderDepthContainer}>
+            <OrderDepthView
+              token={tokenValue}
+              symbol={chartSymbol}
+              staticDepth={staticDepth}
+            />
           </View>
         )}
       </View>
@@ -949,6 +1053,10 @@ const styles = StyleSheet.create({
   drawerContent: { flex: 1, padding: 16 },
   closeBtn: { padding: 4 },
   orderFormContainer: {
+    flex: 1,
+    backgroundColor: global.colors.background,
+  },
+  orderDepthContainer: {
     flex: 1,
     backgroundColor: global.colors.background,
   },

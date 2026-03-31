@@ -291,9 +291,9 @@ export default function EquityScreen() {
       if (selectedCategory === "Sectors")
         await fetchSectors(selectedExchange)
       else if (selectedCategory === "Market Cap")
-        await fetchMarketCap()
+        await fetchMarketCap(selectedExchange)
       else if (selectedCategory === "Themes")
-        await fetchThemes()
+        await fetchThemes(selectedExchange)
       else if (selectedCategory === "Indices") {
         await indicesQuery.refetch()
       }
@@ -719,7 +719,7 @@ export default function EquityScreen() {
 
       const response = await axiosInstance.get(url);
 
-      return response.data.data;
+       return response?.data?.data ?? [];
 
     } catch (error) {
       console.error(

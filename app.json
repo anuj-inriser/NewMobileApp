@@ -25,7 +25,7 @@
 
     "android": {
       "package": "com.inrise.PortfolioApp",
-       "usesCleartextTraffic": true,
+      "usesCleartextTraffic": true,
       "googleServicesFile": "./google-services.json",
 
       "adaptiveIcon": {
@@ -62,7 +62,8 @@
         {
           "iCloudContainerEnvironment": "Production"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
 
     "extra": {

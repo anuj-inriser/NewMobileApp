@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import GlobalAlert from "../../components/GlobalAlert";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, DeviceEventEmitter } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { formatFullPublishedDateTime } from "../../utils/dateFormat";
 import { useRealtimePrices } from "../../hooks/useRealtimePrices";
@@ -239,16 +239,25 @@ const TradeCard = ({
   /* ---------------- UI ---------------- */
   return (
     <>
-      <View style={styles.card}>
-        {/* HEADER */}
-        <View style={styles.topRow}>
-          <View style={{ flex: 1, paddingRight: 8 }}>
-            <View style={styles.titleRow}>
-              <View style={styles.scriptWrapper}>
-                <Text style={styles.script}>
-                  {isLocked ? "••••••••••••" : script}
-                </Text>
-                {isLocked && (
+      <TouchableOpacity
+        activeOpacity={isLocked ? 0.8 : 1}
+        onPress={() => {
+          if (isLocked) {
+            DeviceEventEmitter.emit('SHOW_PREMIUM_MODAL');
+          }
+        }}
+        style={{ marginVertical: 8 }}
+      >
+        <View style={[styles.card, { marginVertical: 0 }, isLocked && { overflow: "hidden" }]} pointerEvents={isLocked ? "none" : "auto"}>
+          {/* HEADER */}
+          <View style={styles.topRow}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <View style={styles.titleRow}>
+                <View style={styles.scriptWrapper}>
+                  <Text style={styles.script}>
+                    {isLocked ? "••••••••••••" : script}
+                  </Text>
+                  {/* {isLocked && (
                   <View style={styles.scriptBlurOverlay}>
                     <View
                       style={[
@@ -261,114 +270,114 @@ const TradeCard = ({
                       <Icon name="lock-closed" size={14} color="#fff" />
                     </View>
                   </View>
-                )}
+                )} */}
+                </View>
+                <View style={styles.liveBadge}>
+                  <Text
+                    style={[styles.liveText, { color: STATUS_COLORS[status] }]}
+                  >
+                    {tradestatus}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.liveBadge}>
-                <Text
-                  style={[styles.liveText, { color: STATUS_COLORS[status] }]}
-                >
-                  {tradestatus}
+
+              <View style={[styles.profitBadge, { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%" }]}>
+                <Text style={[styles.profitText, { marginRight: 15 }]}>
+                  {chipName} :{" "}
+                  <Text style={{ color: getProfitColor() }}>
+                    ₹{Math.abs(profit.toFixed(2))}
+                  </Text>
+                </Text>
+                <Text style={styles.profitText}>
+                  Entry :{" "}
+                  <Text style={{ color: getProfitColor() }}>
+                    {formatJustDate(entryDate)}
+                  </Text>
                 </Text>
               </View>
             </View>
 
-            <View style={[styles.profitBadge, { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%" }]}>
-              <Text style={[styles.profitText, { marginRight: 15 }]}>
-                {chipName} :{" "}
-                <Text style={{ color: getProfitColor() }}>
-                  ₹{Math.abs(profit.toFixed(2))}
-                </Text>
-              </Text>
-              <Text style={styles.profitText}>
-                Entry :{" "}
-                <Text style={{ color: getProfitColor() }}>
-                  {formatJustDate(entryDate)}
-                </Text>
-              </Text>
+            <TouchableOpacity style={styles.actionButton}
+              onPress={() =>
+                openStockInfoDrawer(token, script_id, "placeorder", isin, {
+                  // price: ltp,
+                  target: target,
+                  stoploss: stopLoss,
+                  // quantity: 1, 
+                  name: script,
+                  tradeable: tradeable,
+                  exchange: exchange
+                })
+              }>
+              <View
+                style={[
+                  styles.buyButton,
+                  tradeRecommendation?.toLowerCase() === "sell" && {
+                    backgroundColor: global.colors.error,
+                  },
+                ]}
+              >
+                <Text style={styles.buyText}>{tradeRecommendation}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* VALUES */}
+          <View style={styles.valuesRow}>
+            <View>
+              <Text style={styles.label}>Entry</Text>
+              <Text style={styles.value}>{entry}</Text>
+            </View>
+            <View>
+              <Text style={styles.label}>Target</Text>
+              <Text style={styles.value}>{target}</Text>
+            </View>
+            <View>
+              <Text style={styles.label}>Stop Loss</Text>
+              <Text style={styles.value}>{stopLoss}</Text>
+            </View>
+            <View>
+              <Text style={styles.label}>Perspective</Text>
+              <Text style={styles.value}>{perspective}</Text>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.actionButton}
-            onPress={() =>
-              openStockInfoDrawer(token, script_id, "placeorder", isin, {
-                // price: ltp,
-                target: target,
-                stoploss: stopLoss,
-                // quantity: 1, 
-                name: script,
-                tradeable: tradeable,
-                exchange: exchange
-              })
-            }>
-            <View
-              style={[
-                styles.buyButton,
-                tradeRecommendation?.toLowerCase() === "sell" && {
-                  backgroundColor: global.colors.error,
-                },
+          {/* PRICE METER */}
+          <View
+            style={styles.meterWrapper}
+            onLayout={(e) => setMeterWidth(e.nativeEvent.layout.width)}
+          >
+            {/* PROGRESS BAR */}
+            <LinearGradient
+              colors={[
+                global.colors.error,
+                global.colors.warning,
+                global.colors.success,
               ]}
-            >
-              <Text style={styles.buyText}>{tradeRecommendation}</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.meterBar}
+            />
 
-        {/* VALUES */}
-        <View style={styles.valuesRow}>
-          <View>
-            <Text style={styles.label}>Entry</Text>
-            <Text style={styles.value}>{entry}</Text>
-          </View>
-          <View>
-            <Text style={styles.label}>Target</Text>
-            <Text style={styles.value}>{target}</Text>
-          </View>
-          <View>
-            <Text style={styles.label}>Stop Loss</Text>
-            <Text style={styles.value}>{stopLoss}</Text>
-          </View>
-          <View>
-            <Text style={styles.label}>Perspective</Text>
-            <Text style={styles.value}>{perspective}</Text>
-          </View>
-        </View>
+            {/* TOOLTIP — sibling of bar, pixel-clamped (matches HTML demo) */}
 
-        {/* PRICE METER */}
-        <View
-          style={styles.meterWrapper}
-          onLayout={(e) => setMeterWidth(e.nativeEvent.layout.width)}
-        >
-          {/* PROGRESS BAR */}
-          <LinearGradient
-            colors={[
-              global.colors.error,
-              global.colors.warning,
-              global.colors.success,
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.meterBar}
-          />
+            {/* TRIANGLE INDICATOR — separate, percent-based (matches HTML demo) */}
+            {/* <View style={[styles.indicator, { left: `${percent}%` }]} /> */}
 
-          {/* TOOLTIP — sibling of bar, pixel-clamped (matches HTML demo) */}
-
-          {/* TRIANGLE INDICATOR — separate, percent-based (matches HTML demo) */}
-          {/* <View style={[styles.indicator, { left: `${percent}%` }]} /> */}
-
-          {/* Stop Loss Marker */}
-          <View style={[styles.marker, { left: `${stopLossPercent}%` }]} />
-          {/* <Text style={[styles.markerLabel, { left: `${stopLossPercent}%` }]}>
+            {/* Stop Loss Marker */}
+            <View style={[styles.marker, { left: `${stopLossPercent}%` }]} />
+            {/* <Text style={[styles.markerLabel, { left: `${stopLossPercent}%` }]}>
             SL {stopLoss}
           </Text> */}
 
-          {/* Target Marker */}
-          <View style={[styles.marker, { left: `${targetPercent}%` }]} />
-          {/* <Text style={[styles.markerLabel, { left: `${targetPercent}%` }]}>
+            {/* Target Marker */}
+            <View style={[styles.marker, { left: `${targetPercent}%` }]} />
+            {/* <Text style={[styles.markerLabel, { left: `${targetPercent}%` }]}>
             Target {target}
           </Text> */}
 
-          {/* Tooltip */}
-          {/* <View
+            {/* Tooltip */}
+            {/* <View
             style={[styles.priceBubble, { left: tooltipLeft }]}
             onLayout={(e) => setBubbleWidth(e.nativeEvent.layout.width)}
           >
@@ -377,27 +386,27 @@ const TradeCard = ({
             <View style={styles.tooltipArrow} />
           </View> */}
 
-          <View
-            style={[styles.priceBubble, { left: tooltipLeft }]}
-            onLayout={(e) => setBubbleWidth(e.nativeEvent.layout.width)}
-          >
-            <Text style={styles.priceText}>
-              {`₹${typeof ltp === "number" ? ltp.toFixed(2) : ltp}`} (
-              {Math.abs(tradepercent)}%)
-            </Text>
-            <Text style={tradepercent > 0 ? styles.profit : styles.loss}>
-              {tradepercent > 0 ? "+" : ""}
-            </Text>
-            {/* Downward arrow */}
+            <View
+              style={[styles.priceBubble, { left: tooltipLeft }]}
+              onLayout={(e) => setBubbleWidth(e.nativeEvent.layout.width)}
+            >
+              <Text style={styles.priceText}>
+                {`₹${typeof ltp === "number" ? ltp.toFixed(2) : ltp}`} (
+                {Math.abs(tradepercent)}%)
+              </Text>
+              <Text style={tradepercent > 0 ? styles.profit : styles.loss}>
+                {tradepercent > 0 ? "+" : ""}
+              </Text>
+              {/* Downward arrow */}
 
-            <View style={styles.tooltipArrow} />
+              <View style={styles.tooltipArrow} />
+            </View>
           </View>
-        </View>
 
 
 
-        {/* DATES */}
-        {/* <View style={styles.datesRow}>
+          {/* DATES */}
+          {/* <View style={styles.datesRow}>
                     <Text style={styles.dateText}>
                         Entry: {formatDateWithSuffix(entryDate)}
 
@@ -409,14 +418,23 @@ const TradeCard = ({
                     )}
                 </View> */}
 
-        {/* DISCLAIMER */}
-        <TouchableOpacity
-          style={styles.disclaimerBtn}
-          onPress={() => setShowDisclaimer(true)}
-        >
-          <Text style={styles.disclaimerText}>More Details</Text>
-        </TouchableOpacity>
-        {/* <Text>
+          {/* DISCLAIMER */}
+          <TouchableOpacity
+            style={styles.disclaimerBtn}
+            onPress={() => setShowDisclaimer(true)}
+          >
+            <Text style={styles.disclaimerText}>More Details</Text>
+          </TouchableOpacity>
+          {isLocked && (
+            <View style={[StyleSheet.absoluteFillObject, styles.fullCardBlur]}>
+              <View style={styles.lockCircleLarge}>
+                <Icon name="lock-closed" size={28} color={global.colors.background || "#fff"} />
+              </View>
+              <Text style={styles.unlockText}>Unlock with Premium</Text>
+            </View>
+          )}
+
+          {/* <Text>
                     Potential P/L:{" "}
                     <Text
                         style={[
@@ -427,7 +445,7 @@ const TradeCard = ({
                     </Text>
 
                 </Text> */}
-        {/* 
+          {/* 
                 <Slider
                     style={{ width: "100%", height: 40 }}
                     minimumValue={elasticMin}
@@ -443,7 +461,8 @@ const TradeCard = ({
                     maximumTrackTintColor="#ccc"
                     thumbTintColor={global.colors.primary}
                 /> */}
-      </View>
+        </View>
+      </TouchableOpacity>
 
       {/* <PriceBar
         type={tradeRecommendation}
@@ -786,5 +805,31 @@ const styles = StyleSheet.create({
     color: "red",
     fontSize: 11,
     fontWeight: "700",
+  },
+  fullCardBlur: {
+    backgroundColor: "rgba(255,255,255,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 18,
+    zIndex: 10,
+  },
+  lockCircleLarge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  unlockText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#000",
   },
 });

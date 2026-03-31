@@ -13,6 +13,7 @@ import { useDrawer } from "../context/DrawerContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Device from "expo-device";
 import axiosInstance from "../api/axios";
+import SparklineChart from './Sparkline';
 
 
 const UNDO_TIMEOUT = 2000;
@@ -179,6 +180,7 @@ const WatchlistItemCard = ({
               </Text>
               <Text style={styles.symbol}>{item.name}</Text>
             </View>
+            <SparklineChart symbol={symbol} color={isUp ? global.colors.success : global.colors.error} />
             <View style={styles.verticalCardRight}>
               <Text
                 style={[styles.verticalPrice, { color: "#000" }]}

@@ -5,6 +5,10 @@ import "./src/theme/colors";
 import { apiUrl } from "./src/utils/apiUrl";
 import { AlertProvider } from "./src/context/AlertContext";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CouponProvider } from "./src/context/CouponContext";
+import CheckoutScreen from "./src/screens/checkout";
+import OffersScreen from "./src/screens/offers";
+import ModalScreen from "./src/screens/modal";
 // SDK 54 fix: Use legacy for downloadAsync compatibility
 import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system/legacy";
@@ -210,7 +214,23 @@ function AppNavigator() {
         <AppStack.Screen name="LearningDetail" component={LearningDetail} />
         <AppStack.Screen name="ChapterScreen" component={ChapterScreen} />
         <AppStack.Screen name="ChapterDetails" component={ChapterDetails} />
-
+<AppStack.Screen
+          name="Checkout"
+          component={CheckoutScreen}
+          options={{
+            presentation: 'transparentModal',
+            animation: 'slide_from_bottom'
+          }}
+        />
+        <AppStack.Screen
+          name="Offers"
+          component={OffersScreen}
+          options={{
+            presentation: 'transparentModal',
+            animation: 'slide_from_bottom'
+          }}
+        />
+        <AppStack.Screen name="ModalPlan" component={ModalScreen} />
 
       </AppStack.Navigator>
     </MainLayout>
@@ -320,7 +340,6 @@ export default function App() {
           const notificationId = data?.notificationId; // ✅ push_notifications.id here
 
           if (!notificationId) {
-            console.log("⚠️ notificationId missing");
             return;
           }
 
@@ -331,7 +350,6 @@ export default function App() {
             body: JSON.stringify({ notificationId }),
           });
 
-          console.log("✅ opened_at updated for:", notificationId);
         } catch (error) {
           console.log("❌ Error marking notification opened:", error);
         }
@@ -456,31 +474,32 @@ export default function App() {
             <DrawerProvider>
               <WatchlistProvider>
                 <AlertProvider>
-                  <NavigationContainer
-                    ref={navigationRef}
-                    onReady={() => {
-                      const state = navigationRef.getRootState();
-                      routeNameRef.current = getActiveRouteName(state);
-                    }}
-                    onStateChange={() => {
-                      if (!navigationRef.isReady()) return;
-                      const route = navigationRef.getRootState();
-                      const currentRoute = getActiveRouteName(route);
-                      console.log("currentroute", currentRoute)
+                  <CouponProvider>
+                    <NavigationContainer
+                      ref={navigationRef}
+                      onReady={() => {
+                        const state = navigationRef.getRootState();
+                        routeNameRef.current = getActiveRouteName(state);
+                      }}
+                      onStateChange={() => {
+                        if (!navigationRef.isReady()) return;
+                        const route = navigationRef.getRootState();
+                        const currentRoute = getActiveRouteName(route);
 
-                      if (!currentRoute) return;
-                      if (routeNameRef.current !== currentRoute) {
-                        routeNameRef.current = currentRoute;
+                        if (!currentRoute) return;
+                        if (routeNameRef.current !== currentRoute) {
+                          routeNameRef.current = currentRoute;
 
-                        if (SCREEN_EVENT_MAP[currentRoute]) {
-                          logScreenVisit(SCREEN_EVENT_MAP[currentRoute]);
+                          if (SCREEN_EVENT_MAP[currentRoute]) {
+                            logScreenVisit(SCREEN_EVENT_MAP[currentRoute]);
+                          }
                         }
-                      }
-                    }}
-                  >
-                    <InternetListener />
-                    <RootNavigator />
-                  </NavigationContainer>
+                      }}
+                    >
+                      <InternetListener />
+                      <RootNavigator />
+                    </NavigationContainer>
+                  </CouponProvider>
                 </AlertProvider>
               </WatchlistProvider>
             </DrawerProvider>
