@@ -143,13 +143,13 @@ const NewsScreen = () => {
                                     <NewsCardLarge
                                         key={item.news_id}
                                         item={item}
-                                        onPress={() => navigation.navigate('NewsReadingScreen', { item })}
+                                        onPress={() => navigation.navigate('NewsReadingScreen', { item, newsList: filteredNews, currentIndex: index })}
                                     />
                                 ) : (
                                     <NewsCardSmall
                                         key={item.news_id}
                                         item={item}
-                                        onPress={() => navigation.navigate('NewsReadingScreen', { item })}
+                                        onPress={() => navigation.navigate('NewsReadingScreen', { item, newsList: filteredNews, currentIndex: index })}
                                     />
                                 )
                             ))

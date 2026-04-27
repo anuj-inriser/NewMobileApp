@@ -1,6 +1,12 @@
 import React, { useCallback, useState } from "react";
 import GlobalAlert from "../../components/GlobalAlert";
-import { View, Text, StyleSheet, TouchableOpacity, DeviceEventEmitter } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  DeviceEventEmitter,
+} from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { formatFullPublishedDateTime } from "../../utils/dateFormat";
 import { useRealtimePrices } from "../../hooks/useRealtimePrices";
@@ -12,7 +18,7 @@ import {
 } from "../../ws/marketSubscriptions";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useDrawer } from "../../context/DrawerContext";
-// import PriceBar from "./PriceBar";
+import PriceBar from "./PriceBar";
 
 const STATUS_COLORS = {
   Live: global.colors.error,
@@ -22,6 +28,7 @@ const STATUS_COLORS = {
 };
 
 const TradeCard = ({
+  Tradeid,
   script,
   script_id,
   status,
@@ -42,7 +49,7 @@ const TradeCard = ({
   isLocked,
   isin,
   tradeable,
-  exchange
+  exchange,
 }) => {
 
 
@@ -56,8 +63,13 @@ const TradeCard = ({
   const [bubbleWidth, setBubbleWidth] = useState(0);
 
   const symbolKey = script?.toUpperCase().trim();
+  const isActionDisabled = Boolean(isLocked);
 
-  const rt = prices[token];
+  const priceKey =
+    token != null && String(token).trim() !== ""
+      ? String(token)
+      : symbolKey || script_id || null;
+  const rt = priceKey ? prices[priceKey] : null;
   let ltp;
   if (status === "Live") {
     ltp = rt?.price ?? fixedltp;
@@ -78,24 +90,49 @@ const TradeCard = ({
   const currentPrice = typeof ltp === "number" ? ltp : base;
 
   let chipName = "Profit Potential";
-  let chipAmount = null;
-  let chipPercent = potential_profits;
+  let potential_profits_Percentage = ((potential_profits / entryPrice) * 100);
 
-  let tradestatus = "Live";
+  let tradestatus = status;
   let profit = 0;
 
+  let actual_profit = 0;
+  let actual_profit_percentage = 0;
+
   // Trigger logic
-  if (tradeRecommendation.toLowerCase() === "buy") {
-    if (ltp >= target) tradestatus = "Target Hit";
-    if (ltp <= Number(stopLoss)) tradestatus = "Stop Loss Hit";
-    profit = ltp - entry;
+  // if (tradeRecommendation.toLowerCase() === "buy") {
+  //   if (ltp >= target) tradestatus = "Target Hit";
+  //   if (ltp <= Number(stopLoss)) tradestatus = "Stop Loss Hit";
+  //   profit = target - entry;
+  // } else {
+  //   if (ltp <= target) tradestatus = "Target Hit";
+  //   if (ltp >= Number(stopLoss)) tradestatus = "Stop Loss Hit";
+  //   profit = entry - target;
+  // }
+
+  // Actual Profit logic - direction-aware and status-aware
+  const isBuy = tradeRecommendation.toLowerCase() === "buy";
+  const isLive = status === "Live";
+
+  if (isLive) {
+    actual_profit = isBuy ? ltp - entry : entry - ltp;
+    actual_profit_percentage = isBuy
+      ? ((ltp - entry) / entry) * 100
+      : ((entry - ltp) / entry) * 100;
   } else {
-    if (ltp <= target) tradestatus = "Target Hit";
-    if (ltp >= Number(stopLoss)) tradestatus = "Stop Loss Hit";
-    profit = entry - ltp;
+    // For non-Live trades, use exitPrice and ensure it's direction-aware
+    actual_profit = isBuy ? exitPrice - entry : entry - exitPrice;
+    actual_profit_percentage = isBuy
+      ? ((exitPrice - entry) / entry) * 100
+      : ((entry - exitPrice) / entry) * 100;
   }
 
-  let tradepercent = ((profit / entry) * 100).toFixed(2);
+  function tradepercent(ltp, entry) {
+    if (isBuy) {
+      return (((ltp - entry) / entry) * 100).toFixed(2);
+    } else {
+      return (((entry - ltp) / entry) * 100).toFixed(2);
+    }
+  }
 
   let meterPercent = 0;
 
@@ -109,13 +146,11 @@ const TradeCard = ({
   /* ---------------- PROFIT DISPLAY FORMAT ---------------- */
 
   const getProfitColor = () => {
-    const value = tradepercent;
-
-    if (value === undefined || value === null) {
+    if (actual_profit_percentage === undefined || actual_profit_percentage === null) {
       return global.colors.textSecondary;
     }
 
-    return Number(value) < 0
+    return actual_profit_percentage < 0
       ? global.colors.error // red
       : global.colors.success; // green
   };
@@ -181,6 +216,7 @@ const TradeCard = ({
     return `${day}${getSuffix(day)} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
   };
 
+ 
   const formatJustDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -228,90 +264,137 @@ const TradeCard = ({
   const tooltipLeft =
     meterWidth > 0 && bubbleWidth > 0
       ? Math.max(
-        MARGIN,
-        Math.min(
-          (percent / 100) * meterWidth - bubbleWidth / 2,
-          meterWidth - bubbleWidth - MARGIN,
-        ),
-      )
+          MARGIN,
+          Math.min(
+            (percent / 100) * meterWidth - bubbleWidth / 2,
+            meterWidth - bubbleWidth - MARGIN,
+          ),
+        )
       : 0;
+
 
   /* ---------------- UI ---------------- */
   return (
     <>
-      <TouchableOpacity
-        activeOpacity={isLocked ? 0.8 : 1}
-        onPress={() => {
-          if (isLocked) {
-            DeviceEventEmitter.emit('SHOW_PREMIUM_MODAL');
-          }
-        }}
-        style={{ marginVertical: 8 }}
-      >
-        <View style={[styles.card, { marginVertical: 0 }, isLocked && { overflow: "hidden" }]} pointerEvents={isLocked ? "none" : "auto"}>
+      <TouchableOpacity activeOpacity={1} style={{ marginVertical: 8 }}>
+        <View style={[styles.card, { marginVertical: 0 }]}>
           {/* HEADER */}
           <View style={styles.topRow}>
             <View style={{ flex: 1, paddingRight: 8 }}>
               <View style={styles.titleRow}>
                 <View style={styles.scriptWrapper}>
-                  <Text style={styles.script}>
-                    {isLocked ? "••••••••••••" : script}
-                  </Text>
-                  {/* {isLocked && (
-                  <View style={styles.scriptBlurOverlay}>
-                    <View
-                      style={[
-                        StyleSheet.absoluteFillObject,
-                        { backgroundColor: "rgba(255,255,255,0.9)" },
-                      ]}
-                    />
-
-                    <View style={styles.lockCircleSmall}>
-                      <Icon name="lock-closed" size={14} color="#fff" />
-                    </View>
-                  </View>
-                )} */}
+                  <TouchableOpacity
+                    disabled={!isLocked}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      if (isLocked) {
+                        DeviceEventEmitter.emit("SHOW_PREMIUM_MODAL");
+                      }
+                    }}
+                    style={styles.lockedScriptTrigger}
+                  >
+                    <Text
+                      style={[styles.script, isLocked && styles.lockedScript]}
+                    >
+                      {isLocked ? "***🔒***" : script_id}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.liveBadge}>
                   <Text
                     style={[styles.liveText, { color: STATUS_COLORS[status] }]}
                   >
-                    {tradestatus}
+                    {status}
                   </Text>
                 </View>
               </View>
 
-              <View style={[styles.profitBadge, { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%" }]}>
-                <Text style={[styles.profitText, { marginRight: 15 }]}>
+              <View
+                style={[
+                  styles.profitBadge,
+                  {
+                    width: "100%",
+                    justifyContent: "space-between",
+                    flexDirection: "row",
+                  },
+                ]}
+              >
+                <Text style={[styles.profitText]}>
                   {chipName} :{" "}
+                  <Text style={{ color: global.colors.success }}>
+                    ₹{Math.abs(potential_profits)} 
+                </Text>
+                <Text style={{ color: global.colors.success }}>
+                  {" "}({"+"}{potential_profits_Percentage.toFixed(2)}%)
+                </Text>
+                </Text>
+                { (status === "Live") ? 
+                <Text style={[styles.profitText1]}>
+                  {"Live Profit"} :{" "}
                   <Text style={{ color: getProfitColor() }}>
-                    ₹{Math.abs(profit.toFixed(2))}
+                    ₹{Math.abs(actual_profit.toFixed(2))}
+                  </Text>{" "}
+                  <Text style={{ color: getProfitColor() }}>
+                    ({actual_profit_percentage >= 0 ? "+" : ""}{actual_profit_percentage.toFixed(2)}%)
+                  </Text>
+                </Text> :
+                 <Text style={[styles.profitText1]}>
+                  {"Actual Profit"} :{" "}
+                  <Text style={{ color: getProfitColor() }}>
+                    ₹{Math.abs(actual_profit.toFixed(2))}
+                  </Text>{" "}
+                  <Text style={{ color: getProfitColor() }}>
+                    ({actual_profit_percentage >= 0 ? "+" : ""}{actual_profit_percentage.toFixed(2)}%)
                   </Text>
                 </Text>
-                <Text style={styles.profitText}>
-                  Entry :{" "}
-                  <Text style={{ color: getProfitColor() }}>
-                    {formatJustDate(entryDate)}
-                  </Text>
+                }
+              </View>
+              <View
+                style={[
+                  styles.profitBadge,
+                  {
+                    width: "100%",
+                    justifyContent: "space-between",
+                    flexDirection: "row",
+                    alignItems: "center",
+                  },
+                ]}
+              >
+                <Text style={[styles.profitText]}>
+                  {"Entry"} : <Text>{formatJustDate(entryDate)}</Text>
                 </Text>
+                {tradestatus !== "Live" ? (
+                  <Text style={[styles.profitText1]}>
+                    Exited : <Text>{formatJustDate(exitDate)}</Text>
+                  </Text>
+                ) : null}
               </View>
             </View>
 
-            <TouchableOpacity style={styles.actionButton}
-              onPress={() =>
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                isActionDisabled && styles.actionButtonDisabled,
+              ]}
+              disabled={isActionDisabled}
+              activeOpacity={isActionDisabled ? 1 : 0.8}
+              onPress={() => {
+                if (isActionDisabled) return;
                 openStockInfoDrawer(token, script_id, "placeorder", isin, {
                   // price: ltp,
                   target: target,
                   stoploss: stopLoss,
-                  // quantity: 1, 
+                  // quantity: 1,
                   name: script,
                   tradeable: tradeable,
-                  exchange: exchange
-                })
-              }>
+                  exchange: exchange,
+                });
+              }}
+            >
               <View
                 style={[
                   styles.buyButton,
+                  isActionDisabled && styles.buyButtonDisabled,
                   tradeRecommendation?.toLowerCase() === "sell" && {
                     backgroundColor: global.colors.error,
                   },
@@ -325,11 +408,11 @@ const TradeCard = ({
           {/* VALUES */}
           <View style={styles.valuesRow}>
             <View>
-              <Text style={styles.label}>Entry</Text>
+              <Text style={styles.label}>Entry Price</Text>
               <Text style={styles.value}>{entry}</Text>
             </View>
             <View>
-              <Text style={styles.label}>Target</Text>
+              <Text style={styles.label}>Target Price</Text>
               <Text style={styles.value}>{target}</Text>
             </View>
             <View>
@@ -343,67 +426,15 @@ const TradeCard = ({
           </View>
 
           {/* PRICE METER */}
-          <View
-            style={styles.meterWrapper}
-            onLayout={(e) => setMeterWidth(e.nativeEvent.layout.width)}
-          >
-            {/* PROGRESS BAR */}
-            <LinearGradient
-              colors={[
-                global.colors.error,
-                global.colors.warning,
-                global.colors.success,
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.meterBar}
-            />
-
-            {/* TOOLTIP — sibling of bar, pixel-clamped (matches HTML demo) */}
-
-            {/* TRIANGLE INDICATOR — separate, percent-based (matches HTML demo) */}
-            {/* <View style={[styles.indicator, { left: `${percent}%` }]} /> */}
-
-            {/* Stop Loss Marker */}
-            <View style={[styles.marker, { left: `${stopLossPercent}%` }]} />
-            {/* <Text style={[styles.markerLabel, { left: `${stopLossPercent}%` }]}>
-            SL {stopLoss}
-          </Text> */}
-
-            {/* Target Marker */}
-            <View style={[styles.marker, { left: `${targetPercent}%` }]} />
-            {/* <Text style={[styles.markerLabel, { left: `${targetPercent}%` }]}>
-            Target {target}
-          </Text> */}
-
-            {/* Tooltip */}
-            {/* <View
-            style={[styles.priceBubble, { left: tooltipLeft }]}
-            onLayout={(e) => setBubbleWidth(e.nativeEvent.layout.width)}
-          >
-            <Text style={styles.tooltipText}>₹{currentPrice.toFixed(2)}</Text>
-
-            <View style={styles.tooltipArrow} />
-          </View> */}
-
-            <View
-              style={[styles.priceBubble, { left: tooltipLeft }]}
-              onLayout={(e) => setBubbleWidth(e.nativeEvent.layout.width)}
-            >
-              <Text style={styles.priceText}>
-                {`₹${typeof ltp === "number" ? ltp.toFixed(2) : ltp}`} (
-                {Math.abs(tradepercent)}%)
-              </Text>
-              <Text style={tradepercent > 0 ? styles.profit : styles.loss}>
-                {tradepercent > 0 ? "+" : ""}
-              </Text>
-              {/* Downward arrow */}
-
-              <View style={styles.tooltipArrow} />
-            </View>
-          </View>
-
-
+          <PriceBar
+            type={tradeRecommendation}
+            stopLoss={stopLoss}
+            entry={entry}
+            target={target}
+            ltp={ltp}
+            status={tradestatus}
+            exitprice={exitPrice}
+          />
 
           {/* DATES */}
           {/* <View style={styles.datesRow}>
@@ -419,20 +450,20 @@ const TradeCard = ({
                 </View> */}
 
           {/* DISCLAIMER */}
+          <View style={styles.disclaimerview}>
           <TouchableOpacity
+            style={styles.disclaimerBtn}
+          >
+            
+             <Text style={styles.disclaimerText}>TID: {Tradeid}</Text>
+          </TouchableOpacity>
+         <TouchableOpacity
             style={styles.disclaimerBtn}
             onPress={() => setShowDisclaimer(true)}
           >
-            <Text style={styles.disclaimerText}>More Details</Text>
+             <Text style={styles.disclaimerText}>More Details</Text>
           </TouchableOpacity>
-          {isLocked && (
-            <View style={[StyleSheet.absoluteFillObject, styles.fullCardBlur]}>
-              <View style={styles.lockCircleLarge}>
-                <Icon name="lock-closed" size={28} color={global.colors.background || "#fff"} />
-              </View>
-              <Text style={styles.unlockText}>Unlock with Premium</Text>
-            </View>
-          )}
+          </View>
 
           {/* <Text>
                     Potential P/L:{" "}
@@ -464,13 +495,6 @@ const TradeCard = ({
         </View>
       </TouchableOpacity>
 
-      {/* <PriceBar
-        type={tradeRecommendation}
-        stopLoss={stopLoss}
-        entry={entry}
-        target={target}
-        ltp={ltp}
-      /> */}
       <GlobalAlert
         visible={showDisclaimer}
         type="error"
@@ -516,6 +540,12 @@ const styles = StyleSheet.create({
     color: global.colors.secondary,
     marginRight: 8,
   },
+  lockedScriptTrigger: {
+    alignSelf: "flex-start",
+  },
+  lockedScript: {
+    letterSpacing: 1,
+  },
 
   liveBadge: {
     backgroundColor: global.colors.surface,
@@ -532,17 +562,33 @@ const styles = StyleSheet.create({
   profitBadge: {
     marginTop: 6,
     // backgroundColor: global.colors.surface,
-    alignSelf: "flex-start",
+    alignSelf: "stretch",
     justifyContent: "space-between",
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
     paddingVertical: 4,
     borderRadius: 12,
   },
 
   profitText: {
     color: global.colors.secondary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
+    overflow:'hidden'
+  },
+    profitText1: {
+    color: global.colors.secondary,
+    fontSize: 11,
+    fontWeight: "700",
+    overflow:'hidden',
+    textAlign:'right'
+  },
+
+  actionButton: {
+    alignSelf: "flex-start",
+  },
+
+  actionButtonDisabled: {
+    opacity: 0.55,
   },
 
   buyButton: {
@@ -550,6 +596,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 16,
+  },
+
+  buyButtonDisabled: {
+    backgroundColor: global.colors.textSecondary,
   },
 
   buyText: {
@@ -703,8 +753,14 @@ const styles = StyleSheet.create({
 
   /* ---------- DISCLAIMER ---------- */
 
+
+  disclaimerview:{
+    flexDirection:"row",
+    flex:1,
+    justifyContent:"space-between"
+  },
+
   disclaimerBtn: {
-    alignSelf: "flex-end",
     marginTop: 15,
     backgroundColor: global.colors.secondary,
     paddingHorizontal: 10,
@@ -805,31 +861,5 @@ const styles = StyleSheet.create({
     color: "red",
     fontSize: 11,
     fontWeight: "700",
-  },
-  fullCardBlur: {
-    backgroundColor: "rgba(255,255,255,0.85)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 18,
-    zIndex: 10,
-  },
-  lockCircleLarge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  },
-  unlockText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#000",
   },
 });

@@ -177,6 +177,14 @@ const ScannerTab = ({ onScannerSelect, onWatchlistSelect  }) => {
                   <Text style={styles.detailsDescription}>
                     {selectedScanner.sequence_description || selectedScanner.description}
                   </Text>
+                  {selectedScanner.trigger_time && (
+                    <View style={{ marginTop: 15, flexDirection: 'row', alignItems: 'center' }}>
+                      <Ionicons name="time-outline" size={18} color={global.colors.textSecondary} />
+                      <Text style={[styles.detailsDescription, { marginLeft: 8, fontWeight: '600' }]}>
+                        Trigger Time: {selectedScanner.trigger_time}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </>
             )}

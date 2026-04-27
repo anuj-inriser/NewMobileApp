@@ -40,13 +40,6 @@ const SparklineChart = ({ symbol, color = '#00c853', width = 100, height = 40 })
   return (
     <View style={[styles.container, { width, height }]}>
       <Svg width={width} height={height}>
-        <Defs>
-          <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={color} stopOpacity="0.3" />
-            <Stop offset="1" stopColor={color} stopOpacity="0" />
-          </LinearGradient>
-        </Defs>
-        <Path d={fillD} fill="url(#gradient)" />
         <Path d={d} fill="none" stroke={color} strokeWidth="2" />
       </Svg>
     </View>

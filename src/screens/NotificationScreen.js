@@ -10,13 +10,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useNotifications } from "../context/NotificationContext";
 import axiosInstance from "../api/axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const UNDO_TIMEOUT = 2000;
 
 const NotificationScreen = ({ isInsideSlider, closeSlider }) => {
-    const [notifications, setNotifications] = useState([]);
+    const { notifications, fetchNotifications, markAllAsRead, deleteNotificationLocally } = useNotifications();
     const swipeableRefs = useRef({});
     const undoTimerRef = useRef(null);
     const [undoItem, setUndoItem] = useState(null);
@@ -24,14 +25,10 @@ const NotificationScreen = ({ isInsideSlider, closeSlider }) => {
     const [listData, setListData] = useState([]);
 
     useEffect(() => {
-        fetchNotifications();
-
-        const interval = setInterval(() => {
-            fetchNotifications();
-        }, 1000); // fetch every 1s (you can increase this if needed)
-
-        return () => clearInterval(interval);
+        // Mark as read when screen opens
+        markAllAsRead();
     }, []);
+
     useEffect(() => {
         setListData(
             notifications.filter(
@@ -39,17 +36,7 @@ const NotificationScreen = ({ isInsideSlider, closeSlider }) => {
             )
         );
     }, [notifications]);
-    const fetchNotifications = async () => {
-        try {
-            const userId = await AsyncStorage.getItem("userId"); // get user id from storage
-            const response = await axiosInstance.get(
-                `/notification/getNotificationUserWise?userId=${userId}`
-            );
-            setNotifications(response?.data?.data ?? []);
-        } catch (error) {
-            console.log("Error fetching notifications:", error);
-        }
-    };
+
     const EmptyNotifications = () => {
         return (
             <View style={styles.emptyContainer}>
@@ -124,9 +111,7 @@ const NotificationScreen = ({ isInsideSlider, closeSlider }) => {
                 await axiosInstance.delete(`/notification/delete/${item.id}`);
 
                 // Remove permanently from source data
-                setNotifications((prev) =>
-                    prev.filter((n) => n.id !== item.id)
-                );
+                deleteNotificationLocally(item.id);
 
                 // Cleanup
                 pendingDeleteIds.current.delete(item.id);

@@ -56,10 +56,11 @@ const IndexVerticalCard = ({ index, onPress }) => {
         <Text style={styles.indexName}>{index.symbol}</Text>
         <View style={styles.symbolTimeRow}>
           <Text style={styles.indexSymbol}>{index.name}</Text>
-          {/* <Text style={[styles.indexTime, { color: global.colors.textSecondary }]}>{timeStr}</Text> */}
         </View>
       </View>
-      <SparklineChart symbol={index.symbol} color={color} />
+      <View style={styles.chartContainer}>
+        <SparklineChart symbol={index.symbol} color={color} />
+      </View>
       <View style={styles.priceContainer}>
         <Text style={styles.price}>
           ₹{Number(index.value || 0).toLocaleString("en-IN", {
@@ -82,6 +83,7 @@ const Indices = ({
   onIndexPress,
   refreshing,
   onRefresh,
+  viewMode = "vertical",
 }) => {
   const { prices: realtimePrices } = useRealtimePrices();
 
@@ -213,7 +215,7 @@ const Indices = ({
   //   );
   // }
 
-  // ✅ ONLY VERTICAL LIST — NO HORIZONTAL, NO GRID
+  // ✅ VERTICAL OR HORIZONTAL LIST
   return (
     <>
       <FlatList
@@ -223,7 +225,6 @@ const Indices = ({
           <IndexVerticalCard
             index={item}
             onPress={onIndexPress}
-          // onSwipeRight={onSwipeToChart}
           />
         )}
         style={styles.container}
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   simpleIndexItem: {
-    flexDirection: "row",
+   flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: global.colors.background,
@@ -272,6 +273,11 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     flex: 1,
+  },
+  chartContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   indexName: {
     fontSize: 14,
@@ -300,23 +306,6 @@ const styles = StyleSheet.create({
     color: global.colors.textPrimary,
   },
   change: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-
-  // Swipe Actions
-  rightAction: {
-    backgroundColor: global.colors.secondary,
-    justifyContent: "center",
-    alignItems: "flex-end",
-    paddingHorizontal: 24,
-    borderTopRightRadius: 20,
-    borderBottomRightRadius: 20,
-    marginBottom: 10,
-  },
-  actionText: {
-    color: global.colors.background,
     fontSize: 12,
     fontWeight: "600",
     marginTop: 4,
@@ -370,14 +359,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: global.colors.textSecondary,
   },
-  actionWrapper: {
-    justifyContent: "center",
-    alignItems: "center",
-    width: 80,
-    marginVertical: 6,
-    borderRadius: 14,
-    backgroundColor: global.colors.primary,
-  },
+
+  // Swipe Actions
 });
 
 export default Indices;

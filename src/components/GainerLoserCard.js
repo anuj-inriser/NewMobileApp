@@ -1,13 +1,15 @@
 import React from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { useIntervalData } from '../hooks/useIntervalData';
+import { useDrawer } from '../context/DrawerContext';
 
 const { width } = Dimensions.get('window');
 
-const GainerLoserCard = ({ symbol, name, price, change, percentChange }) => {
+const GainerLoserCard = ({ symbol, name, price, change, percentChange, token, isin, exchange }) => {
     // Always fetch 1D data for Gainers/Losers
     const { data, loading } = useIntervalData(symbol, '1d');
+    const { openStockInfoDrawer } = useDrawer();
 
     const currentPrice = price ?? data?.ltp ?? 0;
     const priceChange = change ?? data?.priceChange ?? 0;
@@ -41,7 +43,16 @@ const GainerLoserCard = ({ symbol, name, price, change, percentChange }) => {
     }
 
     return (
-        <View style={styles.card}>
+        <TouchableOpacity 
+            style={styles.card}
+            activeOpacity={0.7}
+            onPress={() => openStockInfoDrawer(token || symbol, symbol, "chart", isin, {
+                name: name || symbol,
+                price: currentPrice,
+                exchange: exchange || "NSE",
+                tradeable: true
+            })}
+        >
             {/* Left: Icon & Name */}
             <View style={styles.leftSection}>
                 <View style={styles.logoFallback}>
@@ -88,7 +99,7 @@ const GainerLoserCard = ({ symbol, name, price, change, percentChange }) => {
                     {isPositive ? '+' : ''}₹{Math.abs(priceChange).toFixed(2)} ({Math.abs(percentageChange).toFixed(2)}%)
                 </Text>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 };
 

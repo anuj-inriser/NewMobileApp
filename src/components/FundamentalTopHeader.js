@@ -24,6 +24,7 @@ import { apiUrl } from "../utils/apiUrl";
 import { useAuth } from "../context/AuthContext";
 import { useWatchlistRefresh } from "../context/WatchlistContext";
 import { useDrawer } from "../context/DrawerContext";
+import { useNotifications } from "../context/NotificationContext";
 import rupeeIcon from "../../assets/trademenu.png";
 import watchlistIcon from "../../assets/dropdownwatchlist.png";
 import { useFocusEffect } from "@react-navigation/native";
@@ -36,6 +37,7 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const { showSuccess, showError } = useAlert();
   const insets = useSafeAreaInsets();
   const { openProfileDrawer, openNotificationDrawer } = useDrawer();
+  const { unreadCount } = useNotifications();
   const { authToken, clientId, clearAuth, profileImage } = useAuth();
   const { triggerRefresh } = useWatchlistRefresh();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -385,9 +387,13 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
                   {/* LEFT: Script Name */}
 
                   <Text
-                    // onPress={() => openStockInfoDrawer(item.script_id, null, {
-                    //   name: item.script_name
-                    // })}
+                    onPress={() => {
+                      openStockInfoDrawer(item.token, item.script_id, "chart", item.isin, {
+                        name: item.script_name,
+                        tradeable: item.tradeable,
+                        exchange: item.exchange,
+                      });
+                    }}
                     style={styles.dropdownText}
                     numberOfLines={1}
                   >
@@ -449,7 +455,13 @@ const FundamentalTopHeader = ({ onWatchlistAdded, showBackButton }) => {
             size={20}
             color={global.colors.background}
           />
-          {/* <View style={styles.badge} /> */}
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         {/* Menu Button */}
@@ -628,12 +640,23 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: "absolute",
-    top: 6,
-    right: 8,
-    width: 8,
-    height: 8,
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
     backgroundColor: global.colors.error,
-    borderRadius: 4,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+    borderWidth: 1,
+    borderColor: global.colors.background,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "bold",
+    textAlign: "center",
   },
   modalOverlay: {
     flex: 1,

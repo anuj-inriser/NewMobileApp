@@ -61,12 +61,11 @@ const StockInfoView = ({ token, symbol, isin, hideOverview = false, isInsideSlid
 
   // Tabs State
   const subTabs = [
-    { tradeTypeId: 'overview', tradeTypeName: 'Overview' },
-    { tradeTypeId: 'futures', tradeTypeName: 'Futures' },
-    { tradeTypeId: 'options', tradeTypeName: 'Options Chain' },
-    { tradeTypeId: 'orderdepth', tradeTypeName: 'OrderDepth' },
-    { tradeTypeId: 'placeorder', tradeTypeName: 'Place Order' },
     { tradeTypeId: 'chart', tradeTypeName: 'Chart' },
+    { tradeTypeId: 'placeorder', tradeTypeName: 'Place Order' },
+    { tradeTypeId: 'futures', tradeTypeName: 'Stock News' },
+    { tradeTypeId: 'overview', tradeTypeName: 'Overview' },
+    { tradeTypeId: 'orderdepth', tradeTypeName: 'OrderDepth' },
   ].filter(tab => !(hideOverview && tab.tradeTypeId === 'overview'));
 
   const initialTab = subTabs.find(t => t.tradeTypeId === defaultTab) || subTabs[0];

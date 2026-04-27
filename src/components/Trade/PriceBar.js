@@ -1,70 +1,174 @@
 import React, { useState, useMemo } from "react";
 import { View, StyleSheet, Text } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 
-const PriceBar = ({ type = "BUY", stopLoss, entry, target, ltp }) => {
+const BUBBLE_W = 135;
+const DOT_SIZE = 10;
+
+const PriceBar = ({
+  type = "BUY",
+  stopLoss,
+  entry,
+  target,
+  ltp,
+  status,
+  exitprice,
+}) => {
   const [barWidth, setBarWidth] = useState(0);
 
-  const isBuy = type.toUpperCase() === "BUY";
+  const isBuy = type?.toUpperCase() === "BUY";
 
-  const { min, max, markers } = useMemo(() => {
+  // ================= RANGE =================
+  const { min, max, markers, gradientColors } = useMemo(() => {
     const sl = Number(stopLoss);
     const ent = Number(entry);
     const tgt = Number(target);
-    const cur = Number(ltp ?? ent);
 
-    // Range Logic: Use user's 0.8 / 1.4 logic but adapt for both directions
-    const barLow = isBuy ? sl * 0.95 : tgt * 0.95;
-    const barHigh = isBuy ? tgt * 1.05 : sl * 1.05;
+    const leftVal = Math.min(sl, tgt);
+    const rightVal = Math.max(sl, tgt);
 
-    const rangeMin = Math.min(barLow, sl, ent, tgt, cur);
-    const rangeMax = Math.max(barHigh, sl, ent, tgt, cur);
+    const spread = Math.abs(rightVal - leftVal) || 1;
+    const buffer = Math.max(spread * 0.02, 1);
 
     return {
-      min: rangeMin,
-      max: rangeMax,
+      min: leftVal - buffer,
+      max: rightVal + buffer,
+      gradientColors: [
+        global.colors.primary,
+        global.colors.primary,
+        global.colors.primary,
+      ],
       markers: [
         { label: "SL", value: sl, color: "#EF4444" },
-        { label: "Entry", value: ent, color: "#666" },
+        { label: "Entry", value: ent, color: "#FFBD3E" },
         { label: "Target", value: tgt, color: "#22C55E" },
-        { label: "LTP", value: cur, color: "#2962FF", isLTP: true },
       ],
     };
-  }, [type, stopLoss, entry, target, ltp]);
+  }, [stopLoss, entry, target]);
 
-  const getPosition = (price) => {
+  // ================= POSITION =================
+  const getPos = (price) => {
     if (!barWidth) return 0;
+
     const range = max - min;
-    if (range <= 0) return 0;
-    return ((price - min) / range) * barWidth;
+    if (range <= 0) return barWidth / 2;
+
+    const safe = Math.min(Math.max(price, min), max);
+    const normalized = (safe - min) / range;
+
+    return normalized * barWidth; // ✅ no rounding
   };
+
+  // ================= DISPLAY PRICE =================
+  const isClosed = status !== "Live";
+
+  const isTargetHit = isBuy
+    ? Number(ltp) >= Number(target)
+    : Number(ltp) <= Number(target);
+
+  const isStopLossHit = isBuy
+    ? Number(ltp) <= Number(stopLoss)
+    : Number(ltp) >= Number(stopLoss);
+
+  const displayPrice = isClosed
+    ? Number(exitprice ?? target ?? stopLoss)
+    : isTargetHit
+    ? Number(target)
+    : isStopLossHit
+    ? Number(stopLoss)
+    : Number(ltp ?? entry);
+
+  // ================= EXACT SNAP =================
+  let ltpRawPos;
+
+  if (Number(displayPrice) === Number(target)) {
+    ltpRawPos = getPos(target);
+  } else if (Number(displayPrice) === Number(stopLoss)) {
+    ltpRawPos = getPos(stopLoss);
+  } else {
+    ltpRawPos = getPos(displayPrice);
+  }
+
+  // ================= PROFIT COLOR =================
+  const entryVal = Number(entry);
+  const rawProfit = isBuy
+    ? displayPrice - entryVal
+    : entryVal - displayPrice;
+
+  const bubbleColor = rawProfit >= 0 ? "#009746" : "#D32F2F";
+
+  // ================= 🔥 DYNAMIC BUBBLE =================
+  let bubbleLeft = 0;
+  let arrowLeft = BUBBLE_W / 2;
+
+  if (ltpRawPos < BUBBLE_W / 2) {
+    // LEFT EDGE
+    bubbleLeft = 0;
+    arrowLeft = ltpRawPos;
+  } else if (ltpRawPos > barWidth - BUBBLE_W / 2) {
+    // RIGHT EDGE
+    bubbleLeft = barWidth - BUBBLE_W;
+    arrowLeft = ltpRawPos - bubbleLeft;
+  } else {
+    // CENTER
+    bubbleLeft = ltpRawPos - BUBBLE_W / 2;
+    arrowLeft = BUBBLE_W / 2;
+  }
+
+  // Clamp arrow safe
+  arrowLeft = Math.min(Math.max(arrowLeft, 10), BUBBLE_W - 10);
 
   return (
     <View style={styles.container}>
       <View
-        style={styles.bar}
+        style={styles.barRow}
         onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
       >
-        {markers.map((m, index) => {
-          const leftPos = getPosition(m.value);
-          if (m.isLTP) {
-            return (
-              <View key="LTP" style={[styles.ltpWrapper, { left: leftPos - 25 }]}>
-                <View style={styles.bubble}>
-                  <Text style={styles.bubbleText}>₹{m.value.toFixed(2)}</Text>
-                  <View style={styles.bubbleArrow} />
-                </View>
-                <View style={[styles.marker, styles.ltpMarker]} />
-              </View>
-            );
-          }
-          return (
-            <View key={m.label} style={[styles.labelWrapper, { left: leftPos - 25 }]}>
-              <View style={[styles.marker, { backgroundColor: m.color }]} />
-              <Text style={styles.labelText}>{m.label}</Text>
-              <Text style={styles.priceText}>{m.value}</Text>
-            </View>
-          );
-        })}
+        {/* ===== BUBBLE ===== */}
+        {barWidth > 0 && (
+          <View
+            style={[
+              styles.bubble,
+              { left: bubbleLeft, borderColor: bubbleColor },
+            ]}
+          >
+            <Text style={[styles.bubbleText, { color: bubbleColor }]}>
+              ₹
+              {Number.isFinite(displayPrice)
+                ? displayPrice.toFixed(2)
+                : "0.00"}
+            </Text>
+
+            <View
+              style={[
+                styles.bubbleArrow,
+                { borderTopColor: bubbleColor, left: arrowLeft },
+              ]}
+            />
+          </View>
+        )}
+
+        {/* ===== BAR ===== */}
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.bar}
+        />
+
+        {/* ===== DOTS ===== */}
+        {markers.map((m) => (
+          <View
+            key={m.label}
+            style={[
+              styles.dot,
+              {
+                backgroundColor: m.color,
+                left: getPos(m.value) - DOT_SIZE / 2,
+              },
+            ]}
+          />
+        ))}
       </View>
     </View>
   );
@@ -72,79 +176,65 @@ const PriceBar = ({ type = "BUY", stopLoss, entry, target, ltp }) => {
 
 export default PriceBar;
 
+// ================= STYLES =================
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 45, // Match default meter spacing
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
+    marginTop: 8,
   },
-  bar: {
+
+  barRow: {
     height: 6,
-    backgroundColor: "#E5E5E5",
-    borderRadius: 4,
     position: "relative",
+    marginTop: 38,
   },
-  marker: {
+
+  bar: {
     position: "absolute",
-    top: -3,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "#999",
+    left: 0,
+    right: 0,
+    height: 6,
+    borderRadius: 3,
   },
-  labelWrapper: {
+
+  dot: {
     position: "absolute",
-    top: 0,
-    width: 50,
-    alignItems: "center",
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
+    top: -2,
+    zIndex: 3,
   },
-  labelText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#666",
-    marginTop: 15,
-  },
-  priceText: {
-    fontSize: 9,
-    color: "#999",
-  },
-  ltpWrapper: {
-    position: "absolute",
-    top: 0,
-    width: 50,
-    alignItems: "center",
-  },
-  ltpMarker: {
-    backgroundColor: "#2962FF",
-    width: 14,
-    height: 14,
-    top: -4,
-    zIndex: 5,
-  },
+
   bubble: {
     position: "absolute",
-    top: -38,
-    backgroundColor: "#2962FF",
+    bottom: 14,
+    height: 26,
+    minWidth: BUBBLE_W,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 8,
-    paddingVertical: 4,
     borderRadius: 8,
-    minWidth: 60,
+    borderWidth: 1.5,
     alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    zIndex: 20,
   },
+
   bubbleText: {
-    color: "#FFF",
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
   },
+
   bubbleArrow: {
     position: "absolute",
-    bottom: -6,
+    bottom: -8, 
     width: 0,
     height: 0,
     borderLeftWidth: 6,
     borderRightWidth: 6,
-    borderTopWidth: 6,
+    borderTopWidth: 8,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: "#2962FF",
   },
 });

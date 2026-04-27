@@ -18,7 +18,9 @@ const { width } = Dimensions.get('window');
 const PlanDetailModal = ({ visible, plan, onClose, onSelect }) => {
   if (!plan) return null;
 
-  const discountedPrice = plan.planPrice - plan.specialDiscount;
+  const planPrice = Number(plan?.planPrice || 0);
+  const specialDiscount = Number(plan?.specialDiscount || 0);
+  const discountedPrice = Math.max(0, planPrice - specialDiscount);
   const colors = global.colors || {
     secondary: '#210F47',
     warning: '#FF9F3F',
@@ -75,8 +77,8 @@ const PlanDetailModal = ({ visible, plan, onClose, onSelect }) => {
                 <Text style={styles.priceLabel}>TOTAL AMOUNT</Text>
                 <View style={styles.priceRow}>
                   <Text style={[styles.newPrice, { color: colors.secondary }]}>₹{discountedPrice}</Text>
-                  {plan.specialDiscount > 0 && (
-                    <Text style={styles.oldPrice}>₹{plan.planPrice}</Text>
+                  {specialDiscount > 0 && (
+                    <Text style={styles.oldPrice}>₹{planPrice}</Text>
                   )}
                 </View>
               </View>

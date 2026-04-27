@@ -98,7 +98,9 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy, refreshing
           <Text style={styles.marketCapName}>{item.name}</Text>
           <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
         </View>
-        <SparklineChart symbol={item.symbol} color={color} />
+        <View style={styles.chartContainer}>
+          <SparklineChart symbol={item.symbol} color={color} />
+        </View>
         <View style={styles.priceContainer}>
           <Text style={styles.price}>
             ₹{Number(item.value || 0).toLocaleString("en-IN", {
@@ -121,7 +123,7 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy, refreshing
         `${exchange}-${category}-${item.group_name}-${index}`
       }
       renderItem={renderItem}
-      contentContainerStyle={styles.marketCapList}
+      contentContainerStyle={[styles.marketCapList, { paddingBottom: 80 }]}
       showsVerticalScrollIndicator={false}
       refreshing={refreshing}
       onRefresh={onRefresh}
@@ -161,7 +163,9 @@ const SectorsList = ({ data, exchange, category, navigation, refreshing, onRefre
           <Text style={styles.marketCapName}>{item.name}</Text>
           <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
         </View>
-        <SparklineChart symbol={item.symbol} color={color} />
+        <View style={styles.chartContainer}>
+          <SparklineChart symbol={item.symbol} color={color} />
+        </View>
         <View style={styles.priceContainer}>
           <Text style={styles.price}>
             ₹{Number(item.value || 0).toLocaleString("en-IN", {
@@ -1395,14 +1399,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: global.colors.background,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     marginBottom: 10,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: global.colors.border,
+    shadowColor: global.colors.textPrimary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   marketCapName: { fontSize: 14, fontWeight: "600" },
   marketCapSymbol: { fontSize: 11, color: global.colors.textSecondary },
@@ -1417,8 +1424,8 @@ const styles = StyleSheet.create({
   negative: {
     color: global.colors.error,
   },
-  price: { fontSize: 15, fontWeight: "600", color: global.colors.textPrimary },
-  change: { fontSize: 12, fontWeight: "600", marginTop: 4 },
+  price: { fontSize: 15, fontWeight: "600", color: global.colors.textPrimary,textAlign:"right" },
+  change: { fontSize: 12, fontWeight: "600", marginTop: 4,textAlign:"right" },
   leftAction: {
     justifyContent: "center",
     paddingLeft: 30,
@@ -1610,6 +1617,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   infoContainer: { flex: 1 },
+  chartContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
+  priceContainer: { flex: 1, alignItems: "flex-end", justifyContent: "center" },
   companyName: { fontSize: 14, fontWeight: "600" },
   symbol: { fontSize: 11, color: global.colors.textSecondary },
 });

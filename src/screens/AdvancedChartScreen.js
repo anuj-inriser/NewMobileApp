@@ -60,31 +60,31 @@ const AdvancedChartScreen = () => {
 
             {/* 🟢 CONTENT LOGIC */}
             <View style={styles.contentContainer}>
-                {/* Tab 1: Holdings */}
+                {/* Tab 1: Account */}
                 {activeTab === 1 && (
+                    <View style={{ flex: 1 }}>
+                        <AccountScreen />
+                    </View>
+                )}
+
+                {/* Tab 2: Holdings */}
+                {activeTab === 2 && (
                     <View style={{ flex: 1 }}>
                         <PortfolioScreen />
                     </View>
                 )}
 
-                {/* Tab 2: Orders */}
-                {activeTab === 2 && (
+                {/* Tab 3: Orders */}
+                {activeTab === 3 && (
                     <View style={{ flex: 1 }}>
                         <OrdersList />
                     </View>
                 )}
 
-                {/* Tab 3: Positions */}
-                {activeTab === 3 && (
-                    <View style={{ flex: 1 }}>
-                        <PositionsList />
-                    </View>
-                )}
-
-                {/* Tab 4: Account */}
+                {/* Tab 4: Positions */}
                 {activeTab === 4 && (
                     <View style={{ flex: 1 }}>
-                        <AccountScreen />
+                        <PositionsList />
                     </View>
                 )}
             </View>

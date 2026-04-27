@@ -564,7 +564,7 @@ const StockTimelineScreen = () => {
               <Animated.FlatList
                 data={stockData}
                 renderItem={renderGainerLoserItem}
-                keyExtractor={(item) => item.id || item.symbol}
+                keyExtractor={(item, index) => `${item.symbol || 'mover'}-${index}`}
                 contentContainerStyle={{
                   paddingHorizontal: 16,
                   paddingBottom: 20,

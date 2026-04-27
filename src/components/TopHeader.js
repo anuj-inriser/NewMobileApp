@@ -25,6 +25,7 @@ import rupeeIcon from "../../assets/trademenu.png";
 import watchlistIcon from "../../assets/dropdownwatchlist.png";
 import Profile from "../../assets/Profile.png";
 import { useDrawer } from "../context/DrawerContext";
+import { useNotifications } from "../context/NotificationContext";
 
 const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
@@ -34,6 +35,7 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const { openProfileDrawer, openNotificationDrawer } = useDrawer();
+  const { unreadCount } = useNotifications();
   const navigation = useNavigation();
   const [masterData, setMasterData] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -353,9 +355,19 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
                   <Text
                     style={styles.dropdownText}
                     numberOfLines={1}
-                    onPress={() => openStockInfoDrawer(item.script_id, null, {
-                      name: item.script_name
-                    })}
+                    onPress={() => {
+                      openStockInfoDrawer(
+                        item.token,
+                        item.script_id,
+                        "chart",
+                        item.isin,
+                        {
+                          name: item.script_name,
+                          tradeable: item.tradeable,
+                          exchange: item.exchange,
+                        }
+                      );
+                    }}
                   >
                     {item.script_name}
                     {item.script_id ? ` (${item.script_id})` : ""}
@@ -385,6 +397,13 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
         {/* Notification Button */}
         <TouchableOpacity style={styles.circleButton} onPress={openNotificationDrawer}>
           <Ionicons name="notifications-outline" size={20} color={global.colors.background} />
+          {/* {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Text>
+            </View>
+          )} */}
           <View style={styles.badge} />
         </TouchableOpacity>
 
@@ -557,12 +576,23 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: "absolute",
-    top: 6,
-    right: 8,
-    width: 8,
-    height: 8,
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
     backgroundColor: global.colors.error,
-    borderRadius: 4,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+    borderWidth: 1,
+    borderColor: global.colors.background,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "bold",
+    textAlign: "center",
   },
   modalOverlay: {
     flex: 1,

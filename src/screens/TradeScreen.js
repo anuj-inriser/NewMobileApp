@@ -15,6 +15,7 @@ import {
   AppState,
   RefreshControl,
   DeviceEventEmitter,
+  Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Device from "expo-device";
@@ -39,13 +40,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 
 const filterOptions = ["All", "Live", "Closed", "Target Hit", "Target Miss"];
+const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
 
 const TradeScreen = () => {
   const { prices } = useRealtimePrices();
   const route = useRoute();
   const { role, userData } = useAuth();
   const currentRole = role || userData?.role || 1;
-  const { data: activePlansData } = useActivePlans();
+  const { data: activePlansData, refetch: refetchActivePlans } = useActivePlans();
   const allowedScriptTypes = activePlansData?.allowedScriptTypes || [];
   const didSubscribeRef = useRef(false);
   const ALL_TYPE = { tradeTypeId: null, tradeTypeName: "All" };
@@ -56,14 +58,19 @@ const TradeScreen = () => {
   // const [loadingCategories, setLoadingCategories] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [selectedSort, setSelectedSort] = useState("A-Z");
   const touchMoveX = useRef(0);
   const touchStartX = useRef(0);
 
 
   const mergeWithRealtime = (list, realtimePrices) => {
     return list.map((item) => {
-      const rt = realtimePrices[item.token];
-
+      const priceKey =
+        item?.token != null && String(item.token).trim() !== ""
+          ? String(item.token)
+          : item?.symbol || item?.script || item?.script_name || null;
+      const rt = priceKey ? realtimePrices[priceKey] : null;
       // ✅ LTP: realtime > item.ltp > 0
       const ltp =
         rt?.price != null
@@ -121,6 +128,11 @@ const TradeScreen = () => {
     setIsFilterOpen(false);
   };
 
+  const handleSortSelect = (option) => {
+    setSelectedSort(option);
+    setIsSortOpen(false);
+  };
+
   // const handleSwipeStart = (e) => {
   //   touchStartX.current = e.nativeEvent.pageX;
   // };
@@ -163,12 +175,18 @@ const TradeScreen = () => {
 
   const getSymbols = () => {
     return Array.from(
-      new Set(tradeRecommendations.map((t) => t?.token).filter(Boolean)),
+      new Set(
+        tradeRecommendations
+          .map((t) => t?.token || t?.symbol || t?.script || t?.script_name)
+          .filter(Boolean),
+      ),
     );
   };
 
   useFocusEffect(
     useCallback(() => {
+      refetchActivePlans();
+
       const page = "Ideas";
       const context =
         selectedCategory?.scriptTypeName || selectedCategory?.name || "unknown";
@@ -194,8 +212,21 @@ const TradeScreen = () => {
         unsubscribeDelayed(symbols, page, context);
         appStateSub?.remove();
       };
-    }, [tradeRecommendations, selectedCategory]),
+    }, [tradeRecommendations, selectedCategory, refetchActivePlans]),
   );
+
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener(
+      "REFRESH_ACTIVE_PLANS",
+      () => {
+        refetchActivePlans();
+      },
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [refetchActivePlans]);
 
   const { data: tradeTypes = [] } = useQuery({
     queryKey: ["tradeTypes"],
@@ -302,9 +333,29 @@ const TradeScreen = () => {
       // refetchIntervalInBackground: true,
     });
 
+
   const displayStocks = useMemo(() => {
-    return mergeWithRealtime(tradeRecommendations, prices);
-  }, [tradeRecommendations, prices]);
+    let filtered = tradeRecommendations.filter((item) => !item.track_only);
+    let merged = mergeWithRealtime(filtered, prices);
+
+    // Apply Sorting
+    switch (selectedSort) {
+      case "A-Z":
+        merged.sort((a, b) => (a.script_name || "").localeCompare(b.script_name || ""));
+        break;
+      case "Z-A":
+        merged.sort((a, b) => (b.script_name || "").localeCompare(a.script_name || ""));
+        break;
+      case "High-Low":
+        merged.sort((a, b) => (b.value || 0) - (a.value || 0));
+        break;
+      case "Low-High":
+        merged.sort((a, b) => (a.value || 0) - (b.value || 0));
+        break;
+    }
+
+    return merged;
+  }, [tradeRecommendations, prices, selectedSort]);
 
   const renderdata = () => { };
 
@@ -329,7 +380,7 @@ const TradeScreen = () => {
   };
 
   const handleRefresh = async () => {
-    await refetch();
+    await Promise.all([refetch(), refetchActivePlans()]);
     logRefresh();
   };
 
@@ -349,10 +400,22 @@ const TradeScreen = () => {
           onTabChange={setSelectedType}
         />
 
-        {/* FILTER ROW - above cards */}
+        {/* SORT & FILTER ROW - above cards */}
         <View style={styles.filterRow}>
           <TouchableOpacity
             style={styles.filterContainer}
+            onPress={() => setIsSortOpen(true)}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={require("../../assets/sorticon.png")}
+              style={{ width: 14, height: 14, resizeMode: "contain" }}
+            />
+            <Text style={styles.filterLabel}>Sort</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.filterContainer, { marginLeft: 16 }]}
             onPress={() => setIsFilterOpen(!isFilterOpen)}
             activeOpacity={0.7}
           >
@@ -364,6 +427,42 @@ const TradeScreen = () => {
             <Text style={styles.filterLabel}>Filter</Text>
           </TouchableOpacity>
         </View>
+
+        {/* SORT MODAL */}
+        <Modal
+          visible={isSortOpen}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsSortOpen(false)}
+        >
+          <TouchableOpacity
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={() => setIsSortOpen(false)}
+          >
+            <View style={[styles.filterDropdown, { marginTop: 225 }]}>
+              {sortOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.dropdownItem}
+                  onPress={() => handleSortSelect(option)}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownText,
+                      selectedSort === option && {
+                        color: global.colors.secondary,
+                        fontWeight: "700",
+                      },
+                    ]}
+                  >
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         {/* FILTER MODAL */}
         <Modal
@@ -437,12 +536,21 @@ const TradeScreen = () => {
           ) : (
 
             displayStocks.map((recommendation) => {
-              const liveData = prices[recommendation.token];
+              const priceKey =
+                recommendation?.token != null && String(recommendation.token).trim() !== ""
+                  ? String(recommendation.token)
+                  : recommendation?.symbol || recommendation?.script || recommendation?.script_name || null;
+              const liveData = priceKey ? prices[priceKey] : null;
               return (
                 <TradeCard
                   key={recommendation.tradeId}
-                  script={recommendation.script_name}
-                  script_id={recommendation.script}
+                  Tradeid={recommendation.tradeId}
+                  script={
+                    recommendation.script_name ||
+                    recommendation.symbol ||
+                    recommendation.script
+                  }
+                  script_id={recommendation.script || recommendation.symbol}
                   status={recommendation.status}
                   tradeRecommendation={
                     recommendation.tradeRecommendationId === 1
@@ -455,10 +563,11 @@ const TradeScreen = () => {
                   target={recommendation.targetOne}
                   stopLoss={recommendation.stopLoss}
                   potential_profits={recommendation.potential_profits}
+                  
                   perspective={recommendation.tradeTypeName}
-                  token={recommendation.token}
-                  ltp={Number(recommendation.ltp)}
-                  prev_close={recommendation.prev_close}
+                  token={priceKey}
+                  ltp={Number(recommendation.value ?? recommendation.ltp)}
+                  prev_close={recommendation.prevClose ?? recommendation.prev_close}
                   exitTypeId={recommendation.exitTypeId}
                   exitPriceLow={recommendation.exitPriceLow}
                   recoPriceLow={recommendation.recoPriceLow}

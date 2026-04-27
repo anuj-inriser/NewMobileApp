@@ -18,12 +18,49 @@ import axiosInstance from "../api/axios";
 
 const NewsReadingScreen = ({ route }) => {
     const { width } = useWindowDimensions();
-    const { item } = route.params;
+    const { item, newsList = [], currentIndex = 0 } = route.params;
     const navigate = useNavigation();
+
+    const hasNext = newsList.length > 0 && currentIndex < newsList.length - 1;
+    const hasPrev = newsList.length > 0 && currentIndex > 0;
+
+    const handleNextNews = () => {
+        if (hasNext) {
+            const nextItem = newsList[currentIndex + 1];
+            navigate.replace('NewsReadingScreen', {
+                item: nextItem,
+                newsList,
+                currentIndex: currentIndex + 1,
+            });
+        }
+    };
+
+    const handlePrevNews = () => {
+        if (hasPrev) {
+            const prevItem = newsList[currentIndex - 1];
+            navigate.replace('NewsReadingScreen', {
+                item: prevItem,
+                newsList,
+                currentIndex: currentIndex - 1,
+            });
+        }
+    };
 
     const titleWords = item.title?.trim().split(/\s+/).length || 0;
     const descriptionWords = item.brief_description?.trim().split(/\s+/).length || 0;
     const contentWords = item.news_content?.trim().split(/\s+/).length || 0;
+
+    const normalizeNewsContent = (content = "") => {
+        const cleaned = String(content)
+            .replace(/&nbsp;/g, " ")
+            .replace(/\u00a0/g, " ")
+            .trim();
+
+        if (!cleaned) return "";
+
+        const hasHtmlTags = /<\/?[a-z][\s\S]*>/i.test(cleaned);
+        return hasHtmlTags ? cleaned : `<p>${cleaned}</p>`;
+    };
 
     const totalWords = titleWords + descriptionWords + contentWords;
 
@@ -184,7 +221,7 @@ const NewsReadingScreen = ({ route }) => {
                     {item.news_content && (
                         <RenderHTML
                             contentWidth={width}
-                            source={{ html: item.news_content }}
+                            source={{ html: normalizeNewsContent(item.news_content) }}
 
                             baseStyle={{
                                 paddingHorizontal: 6
@@ -204,12 +241,29 @@ const NewsReadingScreen = ({ route }) => {
                                 },
                                 p: {
                                     marginBottom: 12,
+                                    alignItems:'flex-start'
                                 },
                             }}
                         />
                     )}
 
-                    {/* <Text style={styles.content}>{item.news_content}</Text> */}
+                    {/* Navigation Buttons */}
+                    {(hasPrev || hasNext) && (
+                        <View style={styles.navButtonRow}>
+                            {hasPrev ? (
+                                <TouchableOpacity style={styles.prevButton} onPress={handlePrevNews}>
+                                    <Ionicons name="arrow-back" size={16} color={global.colors.secondary} />
+                                    <Text style={styles.prevButtonText}>Previous</Text>
+                                </TouchableOpacity>
+                            ) : <View />}
+                            {hasNext ? (
+                                <TouchableOpacity style={styles.nextButton} onPress={handleNextNews}>
+                                    <Text style={styles.nextButtonText}>Next</Text>
+                                    <Ionicons name="arrow-forward" size={16} color={global.colors.secondary} />
+                                </TouchableOpacity>
+                            ) : <View />}
+                        </View>
+                    )}
                 </ScrollView>
             </SafeAreaView>
 
@@ -256,8 +310,9 @@ const styles = StyleSheet.create({
         color: global.colors.textSecondary,
         marginBottom: 16,
         lineHeight: 18,
-        width: 316,
-        margin: 5
+        marginTop:5,
+        width: "100%",
+        margin: 2
     },
 
     abstractLabel: {
@@ -321,6 +376,48 @@ const styles = StyleSheet.create({
         fontWeight: "600",
     },
     actionButton: { flexDirection: 'row', justifyContent: "flex-end", alignItems: 'center', gap: 6, marginRight: 15 },
+    navButtonRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: 20,
+        marginBottom: 10,
+        paddingHorizontal: 4,
+    },
+    prevButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 18,
+        // borderRadius: 25,
+        // borderWidth: 1.5,
+        // borderColor: global.colors.secondary,
+        gap: 6,
+    },
+    prevButtonText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: global.colors.secondary,
+    },
+    nextButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 18,
+        // borderRadius: 25,
+        // backgroundColor: global.colors.secondary,
+        gap: 6,
+        elevation: 3,
+        shadowColor: global.colors.secondary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    nextButtonText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: global.colors.secondary,
+    },
 });
 
 

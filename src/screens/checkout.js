@@ -26,6 +26,7 @@ import { useAlert } from '../context/AlertContext';
 import PlanDetailModal from '../components/PlanDetailModal';
 import { useCoupon } from '../context/CouponContext';
 import axiosInstance from '../api/axios';
+import { useQueryClient } from '@tanstack/react-query';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -656,16 +657,17 @@ export default function CheckoutScreen({ isOverlay, onBack, onNavigate, params: 
         visible={showPaymentModal}
         onClose={(wasSuccessful) => {
           setShowPaymentModal(false);
-          // Only navigate to INVOICE if payment was successful
-          // We use 'wasSuccessful' flag passed from modal to avoid state race condition
-          if ((wasSuccessful || isPaid) && isOverlay && onNavigate) {
+          
+          // Navigate to INVOICE regardless of success/failure as per user request
+          if (isOverlay && onNavigate) {
             const { total, gst } = computeTotals(activePlan, couponDiscount);
             onNavigate('INVOICE', {
-              plan: { ...activePlan, gst }, // Add calculated gst here
+              plan: { ...activePlan, gst },
               couponDiscount,
               internal_transaction_id: internalTransactionId,
-              payment_id: razorpayPaymentIdRef.current || razorpayPaymentId, // Use ref for current value
+              payment_id: razorpayPaymentIdRef.current || razorpayPaymentId,
               user_name: userData?.name || 'User',
+              status: (wasSuccessful || isPaid) ? 'SUCCESS' : 'FAILED',
             }, true);
           }
         }}
@@ -677,7 +679,10 @@ export default function CheckoutScreen({ isOverlay, onBack, onNavigate, params: 
             razorpayPaymentIdRef.current = pid;
           }
         }}
-        onPaymentFailure={(msg) => Alert.alert("Payment Failed", msg || "Something went wrong with the transaction.")}
+        onPaymentFailure={(msg) => {
+          // We don't alert here anymore as we navigate to Invoice screen
+          console.log("Payment Failed:", msg);
+        }}
       />
     </View>
   );

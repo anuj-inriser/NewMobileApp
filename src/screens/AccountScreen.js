@@ -8,6 +8,7 @@ import {
   Image,
   Platform,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
@@ -17,9 +18,11 @@ import * as Device from "expo-device";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axiosInstance from "../api/axios";
 import { apiUrl } from "../utils/apiUrl";
+import { useAngelOneLoginUrl } from "../hooks/useAngelOneLoginUrl";
 
 const AccountScreen = () => {
-  const { authToken, setAuthData, clearAuth, disconnectBroker, clientId } = useAuth();
+  const { authToken, setAuthData, clearAuth, disconnectBroker, clientId, token } =
+    useAuth();
   const { showSuccess, showError } = useAlert();
   const [showAngelOneModal, setShowAngelOneModal] = useState(false);
   const [balance, setBalance] = useState(0)
@@ -27,8 +30,22 @@ const AccountScreen = () => {
   const webViewRef = useRef(null);
   const isProcessingAuth = useRef(false);
 
-  const angelOneUrl =
-    "https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=accountpage";
+  const { url: angelOneUrl, loading: angelOneUrlLoading } = useAngelOneLoginUrl({
+    state: "accountpage",
+    enabled: showAngelOneModal,
+    onAuthError: () => {
+      setShowAngelOneModal(false);
+      showError("Error", "Please log in first to connect Angel One.");
+    },
+    onError: (e) => {
+      setShowAngelOneModal(false);
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to load Angel One login page.";
+      showError("Error", msg);
+    },
+  });
 
   const brokers = [
     {
@@ -56,7 +73,11 @@ const AccountScreen = () => {
 
   const handleAngelOneNavigation = async (navState) => {
     const { url } = navState;
-    if (url.includes("auth_token") && url.includes("feed_token") && !isProcessingAuth.current) {
+    if (
+      url.includes("auth_token") &&
+      url.includes("feed_token") &&
+      !isProcessingAuth.current
+    ) {
       isProcessingAuth.current = true; // Prevent multiple triggers
 
       let angelOneMeta = {
@@ -230,7 +251,7 @@ const AccountScreen = () => {
       </View>
     </View>
   );
-
+console.log(`broker ${JSON.stringify(brokers)}`)
   return (
     <View style={styles.container}>
       {authToken ? (
@@ -256,7 +277,13 @@ const AccountScreen = () => {
             </View>
             <TouchableOpacity
               style={styles.inlineConnectBtn}
-              onPress={() => setShowAngelOneModal(true)}
+              onPress={() => {
+                if (!token) {
+                  showError("Error", "Please log in first to connect Angel One.");
+                  return;
+                }
+                setShowAngelOneModal(true);
+              }}
             >
               <Text style={styles.inlineConnectBtnText}>Add DEMAT</Text>
             </TouchableOpacity>
@@ -322,13 +349,22 @@ const AccountScreen = () => {
             />
           </TouchableOpacity>
 
-          <WebView
-            ref={webViewRef}
-            source={{ uri: angelOneUrl }}
-            style={styles.webView}
-            onNavigationStateChange={handleAngelOneNavigation}
-            incognito={true} // Helps clear previous session states
-          />
+          {angelOneUrlLoading || !angelOneUrl ? (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <ActivityIndicator size="large" color="#210F47" />
+              <Text style={{ marginTop: 12, fontSize: 16, color: "#444" }}>
+                Loading Angel One login...
+              </Text>
+            </View>
+          ) : (
+            <WebView
+              ref={webViewRef}
+              source={{ uri: angelOneUrl }}
+              style={styles.webView}
+              onNavigationStateChange={handleAngelOneNavigation}
+              incognito={true} // Helps clear previous session states
+            />
+          )}
         </View>
       </Modal>
     </View>

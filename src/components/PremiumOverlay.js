@@ -11,6 +11,7 @@ import ModalScreen from "../screens/modal";
 import CheckoutScreen from "../screens/checkout";
 import OffersScreen from "../screens/offers";
 import InvoiceScreen from "../screens/InvoiceScreen";
+ import { useQueryClient } from '@tanstack/react-query';
 
 const { width } = Dimensions.get("window");
 
@@ -18,6 +19,7 @@ const PremiumOverlay = ({ visible, onClose }) => {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(width)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const queryClient = useQueryClient();
 
   // Navigation stack state: e.g., ['PLANS'] or ['PLANS', 'CHECKOUT']
   const [stack, setStack] = useState(['PLANS']);
@@ -75,6 +77,11 @@ const PremiumOverlay = ({ visible, onClose }) => {
     }
   };
 
+     const handleClose = () => {
+     queryClient.invalidateQueries(['activePlans']); // refresh plan data
+      onClose();
+    };
+
   if (!isVisible && !visible) return null;
 
   const currentScreen = stack[stack.length - 1];
@@ -110,7 +117,7 @@ const PremiumOverlay = ({ visible, onClose }) => {
       case 'INVOICE':
         return (
           <InvoiceScreen
-            onClose={onClose}
+            onClose={handleClose}
             params={params}
           />
         );
@@ -133,7 +140,7 @@ const PremiumOverlay = ({ visible, onClose }) => {
           },
         ]}
       >
-        <Pressable style={styles.flex1} onPress={onClose} />
+        <Pressable style={styles.flex1} onPress={handleClose} />
       </Animated.View>
 
       {/* Slide Container */}

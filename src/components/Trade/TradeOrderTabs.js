@@ -21,10 +21,10 @@ import BottomTabBar from "../BottomTabBar";
 const API = `${apiUrl}/api/wishlistcontrol`;
 
 const orderTabs = [
-  { id: 1, name: "Holdings" },
-  { id: 2, name: "Orders" },
-  { id: 3, name: "Positions" },
-  { id: 4, name: "Account" },
+  { id: 1, name: "Account" },
+  { id: 2, name: "Holdings" },
+  { id: 3, name: "Orders" },
+  { id: 4, name: "Positions" },
 ];
 
 const TradeOrderTabs = ({ onTabChange, activeTab }) => {

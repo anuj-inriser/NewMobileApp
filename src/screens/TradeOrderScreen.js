@@ -9,6 +9,7 @@ import {
   Modal,
   BackHandler,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useAlert } from "../context/AlertContext";
 import { WebView } from "react-native-webview";
@@ -17,10 +18,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import SwipeButton from "rn-swipe-button";
 import { apiUrl } from "../utils/apiUrl";
-import TopOrderHeader from "../components/TopOrderHeader";
-import NseBseRadioBox from "../components/NseBseRadioBox";
-import OrderTopMenu from "../components/OrderTopMenu";
-import OrderInputBox from "../components/OrderInputBox";
+// import TopOrderHeader from "../components/TopOrderHeader";
+// import NseBseRadioBox from "../components/NseBseRadioBox";
+// import OrderTopMenu from "../components/OrderTopMenu";
+// import OrderInputBox from "../components/OrderInputBox";
 // import OrderDropdownBox from "../components/OrderDropdownBox";
 import { useNavigation } from "@react-navigation/native";
 import { getDeviceId } from "../utils/deviceId";
@@ -33,6 +34,7 @@ import axiosInstance from "../api/axios";
 import { useDrawer } from "../context/DrawerContext";
 // import DublearrowRight from "../../assets/dublearrowright.png";
 import * as Device from "expo-device";
+import { useAngelOneLoginUrl } from "../hooks/useAngelOneLoginUrl";
 export default function TradeOrderScreen({
   hideHeader: propHideHeader,
   symbol: propSymbol,
@@ -56,7 +58,7 @@ export default function TradeOrderScreen({
   const hideHeader = propHideHeader || route.params?.hideHeader;
   const [isSwiping, setIsSwiping] = useState(false);
   const { showSuccess, showError } = useAlert();
-  const { authToken, setAuthData } = useAuth();
+  const { authToken, setAuthData, token } = useAuth();
   const { prices } = useRealtimePrices();
   const [validationErrors, setValidationErrors] = useState([]);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -337,9 +339,22 @@ export default function TradeOrderScreen({
   };
 
   const [showAngelOneModal, setShowAngelOneModal] = useState(false);
-
-  const angelOneUrl =
-    "https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=tradepage";
+  const { url: angelOneUrl, loading: angelOneUrlLoading } = useAngelOneLoginUrl({
+    state: "tradeorder",
+    enabled: showAngelOneModal,
+    onAuthError: () => {
+      setShowAngelOneModal(false);
+      showError("Error", "Please log in first to connect Angel One.");
+    },
+    onError: (e) => {
+      setShowAngelOneModal(false);
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to load Angel One login page.";
+      showError("Error", msg);
+    },
+  });
 
   const handleUserPriceInput = (val) => {
     setIsUserTypedPrice(true);
@@ -437,7 +452,7 @@ export default function TradeOrderScreen({
   const [activeToken, setActiveToken] = useState(passedToken);
 
   const symbol = passedSymbol || "WELENT-EQ";
-  const token = passedToken;
+  const stockToken = passedToken;
   useEffect(() => {
     if (propExchange) {
       setSelected(propExchange);
@@ -1358,6 +1373,10 @@ export default function TradeOrderScreen({
               setIsSwiping(false);
 
               if (!authToken) {
+                if (!token) {
+                  showError("Error", "Please log in first to connect Angel One.");
+                  return;
+                }
                 setShowAngelOneModal(true);
                 return;
               }
@@ -1506,21 +1525,30 @@ export default function TradeOrderScreen({
             <Text style={styles.angelOneCloseText}>✕</Text>
           </TouchableOpacity>
 
-          <WebView
-            source={{ uri: angelOneUrl }}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            useWebKit={true}
-            onNavigationStateChange={handleAngelOneNavigation}
-            // 🔑 CRITICAL ANDROID FIXES:
-            androidLayerType="hardware" // Prevents WebView disappearing on keyboard open
-            nestedScrollEnabled={true} // Allows proper scrolling with keyboard
-            thirdPartyCookiesEnabled={true} // Required for Angel One auth
-            originWhitelist={["*"]} // Allows OAuth redirects
-            style={styles.webView}
-            // Prevent keyboard from shrinking WebView
-            contentInsetAdjustmentBehavior="automatic"
-          />
+          {angelOneUrlLoading || !angelOneUrl ? (
+            <View style={styles.webViewLoading}>
+              <ActivityIndicator size="large" color={global.colors.secondary} />
+              <Text style={styles.webViewLoadingText}>
+                Loading Angel One login...
+              </Text>
+            </View>
+          ) : (
+            <WebView
+              source={{ uri: angelOneUrl }}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              useWebKit={true}
+              onNavigationStateChange={handleAngelOneNavigation}
+              // 🔑 CRITICAL ANDROID FIXES:
+              androidLayerType="hardware" // Prevents WebView disappearing on keyboard open
+              nestedScrollEnabled={true} // Allows proper scrolling with keyboard
+              thirdPartyCookiesEnabled={true} // Required for Angel One auth
+              originWhitelist={["*"]} // Allows OAuth redirects
+              style={styles.webView}
+              // Prevent keyboard from shrinking WebView
+              contentInsetAdjustmentBehavior="automatic"
+            />
+          )}
         </View>
       </Modal>
       {/* <Modal
@@ -1550,7 +1578,7 @@ export default function TradeOrderScreen({
 
           <WebView
             source={{
-              uri: "https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=tradeorder",
+              uri: getAngelOneLoginUrl("tradeorder"),
             }}
             javaScriptEnabled={true}
             domStorageEnabled={true}
@@ -1632,6 +1660,17 @@ const styles = StyleSheet.create({
   webView: {
     flex: 1,
     marginTop: Platform.OS === "ios" ? 80 : 60, // Space for close button + status bar
+  },
+  webViewLoading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  webViewLoadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#444",
   },
   actionRow: {
     flexDirection: "row",

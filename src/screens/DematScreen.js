@@ -11,13 +11,15 @@ import {
     Platform,
     Alert,
     Animated,
-    Pressable
+    Pressable,
+    ActivityIndicator
 } from 'react-native';
 import { useAlert } from "../context/AlertContext";
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';   // ⭐ ADD
 import { usePermission } from '../hooks/usePermission';
+import { useAngelOneLoginUrl } from "../hooks/useAngelOneLoginUrl";
 
 // Keys for AsyncStorage
 const TOKENS = {
@@ -30,7 +32,7 @@ const TOKENS = {
 export default function DematScreen({ navigation }) {
     const [showAngelOneModal, setShowAngelOneModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-    const { setAuthData } = useAuth();   // ⭐ MAIN FIX
+    const { setAuthData, token } = useAuth();   // ⭐ MAIN FIX
     const { showSuccess, showError } = useAlert();
     const scaleAnim = useRef(new Animated.Value(0.8)).current;
     useEffect(() => {
@@ -48,8 +50,22 @@ export default function DematScreen({ navigation }) {
 
     const canViewEquity = usePermission("VIEW_EQUITY")
 
-    const angelOneUrl =
-        'https://smartapi.angelone.in/publisher-login?api_key=IG8g0BMf&state=statevariable';
+    const { url: angelOneUrl, loading: angelOneUrlLoading } = useAngelOneLoginUrl({
+        state: "statevariable",
+        enabled: showAngelOneModal,
+        onAuthError: () => {
+            setShowAngelOneModal(false);
+            showError("Error", "Please log in first to connect Angel One.");
+        },
+        onError: (e) => {
+            setShowAngelOneModal(false);
+            const msg =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Failed to load Angel One login page.";
+            showError("Error", msg);
+        },
+    });
 
     const handleWebViewNavigation = async (navState) => {
         const { url } = navState;
@@ -127,7 +143,15 @@ export default function DematScreen({ navigation }) {
                 <Text style={styles.title}>Connect your existing broker.</Text>
 
                 <View style={styles.dotsContainer}>
-                    <TouchableOpacity onPress={() => setShowAngelOneModal(true)}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            if (!token) {
+                                showError("Error", "Please log in first to connect Angel One.");
+                                return;
+                            }
+                            setShowAngelOneModal(true);
+                        }}
+                    >
                         <Image
                             source={require('../../assets/angelone.png')}
                             style={styles.brokerIcon}
@@ -189,21 +213,30 @@ export default function DematScreen({ navigation }) {
                         <Text style={styles.closeButtonText}>✕</Text>
                     </TouchableOpacity>
 
-                    <WebView
-                        source={{ uri: angelOneUrl }}
-                        style={styles.webview}
-                        javaScriptEnabled={true}
-                        domStorageEnabled={true}
-                        useWebKit={true}
-                        onNavigationStateChange={handleWebViewNavigation}
-                        onError={(e) => {
-                            console.error('WebView error:', e.nativeEvent);
-                            showError(
-                                "Error",
-                                "Failed to load Angel One login."
-                            );
-                        }}
-                    />
+                    {angelOneUrlLoading || !angelOneUrl ? (
+                        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                            <ActivityIndicator size="large" color={global.colors.secondary} />
+                            <Text style={{ marginTop: 12, fontSize: 16, color: global.colors.secondary }}>
+                                Loading Angel One login...
+                            </Text>
+                        </View>
+                    ) : (
+                        <WebView
+                            source={{ uri: angelOneUrl }}
+                            style={styles.webview}
+                            javaScriptEnabled={true}
+                            domStorageEnabled={true}
+                            useWebKit={true}
+                            onNavigationStateChange={handleWebViewNavigation}
+                            onError={(e) => {
+                                console.error('WebView error:', e.nativeEvent);
+                                showError(
+                                    "Error",
+                                    "Failed to load Angel One login."
+                                );
+                            }}
+                        />
+                    )}
                 </View>
             </Modal>
 

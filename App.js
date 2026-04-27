@@ -6,6 +6,7 @@ import { apiUrl } from "./src/utils/apiUrl";
 import { AlertProvider } from "./src/context/AlertContext";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CouponProvider } from "./src/context/CouponContext";
+import { NotificationProvider } from "./src/context/NotificationContext";
 import CheckoutScreen from "./src/screens/checkout";
 import OffersScreen from "./src/screens/offers";
 import ModalScreen from "./src/screens/modal";
@@ -242,7 +243,7 @@ Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
-    shouldPlaySound: false,
+    shouldPlaySound: true,
     shouldSetBadge: true,
   }),
 });
@@ -305,7 +306,7 @@ export default function App() {
           content: {
             title: finalTitle,
             body: finalBody,
-            sound: false,
+            sound: true,
             priority: 'max',
             // 🖼️ Force Style using String (To avoid 'undefined' error)
             ...(localImageUri && Platform.OS === 'android' ? {
@@ -471,7 +472,8 @@ export default function App() {
       <SafeAreaProvider>
         <AppQueryProvider>
           <AuthProvider>
-            <DrawerProvider>
+            <NotificationProvider>
+              <DrawerProvider>
               <WatchlistProvider>
                 <AlertProvider>
                   <CouponProvider>
@@ -502,7 +504,8 @@ export default function App() {
                   </CouponProvider>
                 </AlertProvider>
               </WatchlistProvider>
-            </DrawerProvider>
+              </DrawerProvider>
+            </NotificationProvider>
           </AuthProvider>
         </AppQueryProvider>
       </SafeAreaProvider>
