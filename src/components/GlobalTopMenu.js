@@ -158,12 +158,10 @@ export default GlobalTopMenu;
 const styles = StyleSheet.create({
     wrapper: {
         position: "relative",
-        marginBottom: 5,
     },
     topSliders: {
         backgroundColor: global.colors.background,
         zIndex: 2,
-        paddingTop: 6,
         paddingHorizontal: 0,
         // iOS shadow (Android ignores)
         shadowColor: global.colors.textPrimary,
@@ -183,7 +181,6 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: -15,
-        height: 3,
         zIndex: 1,
     },
     mainContainer: {

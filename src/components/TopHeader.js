@@ -397,14 +397,13 @@ const TopHeader = ({ onWatchlistAdded, showBackButton }) => {
         {/* Notification Button */}
         <TouchableOpacity style={styles.circleButton} onPress={openNotificationDrawer}>
           <Ionicons name="notifications-outline" size={20} color={global.colors.background} />
-          {/* {unreadCount > 0 && (
+          {unreadCount > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>
                 {unreadCount > 99 ? '99+' : unreadCount}
               </Text>
             </View>
-          )} */}
-          <View style={styles.badge} />
+          )}
         </TouchableOpacity>
 
         {/* Menu Button */}

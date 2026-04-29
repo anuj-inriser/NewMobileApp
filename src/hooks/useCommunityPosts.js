@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiUrl } from "../utils/apiUrl";
-import axios from "axios";
+import axiosInstance from "../api/axios";
 
 export function useCommunityPosts(sequenceId) {
   const { data, isLoading, error, refetch } = useQuery({
@@ -8,15 +7,11 @@ export function useCommunityPosts(sequenceId) {
     queryFn: async () => {
       if (!sequenceId) return [];
 
-      const response = await fetch(
-        `${apiUrl}/api/communitypost/sequence/${sequenceId}`,
+      const response = await axiosInstance.get(
+        `/communitypost/sequence/${sequenceId}`,
       );
 
-      if (!response.ok) {
-        throw new Error(`Error fetching posts: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
 
       if (result && Array.isArray(result.data)) {
         // 🔥 Fetch fresh stats for these posts
@@ -27,8 +22,8 @@ export function useCommunityPosts(sequenceId) {
             type: "post",
           }));
           if (items.length > 0) {
-            const statsRes = await axios.post(
-              `${apiUrl}/api/likesdislikes/stats`,
+            const statsRes = await axiosInstance.post(
+              `/likesdislikes/stats`,
               { items },
             );
             const statsMap = statsRes.data.data || {};

@@ -3,7 +3,7 @@ import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useSparkline } from '../hooks/useIntervalData';
 
-const SparklineChart = ({ symbol, color = '#00c853', width = 100, height = 40 }) => {
+const SparklineChart = ({ symbol, color = '#00c853', width = 60, height = 20 }) => {
   const { data, isLoading } = useSparkline(symbol);
 
   if (isLoading) {
@@ -48,6 +48,7 @@ const SparklineChart = ({ symbol, color = '#00c853', width = 100, height = 40 })
 
 const styles = StyleSheet.create({
   container: {
+    flex:1,
     justifyContent: 'center',
     alignItems: 'center',
   },

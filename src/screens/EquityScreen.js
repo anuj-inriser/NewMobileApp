@@ -16,10 +16,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import TopMenuSlider from "../components/TopMenuSlider";
-import TopHeader from "../components/TopHeader";
-// import BottomTabBar from "../components/BottomTabBar";
 import MarketTabs from "../components/MarketTabs";
 import Indices from "../components/Indices";
+import StocksScreen from "./StocksScreen";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
 import {
   subscribeSymbols,
@@ -27,83 +26,35 @@ import {
 } from "../ws/marketSubscriptions";
 import { Ionicons } from "@expo/vector-icons";
 import axiosInstance from "../api/axios";
-import Swipeable from "react-native-gesture-handler/Swipeable";
 import { useDrawer } from "../context/DrawerContext";
-import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
 import SparklineChart from "../components/Sparkline";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Device from "expo-device";
+import { useGroupTypes } from "../hooks/useGroupTypes";
 
 
-const Sparkline = ({ color, isPositive }) => {
-  // A simple smooth curve that either goes up or down
-  const curveD = isPositive
-    ? "M 0 35 C 20 35, 30 25, 45 25 S 60 5, 80 0 L 80 40 L 0 40 Z"
-    : "M 0 5 C 20 5, 30 15, 45 15 S 60 35, 80 40 L 80 40 L 0 40 Z";
-
-  const lineD = isPositive
-    ? "M 0 35 C 20 35, 30 25, 45 25 S 60 5, 80 0"
-    : "M 0 5 C 20 5, 30 15, 45 15 S 60 35, 80 40";
-
-  return (
-    <Svg width="80" height="40" viewBox="0 0 80 40">
-      <Defs>
-        <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={color} stopOpacity="0.3" />
-          <Stop offset="1" stopColor={color} stopOpacity="0.0" />
-        </SvgLinearGradient>
-      </Defs>
-      <Path d={curveD} fill="url(#grad)" />
-      <Path d={lineD} fill="none" stroke={color} strokeWidth="2" />
-    </Svg>
-  );
-};
-
-const LeftBuyAction = () => (
-  <View style={styles.leftAction}>
-    <Text style={styles.buyText}>Buy ››</Text>
-  </View>
-);
-// ✅ MarketCapList Component (inline for now)
-const MarketCapList = ({ data, exchange, category, navigation, onBuy, refreshing,
-  onRefresh, }) => {
+// ✅ Generic List Component for all dynamic categories
+const DynamicGroupList = ({ data, exchange, category, navigation, refreshing, onRefresh, onSelectGroup }) => {
   const renderItem = ({ item }) => {
-    // const isPositive = item.change >= 0;
-    // const color = isPositive ? global.colors.success : global.colors.error;
-
     const isPositive = item.change > 0;
-
-    let color = global.colors.textSecondary; // grey for 0
-
-    if (item.change > 0) {
-      color = global.colors.success;
-    } else if (item.change < 0) {
-      color = global.colors.error;
-    }
+    let color = global.colors.textSecondary;
+    if (item.change > 0) color = global.colors.success;
+    else if (item.change < 0) color = global.colors.error;
 
     return (
       <TouchableOpacity
         style={styles.marketCapItem}
-        onPress={() =>
-          navigation.navigate("Stocks", {
-            exchange,
-            from: "Market Cap",
-            filterIndex: item.name,
-            headerData: item,
-            headerCategory: "Market Cap"
-          })
-        }
+        onPress={() => onSelectGroup(item)}
       >
         <View style={styles.infoContainer}>
-          <Text style={styles.marketCapName}>{item.name}</Text>
-          <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
+          <Text style={styles.marketCapName}>{item.group_name || item.name}</Text>
+          <Text style={styles.marketCapSymbol}>{item.symbol || exchange}</Text>
         </View>
         <View style={styles.chartContainer}>
           <SparklineChart symbol={item.symbol} color={color} />
         </View>
         <View style={styles.priceContainer}>
           <Text style={styles.price}>
-            ₹{Number(item.value || 0).toLocaleString("en-IN", {
+            ₹{Number(item.ltp || 0).toLocaleString("en-IN", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
@@ -119,9 +70,7 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy, refreshing
   return (
     <FlatList
       data={data}
-      keyExtractor={(item, index) =>
-        `${exchange}-${category}-${item.group_name}-${index}`
-      }
+      keyExtractor={(item, index) => `${exchange}-${category}-${item.group_name || item.name}-${index}`}
       renderItem={renderItem}
       contentContainerStyle={[styles.marketCapList, { paddingBottom: 80 }]}
       showsVerticalScrollIndicator={false}
@@ -131,142 +80,81 @@ const MarketCapList = ({ data, exchange, category, navigation, onBuy, refreshing
   );
 };
 
-// ✅ SectorsList Component
-const SectorsList = ({ data, exchange, category, navigation, refreshing, onRefresh }) => {
-  const renderItem = ({ item }) => {
-    // const isPositive = item.change >= 0;
-    // const color = isPositive ? global.colors.success : global.colors.error;
+// ✅ Dynamic Data Fetch Function
+const fetchGroupData = async ({ queryKey: [, category, exchange] }) => {
+  try {
+    const formattedCategory = category.toLowerCase().replace(/\s+/g, "");
+    const isStandard = ["marketcap", "sector", "theme", "index"].includes(formattedCategory);
 
-    const isPositive = item.change > 0;
+    let rawData = [];
+    const exchangesToFetch = exchange === "All" ? ["NSE", "BSE"] : [exchange];
 
-    let color = global.colors.textSecondary; // grey for 0
-
-    if (item.change > 0) {
-      color = global.colors.success;
-    } else if (item.change < 0) {
-      color = global.colors.error;
-    }
-    return (
-      <TouchableOpacity
-        style={styles.marketCapItem}
-        onPress={() =>
-          navigation.navigate("Stocks", {
-            exchange,
-            from: "Sectors",
-            filterIndex: item.name,
-            headerData: item,
-            headerCategory: "Sectors"
-          })
+    for (const exch of exchangesToFetch) {
+      const formattedExchange = exch.toLowerCase();
+      let url;
+      
+      if (isStandard) {
+        url = `/indicesNew/${formattedExchange}${formattedCategory}`;
+      } else {
+        const categoryUpper = category.toUpperCase().replace(/\s+/g, "");
+        if (exch === "NSE") {
+          url = `/indicesNew/nseAll${categoryUpper}`;
+        } else {
+          url = `/indicesNew/bseAll${categoryUpper}`;
         }
-      >
-        <View style={styles.infoContainer}>
-          <Text style={styles.marketCapName}>{item.name}</Text>
-          <Text style={styles.marketCapSymbol}>{item.symbol}</Text>
-        </View>
-        <View style={styles.chartContainer}>
-          <SparklineChart symbol={item.symbol} color={color} />
-        </View>
-        <View style={styles.priceContainer}>
-          <Text style={styles.price}>
-            ₹{Number(item.value || 0).toLocaleString("en-IN", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </Text>
-          <Text style={[styles.change, { color }]}>
-            {isPositive ? "+" : ""}{item.change?.toFixed(2)} ({isPositive ? "+" : ""}{item.changePercent?.toFixed(2)}%)
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  return (
-    <FlatList
-      data={data}
-      keyExtractor={(item, index) =>
-        `${exchange}-${category}-${item.group_name}-${index}`
       }
-      renderItem={renderItem}
-      contentContainerStyle={[styles.marketCapList, { paddingBottom: 80 }]}
-      showsVerticalScrollIndicator={false}
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-    />
-  );
-};
 
-// ✅ ThemesList Component
-const ThemesList = ({ data, exchange, category, navigation }) => {
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.marketCapItem}
-      onPress={() =>
-        navigation.navigate("Stocks", {
-          exchange,
-          from: "Themes",
-          filterIndex: item.name, // e.g., "Defence"
-        })
-      }
-    >
-      <View>
-        <Text style={styles.marketCapName}>{item.name}</Text>
-        <Text style={styles.marketCapSymbol}>{exchange}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+      const response = await axiosInstance.get(url);
+      const data = response?.data?.data ?? [];
+      
+      // Mark the exchange for each item if we are fetching 'All'
+      const markedData = data.map(item => ({
+        ...item,
+        exchange: exch
+      }));
+      
+      rawData = [...rawData, ...markedData];
+    }
 
-  return (
-    <FlatList
-      data={data}
-      keyExtractor={(item, index) =>
-        `${exchange}-${category}-${item.group_name}-${index}`
-      }
-      renderItem={renderItem}
-      contentContainerStyle={[styles.marketCapList, { paddingBottom: 80 }]}
-      showsVerticalScrollIndicator={false}
-    />
-  );
+    return rawData.map(item => ({
+      ...item,
+      change: Number(item.ltp || 0) - Number(item.prev_close || 0),
+      changePercent: item.prev_close > 0
+        ? ((Number(item.ltp || 0) - Number(item.prev_close || 0)) / Number(item.prev_close)) * 100
+        : 0
+    }));
+  } catch (error) {
+    console.error(`Error fetching ${category}:`, error);
+    throw error;
+  }
 };
 
 export default function EquityScreen() {
   const navigation = useNavigation();
-  // const subscribedOnceRef = useRef(false);
-  const subscribedRef = useRef({});
 
   const { prices: realtimePrices } = useRealtimePrices();
   const route = useRoute();
-  // const [selectedExchange, setSelectedExchange] = useState("NSE");
-  // const [selectedCategory, setSelectedCategory] = useState("Indices");
   const { initialCategory, initialExchange } = route.params || {};
   const [selectedExchange, setSelectedExchange] = useState(
     initialExchange || "NSE"
   );
   const [selectedCategory, setSelectedCategory] = useState(
-    initialCategory || "Indices"
+    initialCategory || "Index"
   );
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [showPreview, setShowPreview] = useState(true);
 
-  // ✅ Market Cap, Sectors, and Themes States
-  const [marketCapData, setMarketCapData] = useState([]);
-  const [sectorsData, setSectorsData] = useState([]);
-  const [themesData, setThemesData] = useState([]);
-  const [isMarketCapLoading, setIsMarketCapLoading] = useState(false);
-  const [isSectorsLoading, setIsSectorsLoading] = useState(false);
-  const [isThemesLoading, setIsThemesLoading] = useState(false);
-  const [marketCapError, setMarketCapError] = useState(null);
-  const [sectorsError, setSectorsError] = useState(null);
-  const [themesError, setThemesError] = useState(null);
-
-  // ✅ Sort and Filter States
-  const [sortOpen, setSortOpen] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedSort, setSelectedSort] = useState("Default");
-  const [originalMarketCapData, setOriginalMarketCapData] = useState([]);
-  const [originalSectorsData, setOriginalSectorsData] = useState([]);
+  // ✅ Dynamic Category States
+  const [displayData, setDisplayData] = useState([]);
+  const [originalData, setOriginalData] = useState([]);
   const [allIndicesData, setAllIndicesData] = useState([]);
   const [originalAllIndicesData, setOriginalAllIndicesData] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  // ✅ UI States
+  const [sortOpen, setSortOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedSort, setSelectedSort] = useState("Default");
 
 
   const logRefresh = async () => {
@@ -292,18 +180,13 @@ export default function EquityScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      if (selectedCategory === "Sectors")
-        await fetchSectors(selectedExchange)
-      else if (selectedCategory === "Market Cap")
-        await fetchMarketCap(selectedExchange)
-      else if (selectedCategory === "Themes")
-        await fetchThemes(selectedExchange)
-      else if (selectedCategory === "Indices") {
-        await indicesQuery.refetch()
+      if (selectedCategory === "Index") {
+        await indicesQuery.refetch();
+      } else {
+        await groupQuery.refetch();
       }
-
     } catch (error) {
-
+      console.error("Refresh failed:", error);
     } finally {
       setRefreshing(false);
       logRefresh();
@@ -330,7 +213,7 @@ export default function EquityScreen() {
 
   // Get filter options based on selected category
   const getFilterOptions = () => {
-    if (selectedCategory === "Market Cap" || selectedCategory === "Indices" || selectedCategory === "Sectors") {
+    if (selectedCategory === "Market Cap" || selectedCategory === "Index" || selectedCategory === "Sector") {
       return ["All", "Gainers", "Losers"];
     }
     return ["All"];
@@ -339,7 +222,12 @@ export default function EquityScreen() {
   const filterOptions = getFilterOptions();
 
   // ✅ Swipe Navigation Setup - Using touch tracking instead of PanResponder
-  const swipeCategories = ["Indices", "Market Cap", "Sectors"];
+  const { data: groupTypes = [] } = useGroupTypes();
+  const swipeCategories = useMemo(() => {
+    // Ensure "Index" is only added once by including it in the Set with dynamic categories
+    const dynamic = groupTypes.map(i => i.indice_name);
+    return [...new Set(["Index", ...dynamic])];
+  }, [groupTypes]);
   const touchStartX = useRef(0);
 
   const handleSwipeStart = (e) => {
@@ -363,59 +251,32 @@ export default function EquityScreen() {
     }
   };
 
-  const handleBuyFromHome = useCallback(
-    (item) => {
-      navigation.navigate("TradeOrder", {
-        symbol: item.sumbol,
-        token: item.token,
-        name: item.name,
-        internaltype: "Place",
-      });
-    },
-    [navigation, selectedExchange]
-  );
+  // const handleBuyFromHome = useCallback(
+  //   (item) => {
+  //     navigation.navigate("TradeOrder", {
+  //       symbol: item.sumbol,
+  //       token: item.token,
+  //       name: item.name,
+  //       internaltype: "Place",
+  //     });
+  //   },
+  //   [navigation, selectedExchange]
+  // );
   const getCurrentTokens = () => {
-    if (selectedCategory === "Indices") {
+    if (selectedCategory === "Index") {
       return allData.map((i) => i.token).filter(Boolean);
     }
 
-    if (selectedCategory === "Market Cap") {
-      return marketCapData.map((i) => i.token).filter(Boolean);
-    }
-
-    if (selectedCategory === "Sectors") {
-      return sectorsData.map((i) => i.token).filter(Boolean);
-    }
-
-    if (selectedCategory === "Themes") {
-      return themesData.map((i) => i.token).filter(Boolean);
-    }
-
-    return [];
+    return displayData.map((i) => i.token).filter(Boolean);
   };
   const getCurrentSymbols = () => {
     if (!Array.isArray(allData)) return [];
 
-    if (selectedCategory === "Indices") {
+    if (selectedCategory === "Index" || selectedCategory === "Indices") {
       return allData.map(i => i.symbol || i.name).filter(Boolean);
     }
-    if (selectedCategory === "Indices") {
-      return allData.map((i) => i.symbol || i.name);
-    }
 
-    if (selectedCategory === "Market Cap") {
-      return marketCapData.map((i) => i.symbol || i.group_name);
-    }
-
-    if (selectedCategory === "Sectors") {
-      return sectorsData.map((i) => i.symbol || i.group_name);
-    }
-
-    if (selectedCategory === "Themes") {
-      return themesData.map((i) => i.symbol || i.name);
-    }
-
-    return [];
+    return displayData.map((i) => i.symbol || i.group_name || i.name).filter(Boolean);
   };
   useFocusEffect(
     useCallback(() => {
@@ -423,6 +284,10 @@ export default function EquityScreen() {
       let timeout;
 
       const onBackPress = () => {
+        if (selectedGroup) {
+          setSelectedGroup(null);
+          return true;
+        }
         if (backPressCount === 0) {
           backPressCount = 1;
           ToastAndroid.show("Press back again to exit", ToastAndroid.SHORT);
@@ -452,79 +317,9 @@ export default function EquityScreen() {
         backHandler.remove();
         clearTimeout(timeout);
       };
-    }, [])
+    }, [selectedGroup])
   );
 
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     let backPressCount = 0;
-  //     let timeout;
-
-  //     const onBackPress = () => {
-  //       if (backPressCount === 0) {
-  //         backPressCount = 1;
-  //         ToastAndroid.show("Press back again to exit", ToastAndroid.SHORT);
-  //         timeout = setTimeout(() => {
-  //           backPressCount = 0;
-  //         }, 2000);
-  //         return true; // prevent exit
-  //       } else {
-  //         clearTimeout(timeout);
-  //         BackHandler.exitApp(); // ✅ exits app
-  //         return false;
-  //       }
-  //     };
-
-  //     const backHandler = BackHandler.addEventListener(
-  //       "hardwareBackPress",
-  //       onBackPress
-  //     );
-
-  //     return () => {
-  //       backHandler.remove();
-  //       clearTimeout(timeout);
-  //     };
-  //   }, [])
-  // );
-  //  useFocusEffect(
-  //   useCallback(() => {
-  //     const page = "EquityScreen";
-  //     const context = selectedCategory; // 🔥 VERY IMPORTANT
-  //     const symbols = getCurrentSymbols();
-
-  //     if (!symbols.length) return;
-
-  //     // 🟢 Screen active → subscribe
-  //     console.log("[Subscribe] Tokens on focus:", symbols); // <-- log here
-  //     subscribeSymbols(symbols, page, context);
-
-  //     const appStateSub = AppState.addEventListener("change", (state) => {
-  //       if (state !== "active") {
-  //         // ⏱ app background → delayed unsubscribe
-  //         unsubscribeDelayed(symbols, page, context);
-  //       } else {
-  //         // 🔄 app foreground again → cancel unsubscribe
-  //         console.log("[Resubscribe] Tokens on foreground:", symbols); // <-- log here
-  //         subscribeSymbols(symbols, page, context);
-  //       }
-  //     });
-
-  //     return () => {
-  //       // 🚫 screen blur (navigate away OR tab switch)
-  //       // ❗ direct unsubscribe nahi, sirf delay
-  //       console.log("[Unsubscribe delayed] Tokens:", symbols); // <-- log here
-  //       unsubscribeDelayed(symbols, page, context);
-  //       appStateSub?.remove();
-  //     };
-  //   }, [
-  //     selectedCategory,
-  //     selectedExchange,
-  //     allData,
-  //     marketCapData,
-  //     sectorsData,
-  //     themesData,
-  //   ])
-  // );
 
   useFocusEffect(
     useCallback(() => {
@@ -553,178 +348,63 @@ export default function EquityScreen() {
       selectedCategory,
       selectedExchange,
       allData,
-      marketCapData,
-      sectorsData,
-      themesData,
+      displayData,
+
     ])
   );
-  // useEffect(() => {
-  //   const symbols = allData.map((i) => i.symbol).filter(Boolean);
-  //   if (!symbols.length) return;
-
-  //   const key = `${selectedCategory}-${selectedExchange}`;
-  //   if (subscribedRef.current[key]) return;
-
-  //   console.log("[Subscribe Effect] Tokens:", symbols); // <-- log here
-  //   subscribeSymbols(symbols, "EquityScreen", selectedCategory);
-  //   subscribedRef.current[key] = true;
-
-  //   return () => {
-  //     console.log("[Unsubscribe Effect delayed] Tokens:", symbols); // <-- log here
-  //     unsubscribeDelayed(symbols, "EquityScreen", selectedCategory);
-  //   };
-  // }, [allData, selectedCategory, selectedExchange]);
-  // useEffect(() => {
-  //   if (subscribedOnceRef.current) return;
-
-  //   const symbols = getCurrentSymbols();
-  //   if (!symbols.length) return;
-
-  //   const page = "EquityScreen";
-  //   const context = selectedCategory;
-
-
-  //   subscribeSymbols(symbols, page, context);
-  //   subscribedOnceRef.current = true;
-  // }, [
-  //   selectedCategory,
-  //   selectedExchange,
-  //   allData,
-  //   marketCapData,
-  //   sectorsData,
-  //   themesData,
-  // ]);
-
-
-  // useEffect(() => {
-  //   const symbols = allData.map(i => i.symbol).filter(Boolean);
-  //   if (!symbols.length) return;
-
-  //   const key = `${selectedCategory}-${selectedExchange}`;
-  //   if (subscribedRef.current[key]) return;
-
-  //   subscribeSymbols(symbols, "EquityScreen", selectedCategory);
-  //   subscribedRef.current[key] = true;
-
-  //   return () => {
-  //     unsubscribeDelayed(symbols, "EquityScreen", selectedCategory);
-  //   };
-  // }, [allData, selectedCategory, selectedExchange]);
 
 
 
-  // ✅ Fetch Market Cap Data
-  const fetchMarketCap = useCallback(async (exchange) => {
-    setIsMarketCapLoading(true);
-    setMarketCapError(null);
-    try {
-      const url =
-        exchange === "BSE"
-          ? `/indicesNew/bsemarketcap`
-          : `/indicesNew/nsemarketcap`;
-      const response = await axiosInstance.get(url);
-      if (!response.status) throw new Error(`HTTP ${response.status}`);
-      const result = response.data;
-      const data = result.data || [];
-      setMarketCapData(data);
-      setOriginalMarketCapData(data);
-      setSelectedSort("Default");
-    } catch (err) {
-      setMarketCapError(err.message || "Failed to load market cap data");
-    } finally {
-      setIsMarketCapLoading(false);
-    }
-  }, []);
+  // ✅ Dynamic Category Query
+  const groupQuery = useQuery({
+    queryKey: ["groupData", selectedCategory, selectedExchange],
+    queryFn: fetchGroupData,
+    enabled: selectedCategory !== "Index",
+    retry: false,
+  });
 
-  // ✅ Fetch Sectors Data
-  const fetchSectors = useCallback(async (exchange) => {
-    setIsSectorsLoading(true);
-    setSectorsError(null);
-    try {
-      const url =
-        exchange === "BSE"
-          ? `/indicesNew/bsesector`
-          : `/indicesNew/nsesector`;
-      // const response = await fetch(url);
-      const response = await axiosInstance.get(url)
-      if (!response.status) throw new Error(`HTTP ${response.status}`);
-      const result = response.data;
-      const data = result.data || [];
-      setSectorsData(data);
-      setOriginalSectorsData(data);
-      setSelectedSort("Default");
-    } catch (err) {
-      setSectorsError(err.message || "Failed to load sectors data");
-    } finally {
-      setIsSectorsLoading(false);
-    }
-  }, []);
-
-  // ✅ Fetch Themes Data
-  const fetchThemes = useCallback(async (exchange) => {
-    setIsThemesLoading(true);
-    setThemesError(null);
-    try {
-      const url =
-        exchange === "BSE"
-          ? `/indicesNew/bsetheme`
-          : `/indicesNew/nsetheme`;
-      // const response = await fetch(url);
-      const response = await axiosInstance.get(url)
-      if (!response.status) throw new Error(`HTTP ${response.status}`);
-      const result = response.data;
-      setThemesData(result.data || []);
-    } catch (err) {
-      setThemesError(err.message || "Failed to load themes data");
-    } finally {
-      setIsThemesLoading(false);
-    }
-  }, []);
-
-  // ✅ Initialize Original Indices Data when allData loads
-  // useEffect(() => {
-  //   if (allData && allData.length > 0) {
-  //     setOriginalAllIndicesData(allData);
-  //     setAllIndicesData(allData);
-  //   }
-  // }, [allData]);
-
-  // useEffect(() => {
-  //   setAllIndicesData(allData);
-  //   setOriginalAllIndicesData(allData);
-  // }, [allData, selectedExchange]);
-
-
-  // ✅ Refetch Market Cap, Sectors, and Themes when exchange changes & tab is active
+  // Sync group data to state for sorting/filtering
   useEffect(() => {
-    if (selectedCategory === "Market Cap") {
-      fetchMarketCap(selectedExchange);
-    } else if (selectedCategory === "Sectors") {
-      fetchSectors(selectedExchange);
-    } else if (selectedCategory === "Themes") {
-      fetchThemes(selectedExchange);
+    if (groupQuery.data) {
+      const sortedData = applySortToData("Default", groupQuery.data);
+      setDisplayData(sortedData);
+      setOriginalData(sortedData);
+      setSelectedSort("Default");
     }
-  }, [
-    selectedExchange,
-    selectedCategory,
-    fetchMarketCap,
-    fetchSectors,
-    fetchThemes,
-  ]);
+  }, [groupQuery.data]);
 
   // ✅ Indices Fetch 
 
   const fetchIndices = async ({ queryKey: [, exchange] }) => {
     try {
-      const url =
-        exchange === "BSE"
-          ? "/indicesNew/bse"
-          : "/indicesNew/nse";
+      let combinedData = [];
 
-      const response = await axiosInstance.get(url);
+      if (exchange === "All") {
+        const [nseResponse, bseResponse] = await Promise.all([
+          axiosInstance.get("/indicesNew/nse"),
+          axiosInstance.get("/indicesNew/bse")
+        ]);
+        const nseData = nseResponse?.data?.data ?? [];
+        const bseData = bseResponse?.data?.data ?? [];
 
-       return response?.data?.data ?? [];
+        combinedData = [
+          ...nseData.map(item => ({ ...item, exchange: "NSE" })),
+          ...bseData.map(item => ({ ...item, exchange: "BSE" }))
+        ];
+      } else {
+        const url = exchange === "BSE" ? "/indicesNew/bse" : "/indicesNew/nse";
+        const response = await axiosInstance.get(url);
+        const exchangeData = response?.data?.data ?? [];
+        combinedData = exchangeData.map(item => ({ ...item, exchange }));
+      }
 
+      return combinedData.map(item => ({
+        ...item,
+        change: Number(item.ltp || 0) - Number(item.prev_close || 0),
+        changePercent: item.prev_close > 0
+          ? ((Number(item.ltp || 0) - Number(item.prev_close || 0)) / Number(item.prev_close)) * 100
+          : 0
+      }));
     } catch (error) {
       console.error(
         error?.response?.data?.message || "Error fetching indices"
@@ -734,32 +414,11 @@ export default function EquityScreen() {
   };
 
 
-  // const { data: allData = [], isLoading: loading } = useQuery({
-  //   queryKey: ["indices", selectedExchange],
-  //   queryFn: fetchIndices,
-  //   retry: false,
-  //   refetchOnMount: true,
-  //   refetchOnWindowFocus: false,
-
-  //   onSuccess: (data) => {
-  //     if (subscribedOnceRef.current) return;
-  //     if (!data?.length) return;
-
-  //     const symbols = data.map((i) => i.symbol || i.name).filter(Boolean);
-  //     if (!symbols.length) return;
-
-
-  //     subscribeSymbols(symbols, "EquityScreen", "Indices");
-  //     subscribedOnceRef.current = true;
-  //   },
-  // });
-
   const indicesQuery = useQuery({
     queryKey: ["indices", selectedExchange],
     queryFn: fetchIndices,
     retry: false,
-    staleTime: 0,                 // 🔥 force fresh
-    refetchOnMount: "always",     // 🔥 ALWAYS fire
+    staleTime: 30000,             // 30 seconds cache
     refetchOnWindowFocus: false,
   });
   // ✅ Stable reference: useMemo prevents new [] on every render (infinite loop fix)
@@ -767,8 +426,9 @@ export default function EquityScreen() {
   const loading = indicesQuery.isLoading;
   useEffect(() => {
     if (allData && allData.length > 0) {
-      setAllIndicesData(allData);
-      setOriginalAllIndicesData(allData);
+      const sortedIndices = applySortToData("Default", allData);
+      setAllIndicesData(sortedIndices);
+      setOriginalAllIndicesData(sortedIndices);
     }
   }, [allData, selectedExchange]);
 
@@ -776,79 +436,20 @@ export default function EquityScreen() {
   // ✅ Handlers
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
+    setSelectedGroup(null);
     setShowPreview(false);
-
-    if (
-      category === "Market Cap" &&
-      marketCapData.length === 0 &&
-      !isMarketCapLoading
-    ) {
-      fetchMarketCap(selectedExchange);
-    }
-
-    if (
-      category === "Sectors" &&
-      sectorsData.length === 0 &&
-      !isSectorsLoading
-    ) {
-      fetchSectors(selectedExchange);
-    }
-
-    if (
-      category === "Themes" &&
-      themesData.length === 0 &&
-      !isThemesLoading
-    ) {
-      fetchThemes(selectedExchange);
-    }
   };
 
   const handleExchangeChange = (exchange) => setSelectedExchange(exchange);
 
   // ✅ Sort Logic
-  // const applySortToData = (sortType, data) => {
-  //   let sorted = [...data];
-
-  //   const getChangePercent = (item) => {
-  //     const value = Number(item.ltp || 0);
-  //     console.log("value", value)
-  //     const prevClose = Number(item.prev_close || 0);
-  //     console.log("prev", prevClose)
-  //     const change = prevClose > 0 ? value - prevClose : 0;
-  //     console.log("change", change)
-  //     const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
-  //     console.log("percent ", changePercent)
-  //     return changePercent;
-  //   };
-
-  //   if (sortType === "A-Z") {
-  //     sorted.sort((a, b) => {
-  //       const nameA = (a.symbol || "").toUpperCase();
-  //       const nameB = (b.symbol || "").toUpperCase();
-  //       return nameA.localeCompare(nameB);
-  //     });
-  //   } else if (sortType === "Z-A") {
-  //     sorted.sort((a, b) => {
-  //       const nameA = (a.symbol || "").toUpperCase();
-  //       const nameB = (b.symbol || "").toUpperCase();
-  //       return nameB.localeCompare(nameA);
-  //     });
-  //   }
-  //   if (sortType === "High-Low") {
-  //     sorted.sort((a, b) => getChangePercent(a) - getChangePercent(b));
-  //   }
-  //   else if (sortType === "Low-High") {
-  //     sorted.sort((a, b) => getChangePercent(b) - getChangePercent(a));
-  //   }
-
-  //   return sorted;
-  // };
-
   const applySortToData = (sortType, data) => {
     let sorted = [...data];
 
+    const getLTP = (item) => Number(item.ltp || item.value || 0);
+
     const getChangePercent = (item) => {
-      const value = Number(item.ltp || 0);
+      const value = getLTP(item);
       const prevClose = Number(item.prev_close || 0);
       const change = prevClose > 0 ? value - prevClose : 0;
       const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
@@ -857,15 +458,15 @@ export default function EquityScreen() {
 
     if (sortType === "A-Z") {
       sorted.sort((a, b) => {
-        const nameA = (a.symbol || "").toUpperCase();
-        const nameB = (b.symbol || "").toUpperCase();
+        const nameA = (a.symbol || a.group_name || a.name || "").toUpperCase();
+        const nameB = (b.symbol || b.group_name || b.name || "").toUpperCase();
         return nameA.localeCompare(nameB);
       });
     }
     else if (sortType === "Z-A") {
       sorted.sort((a, b) => {
-        const nameA = (a.symbol || "").toUpperCase();
-        const nameB = (b.symbol || "").toUpperCase();
+        const nameA = (a.symbol || a.group_name || a.name || "").toUpperCase();
+        const nameB = (b.symbol || b.group_name || b.name || "").toUpperCase();
         return nameB.localeCompare(nameA);
       });
     }
@@ -875,6 +476,18 @@ export default function EquityScreen() {
     else if (sortType === "Low-High") {
       sorted.sort((a, b) => getChangePercent(a) - getChangePercent(b));
     }
+    else if (sortType === "Default") {
+      // 1) first by sort order asc if no change then; 
+      // 2) price percentage change high to low.
+      sorted.sort((a, b) => {
+        const orderA = a.sort_order ?? 999999;
+        const orderB = b.sort_order ?? 999999;
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        return getChangePercent(b) - getChangePercent(a);
+      });
+    }
 
     return sorted;
   };
@@ -883,12 +496,10 @@ export default function EquityScreen() {
     setSelectedSort(sortType);
     setSortOpen(false);
 
-    if (selectedCategory === "Market Cap") {
-      setMarketCapData(applySortToData(sortType, originalMarketCapData));
-    } else if (selectedCategory === "Sectors") {
-      setSectorsData(applySortToData(sortType, originalSectorsData));
-    } else if (selectedCategory === "Indices") {
+    if (selectedCategory === "Index") {
       setAllIndicesData(applySortToData(sortType, originalAllIndicesData));
+    } else {
+      setDisplayData(applySortToData(sortType, originalData));
     }
   };
 
@@ -904,43 +515,25 @@ export default function EquityScreen() {
 
     const processData = (data) => {
       let filtered = [...data];
-
       if (filterType === "Gainers") {
         filtered = filtered
           .filter((item) => getChangePercent(item) > 0)
           .sort((a, b) => getChangePercent(b) - getChangePercent(a));
-      }
-
-      else if (filterType === "Losers") {
+      } else if (filterType === "Losers") {
         filtered = filtered
           .filter((item) => getChangePercent(item) < 0)
           .sort((a, b) => getChangePercent(a) - getChangePercent(b));
       }
-
       return filtered;
     };
 
-    if (selectedCategory === "Market Cap") {
-      setMarketCapData(
-        filterType === "All"
-          ? originalMarketCapData
-          : processData(originalMarketCapData)
-      );
-    }
-
-    else if (selectedCategory === "Indices") {
+    if (selectedCategory === "Index") {
       setAllIndicesData(
-        filterType === "All"
-          ? originalAllIndicesData
-          : processData(originalAllIndicesData)
+        filterType === "All" ? originalAllIndicesData : processData(originalAllIndicesData)
       );
-    }
-
-    else if (selectedCategory === "Sectors") {
-      setSectorsData(
-        filterType === "All"
-          ? originalSectorsData
-          : processData(originalSectorsData)
+    } else {
+      setDisplayData(
+        filterType === "All" ? originalData : processData(originalData)
       );
     }
   };
@@ -953,13 +546,7 @@ export default function EquityScreen() {
   const { openStockInfoDrawer } = useDrawer();
 
   const handleIndexPress = (index) => {
-    navigation.navigate("Stocks", {
-      exchange: selectedExchange,
-      from: "Indices",
-      filterIndex: index.name,
-      headerData: index,
-      headerCategory: "Indices"
-    });
+    setSelectedGroup(index);
   };
 
   // ✅ Swipe right → View chart directly
@@ -967,230 +554,27 @@ export default function EquityScreen() {
     openStockInfoDrawer(index.symbol);
   };
 
-  // const getDataForCategory = () => {
-  //   if (selectedCategory === "Indices") return allIndicesData;
-  //   return [];
-  // };
-
   // ✅ Render Content
   const renderContent = () => {
-    // Market Cap Loading
-    if (selectedCategory === "Market Cap" && isMarketCapLoading) {
+    if (selectedGroup) {
       return (
-        <View style={styles.placeholderContainer}>
-          <ActivityIndicator size="large" color={global.colors.overlay} />
-          <Text style={styles.loadingText}>
-            Loading {selectedExchange} market cap...
-          </Text>
-        </View>
-      );
-    }
-
-    // Market Cap Error
-    if (selectedCategory === "Market Cap" && marketCapError) {
-      return (
-        <View style={styles.placeholderContainer}>
-          <Text style={styles.errorText}>⚠️ {marketCapError}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => fetchMarketCap(selectedExchange)}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    // Market Cap Success
-    if (selectedCategory === "Market Cap") {
-      if (marketCapData.length === 0) {
-        return (
-          <View style={styles.placeholderContainer}>
-            <Text style={styles.placeholderText}>
-              No {selectedExchange} market cap data
-            </Text>
-          </View>
-        );
-      }
-      const marketCapWithRealtime = mergeWithRealtime(
-        marketCapData.map((item) => {
-          const value = Number(item.ltp || 0);
-          const prevClose = Number(item.prev_close || 0);
-          const change = prevClose > 0 ? value - prevClose : 0;
-          const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
-
-          return {
-            symbol: item.symbol || item.group_name,
-            name: item.group_name,
-            value,
-            token: item.token,
-            prevClose,
-            change,
-            changePercent,
-            timestamp: item.timestamp || item.exchange_timestamp,
-            exchange_timestamp: item.exchange_timestamp,
-          };
-        }),
-        realtimePrices
-      );
-
-      return (
-        <MarketCapList
-          data={marketCapWithRealtime}
-          exchange={selectedExchange}
-          category={selectedCategory}
-          navigation={navigation}
-          onBuy={handleBuyFromHome}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
+        <StocksScreen
+          inline={true}
+          inlineGroup={selectedGroup}
+          inlineCategory={selectedCategory}
+          inlineExchange={selectedExchange}
+          onBack={() => setSelectedGroup(null)}
         />
       );
     }
 
-    // Sectors Loading
-    if (selectedCategory === "Sectors" && isSectorsLoading) {
-      return (
-        <View style={styles.placeholderContainer}>
-          <ActivityIndicator size="large" color={global.colors.overlay} />
-          <Text style={styles.loadingText}>
-            Loading {selectedExchange} sectors...
-          </Text>
-        </View>
-      );
-    }
-
-    // Sectors Error
-    if (selectedCategory === "Sectors" && sectorsError) {
-      return (
-        <View style={styles.placeholderContainer}>
-          <Text style={styles.errorText}>⚠️ {sectorsError}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => fetchSectors(selectedExchange)}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    // Sectors Success
-    if (selectedCategory === "Sectors") {
-      if (sectorsData.length === 0) {
-        return (
-          <View style={styles.placeholderContainer}>
-            <Text style={styles.placeholderText}>
-              No {selectedExchange} sector data
-            </Text>
-          </View>
-        );
-      }
-      const sectorsWithRealtime = mergeWithRealtime(
-        sectorsData.map((item) => {
-          const value = Number(item.ltp || 0);
-          const prevClose = Number(item.prev_close || 0);
-          const change = prevClose > 0 ? value - prevClose : 0;
-          const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
-
-          return {
-            symbol: item.symbol || item.group_name,
-            name: item.group_name,
-            token: item.token,
-            value,
-            prevClose,
-            change,
-            changePercent,
-            timestamp: item.timestamp || item.exchange_timestamp,
-            exchange_timestamp: item.exchange_timestamp,
-          };
-        }),
-        realtimePrices
-      );
-
-      return (
-        <SectorsList
-          data={sectorsWithRealtime}
-          exchange={selectedExchange}
-          category={selectedCategory}
-          navigation={navigation}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-        />
-      );
-    }
-
-    // Themes Loading
-    if (selectedCategory === "Themes" && isThemesLoading) {
-      return (
-        <View style={styles.placeholderContainer}>
-          <ActivityIndicator size="large" color={global.colors.overlay} />
-          <Text style={styles.loadingText}>
-            Loading {selectedExchange} themes...
-          </Text>
-        </View>
-      );
-    }
-
-    // Themes Error
-    if (selectedCategory === "Themes" && themesError) {
-      return (
-        <View style={styles.placeholderContainer}>
-          <Text style={styles.errorText}>⚠️ {themesError}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => fetchThemes(selectedExchange)}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    // Themes Success
-    if (selectedCategory === "Themes") {
-      if (themesData.length === 0) {
-        return (
-          <View style={styles.placeholderContainer}>
-            <Text style={styles.placeholderText}>
-              No {selectedExchange} theme data
-            </Text>
-          </View>
-        );
-      }
-      return (
-        <ThemesList
-          data={themesData}
-          exchange={selectedExchange}
-          category={selectedCategory}
-          navigation={navigation}
-        />
-      );
-    }
-
-    // Indices Success
-    // if (selectedCategory === "Indices") {
-    //   const data = getDataForCategory();
-    //   return (
-    //     <Indices
-    //       exchange={selectedExchange}
-    //       viewMode={showPreview ? "horizontal" : "vertical"}
-    //       onViewAllPress={handleViewAllIndices}
-    //       onIndexPress={handleIndexPress}
-    //       onSwipeToChart={handleSwipeToChart}
-    //       externalData={data}
-    //       maxItems={showPreview ? 5 : undefined}
-    //     />
-    //   );
-    // }
-
-    if (selectedCategory === "Indices") {
+    if (selectedCategory === "Index") {
       return (
         <Indices
           exchange={selectedExchange}
           viewMode={showPreview ? "horizontal" : "vertical"}
           onViewAllPress={handleViewAllIndices}
           onIndexPress={handleIndexPress}
-          // onSwipeToChart={handleSwipeToChart}
           externalData={allIndicesData}
           maxItems={showPreview ? 5 : undefined}
           refreshing={refreshing}
@@ -1199,14 +583,56 @@ export default function EquityScreen() {
       );
     }
 
+    if (groupQuery.isLoading) {
+      return (
+        <View style={styles.placeholderContainer}>
+          <ActivityIndicator size="large" color={global.colors.overlay} />
+          <Text style={styles.loadingText}>Loading {selectedCategory}...</Text>
+        </View>
+      );
+    }
 
-    // Other Tabs (Sectors, Themes, etc.)
+    if (groupQuery.isError) {
+      return (
+        <View style={styles.placeholderContainer}>
+          <Text style={styles.errorText}>⚠️ Failed to load {selectedCategory}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => groupQuery.refetch()}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (!displayData || displayData.length === 0) {
+      return (
+        <View style={styles.placeholderContainer}>
+          <Text style={styles.placeholderText}>No {selectedCategory} data available</Text>
+        </View>
+      );
+    }
+
+    const dataWithRealtime = mergeWithRealtime(
+      displayData.map((item) => ({
+        ...item,
+        symbol: item.symbol || item.group_name || item.name,
+        name: item.group_name || item.name,
+        token: item.token,
+        prevClose: Number(item.prev_close || 0),
+        value: Number(item.ltp || 0),
+      })),
+      realtimePrices
+    );
+
     return (
-      <View style={styles.placeholderContainer}>
-        <Text style={styles.placeholderText}>
-          {selectedCategory} coming soon...
-        </Text>
-      </View>
+      <DynamicGroupList
+        data={dataWithRealtime}
+        exchange={selectedExchange}
+        category={selectedCategory}
+        navigation={navigation}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onSelectGroup={setSelectedGroup}
+      />
     );
   };
 
@@ -1223,11 +649,11 @@ export default function EquityScreen() {
           onCategoryChange={handleCategoryChange}
           selectedExchange={selectedExchange}
           activeTab={selectedCategory}
-          additionalTabs={["Sectors", "Themes"]} // Adding "Sectors" and "Themes" to the tabs
+          tabs={swipeCategories}
         />
 
         {/* Sort & Filter Bar for Market Cap, Sectors, and Indices */}
-        {(selectedCategory === "Market Cap" || selectedCategory === "Sectors" || selectedCategory === "Indices") && (
+        {(selectedCategory === "Market Cap" || selectedCategory === "Sector" || selectedCategory === "Index") && !selectedGroup && (
           <View style={styles.sortFilterBar}>
 
             {/* Sort & Filter - RIGHT (Always visible) */}

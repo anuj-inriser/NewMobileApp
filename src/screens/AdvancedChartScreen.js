@@ -16,7 +16,7 @@ import TradeOrderScreen from "./TradeOrderScreen";
 import AccountScreen from "./AccountScreen";
 
 // Main App Layout Components
-import FundamentalTopHeader from "../components/FundamentalTopHeader";
+// import FundamentalTopHeader from "../components/FundamentalTopHeader";
 import BottomTabBar from "../components/BottomTabBar";
 
 const AdvancedChartScreen = () => {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, UIManager, LayoutAnimation } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, UIManager, LayoutAnimation, Modal, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 if (
     Platform.OS === 'android' &&
@@ -22,28 +23,18 @@ const MarketTabs = ({
     initialActiveTab = null,
 }) => {
 
+    // 🔥 Initialize with NSE or the parent's choice
     const [exchange, setExchange] = useState(selectedExchange || 'NSE');
     const [internalActiveTab, setInternalActiveTab] = useState(initialActiveTab);
     const [isReady, setIsReady] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    // 🔥 Restore exchange BEFORE rendering (no flicker)
+    // 🔥 Sync with parent and ensure NSE is notified on mount if no selection exists
     useEffect(() => {
-        const restoreExchange = async () => {
-            try {
-                const savedExchange = await AsyncStorage.getItem(EXCHANGE_KEY);
-
-                if (savedExchange && savedExchange !== exchange) {
-                    setExchange(savedExchange);
-                    onExchangeChange && onExchangeChange(savedExchange);
-                }
-            } catch {
-                // Keep initial state
-            } finally {
-                setIsReady(true);
-            }
-        };
-
-        restoreExchange();
+        if (!selectedExchange && exchange === 'NSE') {
+            onExchangeChange && onExchangeChange('NSE');
+        }
+        setIsReady(true);
     }, []);
 
     // 🔄 Sync if parent updates selectedExchange
@@ -60,6 +51,7 @@ const MarketTabs = ({
     const handleExchangeToggle = async (exch) => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setExchange(exch);
+        setIsDropdownOpen(false);
         onExchangeChange && onExchangeChange(exch);
         try {
             await AsyncStorage.setItem(EXCHANGE_KEY, exch);
@@ -77,25 +69,53 @@ const MarketTabs = ({
     return (
         <View style={styles.wrapper}>
             <View style={styles.container}>
-                {/* Exchange Toggle */}
-                <View style={styles.toggleContainer}>
+                {/* Exchange Dropdown */}
+                <View style={styles.dropdownContainer}>
                     <TouchableOpacity
-                        style={[styles.toggleButton, exchange === 'NSE' && styles.activeToggle]}
-                        onPress={() => handleExchangeToggle('NSE')}
+                        style={styles.dropdownButton}
+                        onPress={() => setIsDropdownOpen(!isDropdownOpen)}
                     >
-                        <Text style={[styles.toggleText, exchange === 'NSE' && styles.activeToggleText]}>
-                            NSE
-                        </Text>
+                        <Text style={styles.dropdownButtonText}>{exchange}</Text>
+                        <Ionicons 
+                            name={isDropdownOpen ? "chevron-up" : "chevron-down"} 
+                            size={16} 
+                            color={global.colors.secondary} 
+                        />
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.toggleButton, exchange === 'BSE' && styles.activeToggle]}
-                        onPress={() => handleExchangeToggle('BSE')}
-                    >
-                        <Text style={[styles.toggleText, exchange === 'BSE' && styles.activeToggleText]}>
-                            BSE
-                        </Text>
-                    </TouchableOpacity>
+                    {isDropdownOpen && (
+                        <Modal
+                            transparent={true}
+                            visible={isDropdownOpen}
+                            animationType="fade"
+                            onRequestClose={() => setIsDropdownOpen(false)}
+                        >
+                            <Pressable 
+                                style={styles.modalOverlay} 
+                                onPress={() => setIsDropdownOpen(false)}
+                            >
+                                <View style={styles.dropdownMenu}>
+                                    {['NSE', 'BSE','All'].map((item) => (
+                                        <TouchableOpacity
+                                            key={item}
+                                            style={[
+                                                styles.dropdownItem,
+                                                exchange === item && styles.activeDropdownItem
+                                            ]}
+                                            onPress={() => handleExchangeToggle(item)}
+                                        >
+                                            <Text style={[
+                                                styles.dropdownItemText,
+                                                exchange === item && styles.activeDropdownItemText
+                                            ]}>
+                                                {item}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </Pressable>
+                        </Modal>
+                    )}
                 </View>
 
                 {/* Tabs */}
@@ -150,33 +170,62 @@ const styles = StyleSheet.create({
         height: 3,
         zIndex: 1,
     },
-    toggleContainer: {
+    dropdownContainer: {
+        marginRight: 10,
+        zIndex: 1000,
+    },
+    dropdownButton: {
         flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: global.colors.primary,
         borderRadius: 20,
-        padding: 2,
-        marginRight: 16,
-    },
-    toggleButton: {
         paddingVertical: 6,
         paddingHorizontal: 12,
-        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: global.colors.primary
     },
-    activeToggle: {
-        backgroundColor: global.colors.background,
-        elevation: 2,
-        shadowColor: global.colors.textPrimary,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
-    },
-    toggleText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: global.colors.textSecondary,
-    },
-    activeToggleText: {
+    dropdownButtonText: {
+        fontSize: 13,
+        fontWeight: '700',
         color: global.colors.secondary,
+        marginRight: 4,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.1)',
+        justifyContent: 'flex-start',
+        paddingTop: 140, // Adjust based on header height
+        paddingLeft: 16,
+    },
+    dropdownMenu: {
+        backgroundColor: global.colors.background,
+        borderRadius: 12,
+        width: 100,
+        padding: 4,
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        borderWidth: 1,
+        borderColor: global.colors.overlayLow,
+    },
+    dropdownItem: {
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+    },
+    activeDropdownItem: {
+        backgroundColor: global.colors.primary,
+    },
+    dropdownItemText: {
+        fontSize: 14,
+        color: global.colors.textSecondary,
+        fontWeight: '500',
+    },
+    activeDropdownItemText: {
+        color: global.colors.secondary,
+        fontWeight: '700',
     },
     tabsScroll: {
         alignItems: 'center',

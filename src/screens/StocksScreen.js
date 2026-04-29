@@ -59,7 +59,7 @@ import SparklineChart from "../components/Sparkline";
 //   );
 // };
 
-const AdvancedHeaderCard = ({ item, realtime, counts }) => {
+export const AdvancedHeaderCard = ({ item, realtime, counts }) => {
   const isPositive = (realtime?.price || item?.value) >= (realtime?.prevClose || item?.prevClose);
   const color = isPositive ? global.colors.success : global.colors.error;
 
@@ -67,9 +67,6 @@ const AdvancedHeaderCard = ({ item, realtime, counts }) => {
   const prevClose = realtime?.prevClose || item?.prevClose || price;
   const change = price - prevClose;
   const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
-
-  // const isMarketStillOpen = isMarketOpen();
-  // const timeColor = isMarketStillOpen ? global.colors.textSecondary : "#ef4444"; // Redis/Red if closed
 
   const timeStr = realtime?.timestamp
     ? new Date(realtime.timestamp).toLocaleTimeString("en-IN", {
@@ -88,10 +85,6 @@ const AdvancedHeaderCard = ({ item, realtime, counts }) => {
           <Text style={[styles.card_verticalTime, { color: global.colors.textSecondary }]}>{timeStr}</Text>
         </View>
 
-        <View style={styles.card_topMiddle}>
-          <SparklineChart symbol={item.symbol} color={color} />
-        </View>
-
         <View style={styles.card_topRight}>
           <Text style={styles.card_verticalPrice}>
             ₹{Number(price).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -100,6 +93,10 @@ const AdvancedHeaderCard = ({ item, realtime, counts }) => {
             {change >= 0 ? "+" : ""}{change.toFixed(2)} ({change >= 0 ? "+" : ""}{changePercent.toFixed(2)}%)
           </Text>
         </View>
+      </View>
+
+      <View style={styles.card_middleRow}>
+        <SparklineChart symbol={item.symbol} color={color} />
       </View>
 
       <View style={styles.card_bottomRow}>
@@ -117,23 +114,29 @@ const AdvancedHeaderCard = ({ item, realtime, counts }) => {
   );
 };
 
-const StocksScreen = () => {
+const StocksScreen = ({ 
+  inline = false, 
+  inlineGroup = null, 
+  inlineCategory = null, 
+  inlineExchange = null,
+  onBack
+}) => {
   const navigation = useNavigation();
   const route = useRoute();
+  
+  // Use either route params (navigation) or props (inline)
   const {
-    exchange: initExchange = "NSE",
-    filterIndex,
-    from,
-    headerData,
-    headerCategory
+    exchange: routeExchange = "NSE",
+    filterIndex: routeFilterIndex,
+    from: routeFrom,
+    headerData: routeHeaderData,
   } = route.params || {};
-  const [selectedExchange, setSelectedExchange] = useState(initExchange);
-  const [selectedCategory, setSelectedCategory] = useState(from || "Indices");
-  useEffect(() => {
-    if (from) {
-      setSelectedCategory(from);
-    }
-  }, [from]);
+
+  const selectedExchange = inline ? inlineExchange : routeExchange;
+  const selectedCategory = inline ? inlineCategory : (routeFrom || "Indices");
+  const headerData = inline ? inlineGroup : routeHeaderData;
+  const filterIndex = inline ? (inlineGroup?.group_name || inlineGroup?.name) : routeFilterIndex;
+
   const { prices: realtimePrices } = useRealtimePrices();
   const subscribedRef = useRef(false);
   const { openStockInfoDrawer } = useDrawer();
@@ -183,7 +186,9 @@ const StocksScreen = () => {
   // 🔁 Dynamic fetch based on category + filter
   const fetchStocks = useCallback(async () => {
     let url = "";
-    const group_token = headerData.token;
+    const group_token = headerData?.token;
+    if (!group_token) return [];
+    
     url =
       selectedExchange === "BSE"
         ? `${apiUrl}/api/indicesNew/bseStocks?filterIndex=${group_token}&category=${selectedCategory}`
@@ -344,11 +349,6 @@ const StocksScreen = () => {
     setDisplayStocks(applySortToData(selectedSort, filtered));
   };
 
-  // 🔁 Refetch on tab/exchange change
-  useEffect(() => {
-    refetch();
-  }, [selectedExchange, selectedCategory, filterIndex, refetch]);
-
   const counts = useMemo(() => {
     let g = 0, l = 0, n = 0;
     displayStocks.forEach((stock) => {
@@ -368,64 +368,61 @@ const StocksScreen = () => {
 
   // Update display stocks when stocksData changes
   useEffect(() => {
-    setOriginalStocks(stocksData);
-    setDisplayStocks(stocksData);
-    setSelectedSort("Default");
+    if (stocksData && stocksData.length > 0) {
+      setOriginalStocks(stocksData);
+      setDisplayStocks(stocksData);
+      setSelectedSort("Default");
+    }
   }, [stocksData]);
 
   // 🖼️ Loading / Error UI
   if (isLoading && stocksData.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        {/* <TopHeader /> */}
-        <TopMenuSlider currentRoute="Stocks" />
+      <View style={[styles.container, inline && { flex: 1 }]}>
+        {!inline && <TopMenuSlider currentRoute="Stocks" />}
         <View style={styles.placeholderContainer}>
           <ActivityIndicator size="large" color={global.colors.textPrimary} />
           <Text style={styles.loadingText}>
             Loading {selectedCategory} stocks...
           </Text>
         </View>
-        {/* <BottomTabBar /> */}
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
-        {/* <TopHeader /> */}
-        <TopMenuSlider currentRoute="Stocks" />
+      <View style={[styles.container, inline && { flex: 1 }]}>
+        {!inline && <TopMenuSlider currentRoute="Stocks" />}
         <View style={styles.placeholderContainer}>
           <Text style={styles.errorText}>⚠️ {error.message}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={refetch}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-        {/* <BottomTabBar /> */}
-      </SafeAreaView>
+      </View>
     );
   }
 
-
-
   return (
-    <SafeAreaView edges={["bottom"]} style={styles.container}>
-      {/* ... existing header code ... */}
-      <TopMenuSlider currentRoute="Equity" />
+    <View style={[styles.container, inline && { flex: 1 }]}>
+      {!inline && <TopMenuSlider currentRoute="Equity" />}
 
       {/* ✅ MarketTabs */}
-      <MarketTabs
-        onExchangeChange={handleExchangeChange}
-        onCategoryChange={handleCategoryChange}
-        selectedExchange={selectedExchange}
-        activeTab={selectedCategory}
-        additionalTabs={["Sectors", "Themes"]}
-      />
+      {!inline && (
+        <MarketTabs
+          onExchangeChange={handleExchangeChange}
+          onCategoryChange={handleCategoryChange}
+          selectedExchange={selectedExchange}
+          activeTab={selectedCategory}
+          additionalTabs={["Sectors", "Themes"]}
+        />
+      )}
 
-      {from && (
+      {(route.params?.from || inline) && (
         <View style={styles.headerWithBack}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={inline ? onBack : () => navigation.goBack()}
             style={styles.backButton}
           >
             <Ionicons name="arrow-back" size={22} color={global.colors.secondary} />
@@ -549,7 +546,7 @@ const StocksScreen = () => {
       </Modal>
 
       {/* <BottomTabBar /> */}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -718,6 +715,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "flex-end",
     justifyContent: "flex-start",
+  },
+  card_middleRow: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex:1,
   },
   card_companyName: { fontSize: 16, fontWeight: "700", color: global.colors.textPrimary },
   card_verticalTime: {

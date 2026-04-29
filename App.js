@@ -30,6 +30,8 @@ import { AuthProvider } from "./src/context/AuthContext";
 import { WatchlistProvider } from "./src/context/WatchlistContext";
 import { AppQueryProvider } from "./src/context/QueryClientProvider";
 import { DrawerProvider } from "./src/context/DrawerContext";
+import { NewsProvider } from "./src/context/Newscontext";
+import { IdeasProvider } from "./src/context/IdeasContext";
 import { connectMarketWS, onMarketMessage } from "./src/ws/marketWs";
 import { applyPriceMessage } from "./src/store/marketPrices";
 import { useAuth } from "./src/context/AuthContext";
@@ -52,8 +54,6 @@ import TradeOrderScreen from "./src/screens/TradeOrderScreen";
 import OrdersScreen from "./src/screens/OrdersScreen";
 import StockTimelineScreen from "./src/screens/StockTimelineScreen";
 import StocksScreen from "./src/screens/StocksScreen";
-import IndicesListScreen from "./src/screens/IndicesListScreen";
-import IndicesDetailScreen from "./src/screens/IndicesDetailScreen";
 import Learning from "./src/screens/Learning";
 import LearningDetail from "./src/screens/LearningDetail";
 import ChapterScreen from "./src/screens/ChapterScreen";
@@ -63,6 +63,7 @@ import NotificationScreen from "./src/screens/NotificationScreen";
 import PermissionGuard from "./src/guards/PermissionGuard";
 import TradeOrderNativeScreen from "./src/screens/TradeOrderNativeScreen";
 import axiosInstance from "./src/api/axios";
+
 
 const RootStack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
@@ -210,12 +211,10 @@ function AppNavigator() {
         <AppStack.Screen name="NewsReadingScreen" component={NewsReadingScreen} />
 
 
-        <AppStack.Screen name="IndicesList" component={IndicesListScreen} />
-        <AppStack.Screen name="IndicesDetail" component={IndicesDetailScreen} />
         <AppStack.Screen name="LearningDetail" component={LearningDetail} />
         <AppStack.Screen name="ChapterScreen" component={ChapterScreen} />
         <AppStack.Screen name="ChapterDetails" component={ChapterDetails} />
-<AppStack.Screen
+        <AppStack.Screen
           name="Checkout"
           component={CheckoutScreen}
           options={{
@@ -472,12 +471,14 @@ export default function App() {
       <SafeAreaProvider>
         <AppQueryProvider>
           <AuthProvider>
-            <NotificationProvider>
-              <DrawerProvider>
-              <WatchlistProvider>
-                <AlertProvider>
-                  <CouponProvider>
-                    <NavigationContainer
+            <NewsProvider>
+              <IdeasProvider>
+                <NotificationProvider>
+                  <DrawerProvider>
+                  <WatchlistProvider>
+                    <AlertProvider>
+                      <CouponProvider>
+                        <NavigationContainer
                       ref={navigationRef}
                       onReady={() => {
                         const state = navigationRef.getRootState();
@@ -506,6 +507,8 @@ export default function App() {
               </WatchlistProvider>
               </DrawerProvider>
             </NotificationProvider>
+            </IdeasProvider>
+            </NewsProvider>
           </AuthProvider>
         </AppQueryProvider>
       </SafeAreaProvider>

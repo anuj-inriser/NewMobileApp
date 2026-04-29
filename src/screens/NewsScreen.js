@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import NewsCardLarge from '../components/News/NewsCardLarge';
 import NewsCardSmall from '../components/News/NewsCardSmall';
 import { useNews, useNewsCategories } from '../hooks/useCachedQueries';
+import { useNewsContext } from '../context/Newscontext';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Device from "expo-device";
 import axiosInstance from "../api/axios";
@@ -13,6 +14,7 @@ import axiosInstance from "../api/axios";
 const NewsScreen = () => {
 
     const navigation = useNavigation();
+    const { markNewsAsRead } = useNewsContext();
     const [selectedCategory, setSelectedCategory] = useState({ id: 0, name: 'All' });
 
     const categoryId = selectedCategory?.id !== undefined ? selectedCategory.id : selectedCategory?.news_category;
@@ -38,6 +40,13 @@ const NewsScreen = () => {
             setSelectedCategory(categories[0]);
         }
     }, [categories, selectedCategory]);
+
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            markNewsAsRead();
+        });
+        return unsubscribe;
+    }, [navigation, markNewsAsRead]);
 
     const renderCategoryItem = ({ item }) => {
         const itemId = item.id !== undefined ? item.id : item.news_category;

@@ -3,6 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, Modal, Animated, Press
 import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePermission } from "../hooks/usePermission";
+import { useNotifications } from "../context/NotificationContext";
+import { useNewsContext } from "../context/Newscontext";
+import { useIdeasContext } from "../context/IdeasContext";
 
 // Helper to find the current active route name recursively
 const getActiveRouteName = (state) => {
@@ -19,6 +22,9 @@ const BottomTabBar = ({ state, descriptors, navigation, forceShow = false }) => 
   const canViewTrade = usePermission("VIEW_TRADE");
   const canViewIdeas = usePermission("VIEW_IDEAS");
   const canViewNews = usePermission("VIEW_NEWS");
+  const { unreadCount } = useNotifications();
+  const { unreadNewsCount } = useNewsContext();
+  const { unreadIdeasCount } = useIdeasContext();
   // const navigation = useNavigation();
   // const currentRouteName = useNavigationState((state) => getActiveRouteName(state));
   const insets = useSafeAreaInsets();
@@ -40,11 +46,11 @@ const BottomTabBar = ({ state, descriptors, navigation, forceShow = false }) => 
 
   const tabs = React.useMemo(() => [
     { name: "Home", component: "Equity", isPermission: true, icon: require("../../assets/homemenu.png") },
-    { name: "News", component: "NewsScreen", isPermission: canViewNews, icon: require("../../assets/newsmennu.png") },
-    { name: "Explore", component: "StockTimelineScreen", isPermission: canViewCommunity, icon: require("../../assets/exploremenu.png") },
-    { name: "Ideas", component: "Trade", isPermission: canViewIdeas, icon: require("../../assets/ideasmenu.png"), isRootNav: false },
+    { name: "News", component: "NewsScreen", isPermission: canViewNews, icon: require("../../assets/newsmennu.png"), badge: unreadNewsCount > 0 ? unreadNewsCount : null },
+    { name: "Scans", component: "StockTimelineScreen", isPermission: canViewCommunity, icon: require("../../assets/exploremenu.png") },
+    { name: "Ideas", component: "Trade", isPermission: canViewIdeas, icon: require("../../assets/ideasmenu.png"), isRootNav: false, badge: unreadIdeasCount > 0 ? unreadIdeasCount : null },
     { name: "Portfolio", component: "AdvancedChart", isPermission: canViewTrade, icon: require("../../assets/trademenu.png"), isRootNav: true },
-  ], [canViewNews, canViewCommunity, canViewIdeas, canViewTrade]);
+  ], [canViewNews, canViewCommunity, canViewIdeas, canViewTrade, unreadNewsCount, unreadIdeasCount, unreadCount]);
 
   if (!state || !state.routes || typeof state.index !== 'number') {
     return null; // or empty view

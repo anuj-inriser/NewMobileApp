@@ -54,7 +54,7 @@ import { useKeyboardAvoidingShift } from '../hooks/useKeyboardAvoidingShift';
 
 const WISHLIST_API = `${apiUrl}/api/wishlistcontrol`;
 // Added postNumber prop with default "1/1"
-const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber, fullScreen }) => {
+const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber, fullScreen, onRupeePress }) => {
   const translateY = useKeyboardAvoidingShift()
   const { userId } = useAuth();
   const { showSuccess, showError } = useAlert();
@@ -769,13 +769,14 @@ const StockCard = ({ stock, realtimeData, userReaction, contentType, postNumber,
           <Bookmark size={17} color={global.colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}
-          onPress={() =>
+          onPress={() => {
+            if (onRupeePress) onRupeePress();
             openStockInfoDrawer(stock.token, stock.symbol, "placeorder", stock.isin, {
               name: stock.name,
               tradeable: stock.tradeable,
               exchange: stock.exchange
-            })
-          }
+            });
+          }}
         >
           <IndianRupee size={17} color={global.colors.textSecondary} />
         </TouchableOpacity>

@@ -20,7 +20,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Device from "expo-device";
 // import TopHeader from "../components/TopHeader";
-import TopMenuSlider from "../components/TopMenuSlider";
+// import TopMenuSlider from "../components/TopMenuSlider";
 import { useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 // import BottomTabBar from '../components/BottomTabBar';
@@ -38,13 +38,15 @@ import { useRealtimePrices } from "../hooks/useRealtimePrices";
 import GlobalSubTabMenu from "../components/GlobalSubTabMenu";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
+import { useIdeasContext } from "../context/IdeasContext";
 
-const filterOptions = ["All", "Live", "Closed", "Target Hit", "Target Miss"];
-const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
+const filterOptions = ["All", "Live", "Target Hit", "Closed", "Stop Loss Hit"];
+const sortOptions = ["Default", "A-Z", "Z-A", "High-Low", "Low-High"];
 
 const TradeScreen = () => {
   const { prices } = useRealtimePrices();
   const route = useRoute();
+  const { markIdeasAsRead } = useIdeasContext();
   const { role, userData } = useAuth();
   const currentRole = role || userData?.role || 1;
   const { data: activePlansData, refetch: refetchActivePlans } = useActivePlans();
@@ -59,7 +61,7 @@ const TradeScreen = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [isSortOpen, setIsSortOpen] = useState(false);
-  const [selectedSort, setSelectedSort] = useState("A-Z");
+  const [selectedSort, setSelectedSort] = useState("Default");
   const touchMoveX = useRef(0);
   const touchStartX = useRef(0);
 
@@ -185,6 +187,7 @@ const TradeScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
+      markIdeasAsRead();
       refetchActivePlans();
 
       const page = "Ideas";
@@ -272,27 +275,36 @@ const TradeScreen = () => {
 
   useEffect(() => {
     if (!tradeCategories.length) return;
+    
+    let targetCategory = null;
     if (route.params?.selectedCategoryId) {
-      const found = tradeCategories.find(
+      targetCategory = tradeCategories.find(
         (c) => c.id === route.params.selectedCategoryId,
       );
-      if (found) {
-        setSelectedCategory(found);
-        return;
-      }
     }
 
-    // Only set default if selectedCategory is null AND no route param
-    if (!selectedCategory) {
-      setSelectedCategory(tradeCategories[0]);
+    // If no route param or not found, fallback to first category (usually Equity)
+    if (!targetCategory && !selectedCategory) {
+      targetCategory = tradeCategories[0];
     }
-  }, [route.params?.selectedCategoryId, tradeCategories, selectedCategory]);
+
+    // Double check: if still not set or first isn't equity, find it explicitly
+    if (!targetCategory || (targetCategory && !targetCategory.scriptTypeName?.toLowerCase().includes("equity"))) {
+      const equityCat = tradeCategories.find(c => c.scriptTypeName?.toLowerCase().includes("equity"));
+      if (equityCat) targetCategory = equityCat;
+    }
+
+    // Only update if target is found AND different from current
+    if (targetCategory && targetCategory.id !== selectedCategory?.id) {
+      setSelectedCategory(targetCategory);
+    }
+  }, [route.params?.selectedCategoryId, tradeCategories, selectedCategory?.id]);
 
   useEffect(() => {
-    if (tradeTypes.length && !selectedType) {
-      setSelectedType(tradeTypes);
+    if (tradeTypes.length && (!selectedType || !selectedType.tradeTypeId)) {
+      setSelectedType(ALL_TYPE);
     }
-  }, [tradeTypes]);
+  }, [tradeTypes, selectedType?.tradeTypeId]);
 
   const { data: tradeRecommendations = [], isLoading: loadingRecommendations, refetch, isFetching } =
     useQuery({
@@ -311,7 +323,8 @@ const TradeScreen = () => {
         }
 
         if (selectedFilter !== "All") {
-          params.status = selectedFilter;
+          // Map "Stop Loss Hit" to "Target Miss" for API compatibility if needed
+          params.status = selectedFilter === "Stop Loss Hit" ? "Target Miss" : selectedFilter;
         }
 
         if (selectedType?.tradeTypeId) {
@@ -338,20 +351,46 @@ const TradeScreen = () => {
     let filtered = tradeRecommendations.filter((item) => !item.track_only);
     let merged = mergeWithRealtime(filtered, prices);
 
-    // Apply Sorting
-    switch (selectedSort) {
-      case "A-Z":
-        merged.sort((a, b) => (a.script_name || "").localeCompare(b.script_name || ""));
-        break;
-      case "Z-A":
-        merged.sort((a, b) => (b.script_name || "").localeCompare(a.script_name || ""));
-        break;
-      case "High-Low":
-        merged.sort((a, b) => (b.value || 0) - (a.value || 0));
-        break;
-      case "Low-High":
-        merged.sort((a, b) => (a.value || 0) - (b.value || 0));
-        break;
+    // ✅ Priority Sorting by Status (Live -> Target Hit -> Closed -> Stop Loss Hit)
+    const statusPriority = {
+      "Live": 1,
+      "Target Hit": 2,
+      "Closed": 3,
+      "Target Miss": 4,
+      "Stop Loss Hit": 4
+    };
+
+    merged.sort((a, b) => {
+      // 1. Sort by Status Priority
+      const priorityA = statusPriority[a.status] || 99;
+      const priorityB = statusPriority[b.status] || 99;
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // 2. Sort by Publish Date (Newest first)
+      const dateA = new Date(a.published_at || a.created_at || 0);
+      const dateB = new Date(b.published_at || b.created_at || 0);
+      return dateB - dateA;
+    });
+
+    // Apply Secondary User Sorting (if selected)
+    if (selectedSort !== "Default") {
+      switch (selectedSort) {
+        case "A-Z":
+          merged.sort((a, b) => (a.script_name || "").localeCompare(b.script_name || ""));
+          break;
+        case "Z-A":
+          merged.sort((a, b) => (b.script_name || "").localeCompare(a.script_name || ""));
+          break;
+        case "High-Low":
+          merged.sort((a, b) => (b.value || 0) - (a.value || 0));
+          break;
+        case "Low-High":
+          merged.sort((a, b) => (a.value || 0) - (b.value || 0));
+          break;
+      }
     }
 
     return merged;
@@ -386,7 +425,7 @@ const TradeScreen = () => {
 
   return (
     <>
-      <SafeAreaView edges={["bottom"]} style={styles.container}>
+      <SafeAreaView  edges={["bottom"]} style={styles.container}>
         {/* <TopHeader /> */}
         <GlobalTopMenu
           tabs={tradeCategories}
@@ -597,12 +636,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: global.colors.background,
+    paddingTop: 10,
   },
   topSliders: {
     backgroundColor: global.colors.background,
     elevation: 10, // Android shadow
     shadowColor: global.colors.textPrimary,
-    shadowOffset: { width: 0, height: 2 }, // bottom direction
+    shadowOffset: { width: 0, height: 5 }, // bottom direction
     shadowOpacity: 0.2,
     shadowRadius: 3,
 

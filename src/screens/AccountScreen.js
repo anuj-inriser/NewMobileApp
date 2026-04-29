@@ -251,7 +251,6 @@ const AccountScreen = () => {
       </View>
     </View>
   );
-console.log(`broker ${JSON.stringify(brokers)}`)
   return (
     <View style={styles.container}>
       {authToken ? (
