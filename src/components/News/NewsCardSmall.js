@@ -39,7 +39,11 @@ const NewsCardSmall = ({ item, onPress }) => {
     return (
         <>
             <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
-
+                {item.premium && (
+                          <View style={styles.cardBadge}>
+                            <Text style={styles.cardBadgeText}>Premium</Text>
+                          </View>
+                  )}
                 <View style={styles.top}>
                     {/* <Image source={{ uri: `${apiUrl}/uploads/newsimages/${item.image_url}` }} style={styles.image} /> */}
                     <Image
@@ -69,6 +73,8 @@ const NewsCardSmall = ({ item, onPress }) => {
                         <MaterialIcons name="more-vert" size={20} color={global.colors.textSecondary} />
                     </TouchableOpacity>
                 </View>
+
+                
 
             </TouchableOpacity>
 
@@ -121,9 +127,10 @@ const styles = StyleSheet.create({
         backgroundColor: global.colors.border,
         borderRadius: 18,
         padding: 10,
+        paddingTop: 20,
         marginBottom: 16,
         elevation: 3,
-        height: 110,
+        height: 120,
         width: '100%'
     },
     top: {
@@ -181,7 +188,23 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: global.colors.textPrimary,
         fontWeight: '500',
-    }
+    },
+    cardBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: global.colors.secondary, // Same as COLORS.red in modal.js
+    borderTopRightRadius: 20, // Match scannerCard border radius
+    borderBottomLeftRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    zIndex: 10,
+  },
+  cardBadgeText: {
+    color: '#FFFFFF', // Same as COLORS.white in modal.js
+    fontWeight: '700',
+    fontSize: 10,
+  },
 });
 
 export default NewsCardSmall;

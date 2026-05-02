@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     left: 0,
-    backgroundColor: '#D32F2F', // Same as COLORS.red in modal.js
+    backgroundColor: global.colors.secondary, // Same as COLORS.red in modal.js
     borderTopRightRadius: 20, // Match scannerCard border radius
     borderBottomLeftRadius: 12,
     paddingHorizontal: 10,
