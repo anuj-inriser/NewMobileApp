@@ -104,76 +104,33 @@ const Indices = ({
     staleTime: 5 * 60 * 1000, // 5 mins
   });
 
-  // ✅ Normalize externalData (HomeScreen style)
-  const normalizedExternalData = useMemo(() => {
-    if (!Array.isArray(externalData) || externalData.length === 0) return [];
+  // ✅ Choose and normalize data source
+  const indicesWithRealtimeData = useMemo(() => {
+    const source = externalData || indicesData || [];
+    if (!source.length) return [];
 
-    return externalData.map((item) => {
-      const value = Number(item.ltp || item.value || 0);
-      const prevClose = Number(item.prev_close || item.prevClose || 0);
+    return source.map((index) => {
+      const rt = realtimePrices[index.token];
+      
+      // Use existing values or fallback to realtime
+      const value = rt ? rt.price : Number(index.ltp || index.value || 0);
+      const prevClose = Number(index.prev_close || index.prevClose || (rt ? rt.prevClose : 0) || 0);
+      
       const change = value - prevClose;
       const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
 
       return {
-        symbol: item.symbol ,
-        name: item.group_name,
-        token: item.token,
+        ...index,
+        symbol: index.symbol || index.group_name || index.name,
+        name: index.group_name || index.name,
         value,
         prevClose,
         change,
         changePercent,
-        timestamp: item.timestamp || item.exchange_timestamp,
+        timestamp: rt?.timestamp || rt?.exchange_timestamp || index.timestamp || index.exchange_timestamp,
       };
     });
-  }, [externalData]);
-
-  // ✅ Choose data source
-  const indicesSource = externalData
-    ? normalizedExternalData
-    : indicesData || [];
-
-  // ✅ Merge with realtime (HomeScreen style)
-  const indicesWithRealtimeData = useMemo(() => {
-    if (!indicesSource?.length) return [];
-
-    let NSE_SYMBOLS = [];
-    let BSE_SYMBOLS = [];
-
-    if (indicesSource) {
-      if (exchange === "NSE")
-        NSE_SYMBOLS.push(...indicesSource.map((item) => item.name));
-      else if (exchange === "BSE")
-        BSE_SYMBOLS.push(...indicesSource.map((item) => item.name));
-    }
-    const filtered = indicesSource.filter((index) => {
-      const name = (index.name || index.symbol || "").toUpperCase();
-      if (exchange === "NSE") {
-        return NSE_SYMBOLS.some((sym) => name.includes(sym));
-      }
-      if (exchange === "BSE") {
-        return BSE_SYMBOLS.some((sym) => name.includes(sym));
-      }
-      return true;
-    });
-    return filtered.map((index) => {
-      const rt = realtimePrices[index.token];
-      if (!rt) return index; // Stable DB data
-
-      const prevClose =
-        rt.prevClose || index.prevClose || rt.open || index.value;
-
-      const change = rt.price - prevClose;
-      const changePercent = prevClose !== 0 ? (change / prevClose) * 100 : 0;
-
-      return {
-        ...index,
-        value: rt.price,
-        change,
-        changePercent,
-        timestamp: rt.timestamp || rt.exchange_timestamp || index.timestamp || index.exchange_timestamp,
-      };
-    });
-  }, [indicesSource, realtimePrices, exchange]);
+  }, [externalData, indicesData, realtimePrices]);
 
   // ✅ Loading
   if (isLoading && !externalData) {

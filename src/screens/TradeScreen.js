@@ -16,6 +16,7 @@ import {
   RefreshControl,
   DeviceEventEmitter,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Device from "expo-device";
@@ -40,6 +41,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import { useIdeasContext } from "../context/IdeasContext";
 
+
 const filterOptions = ["All", "Live", "Target Hit", "Closed", "Stop Loss Hit"];
 const sortOptions = ["Default", "A-Z", "Z-A", "High-Low", "Low-High"];
 
@@ -47,10 +49,10 @@ const TradeScreen = () => {
   const { prices } = useRealtimePrices();
   const route = useRoute();
   const { markIdeasAsRead } = useIdeasContext();
-  const { role, userData } = useAuth();
-  const currentRole = role || userData?.role || 1;
-  const { data: activePlansData, refetch: refetchActivePlans } = useActivePlans();
+  const { userData } = useAuth();
+  const { data: activePlansData, isLoading: loadingPlans, refetch: refetchActivePlans } = useActivePlans();
   const allowedScriptTypes = activePlansData?.allowedScriptTypes || [];
+  console.log(`allowedScriptTypes`, allowedScriptTypes);
   const didSubscribeRef = useRef(false);
   const ALL_TYPE = { tradeTypeId: null, tradeTypeName: "All" };
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -188,7 +190,6 @@ const TradeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       markIdeasAsRead();
-      refetchActivePlans();
 
       const page = "Ideas";
       const context =
@@ -277,28 +278,26 @@ const TradeScreen = () => {
     if (!tradeCategories.length) return;
     
     let targetCategory = null;
+
+    // 1. If we have a route param, try to find that specific category
     if (route.params?.selectedCategoryId) {
       targetCategory = tradeCategories.find(
-        (c) => c.id === route.params.selectedCategoryId,
+        (c) => (c.scriptTypeId || c.id) === route.params.selectedCategoryId,
       );
     }
 
-    // If no route param or not found, fallback to first category (usually Equity)
+    // 2. If no route param OR route param not found, and we don't have a selected category yet,
+    //    fallback to finding Equity or the first category.
     if (!targetCategory && !selectedCategory) {
-      targetCategory = tradeCategories[0];
-    }
-
-    // Double check: if still not set or first isn't equity, find it explicitly
-    if (!targetCategory || (targetCategory && !targetCategory.scriptTypeName?.toLowerCase().includes("equity"))) {
       const equityCat = tradeCategories.find(c => c.scriptTypeName?.toLowerCase().includes("equity"));
-      if (equityCat) targetCategory = equityCat;
+      targetCategory = equityCat || tradeCategories[0];
     }
 
     // Only update if target is found AND different from current
-    if (targetCategory && targetCategory.id !== selectedCategory?.id) {
+    if (targetCategory && (targetCategory.scriptTypeId || targetCategory.id) !== (selectedCategory?.scriptTypeId || selectedCategory?.id)) {
       setSelectedCategory(targetCategory);
     }
-  }, [route.params?.selectedCategoryId, tradeCategories, selectedCategory?.id]);
+  }, [route.params?.selectedCategoryId, tradeCategories]); // Removed selectedCategory from dependencies to prevent forcing default on every change
 
   useEffect(() => {
     if (tradeTypes.length && (!selectedType || !selectedType.tradeTypeId)) {
@@ -553,7 +552,14 @@ const TradeScreen = () => {
             />
           }
         >
-          {tradeRecommendations.length === 0 ? (
+          {loadingRecommendations || loadingCategories || loadingPlans || (isFetching && tradeRecommendations.length === 0) ? (
+            <View style={styles.loader}>
+              <ActivityIndicator size="large" color={global.colors.secondary} />
+              <Text style={{ marginTop: 10, color: global.colors.textSecondary }}>
+                Loading {selectedCategory?.scriptTypeName || ""}...
+              </Text>
+            </View>
+          ) : tradeRecommendations.length === 0 ? (
             <View
               style={{
                 alignItems: "center",
@@ -611,7 +617,6 @@ const TradeScreen = () => {
                   exitPriceLow={recommendation.exitPriceLow}
                   recoPriceLow={recommendation.recoPriceLow}
                   isLocked={
-                    Number(currentRole) === 1 &&
                     !allowedScriptTypes.includes(Number(recommendation.scriptTypeId || selectedCategory?.scriptTypeId))
                   }
                   isin={recommendation.isin}

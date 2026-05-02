@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
 const PortfolioCard = ({
     name,
@@ -10,7 +10,10 @@ const PortfolioCard = ({
     profit,
     profitPercent,
     today,
-    todayPercent
+    todayPercent,
+    onLongPress,
+    onPress,
+    brokerId
 }) => {
 
     // Safely convert all values to number
@@ -33,16 +36,28 @@ const PortfolioCard = ({
     };
 
     return (
-        <View style={styles.card}>
+        <TouchableOpacity 
+            style={styles.card} 
+            onPress={onPress}
+            onLongPress={onLongPress} 
+            activeOpacity={0.7}
+            delayLongPress={150}
+        >
+            {(brokerId === 0 || brokerId === 1) && (
+                <View style={styles.ribbon}>
+                    <Text style={styles.ribbonText}>
+                        {brokerId === 0 ? "Manual" : "Angel"}
+                    </Text>
+                </View>
+            )}
+            <Text style={styles.name}>{name}</Text>
+
             <View style={styles.row}>
 
                 {/* LEFT SIDE */}
                 <View style={{ flex: 1.6 }}>
-                    <Text style={styles.name}>
-                        {name}{" "}
-                        <Text style={styles.sharesText}>
-                            (Share : {formatNumber(shares)})
-                        </Text>
+                    <Text style={styles.sharesText}>
+                        Qty: {formatNumber(shares)}
                     </Text>
 
                     <Text style={styles.label}>Invested : ₹{formatNumber(invested)}</Text>
@@ -74,7 +89,7 @@ const PortfolioCard = ({
                     </Text>
                 </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 };
 
@@ -107,16 +122,20 @@ const styles = StyleSheet.create({
     },
 
     name: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: "700",
         color: global.colors.textPrimary,
-        marginBottom: 4,
+        marginBottom: 8,
+        borderBottomWidth: 0.5,
+        borderBottomColor: global.colors.border,
+        paddingBottom: 4,
     },
 
     sharesText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: "600",
         color: global.colors.textSecondary,
+        marginBottom: 4,
     },
 
     label: {
@@ -146,5 +165,24 @@ const styles = StyleSheet.create({
     today: {
         fontSize: 10,
         textAlign: "right"
+    },
+
+    ribbon: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        backgroundColor: global.colors.secondary,
+        paddingHorizontal: 12,
+        paddingVertical: 2,
+        borderTopRightRadius: 16,
+        borderBottomLeftRadius: 12,
+        zIndex: 10,
+    },
+
+    ribbonText: {
+        color: "#FFF",
+        fontSize: 8,
+        fontWeight: "700",
+        textTransform: "uppercase",
     },
 });

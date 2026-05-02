@@ -84,8 +84,17 @@ const DynamicGroupList = ({ data, exchange, category, navigation, refreshing, on
 const fetchGroupData = async ({ queryKey: [, category, exchange] }) => {
   try {
     const formattedCategory = category.toLowerCase().replace(/\s+/g, "");
-    const isStandard = ["marketcap", "sector", "theme", "index"].includes(formattedCategory);
+    
+    // Exact mapping for standard categories to match backend route names
+    const standardMapping = {
+      "index": "",         // maps to /nse or /bse
+      "indices": "",
+      "marketcap": "marketcap", // maps to /nsemarketcap or /bsemarketcap
+      "sector": "sector",       // maps to /nsesector or /bsesector
+      "theme": "theme"          // maps to /nsetheme or /bsetheme
+    };
 
+    const isStandard = standardMapping.hasOwnProperty(formattedCategory);
     let rawData = [];
     const exchangesToFetch = exchange === "All" ? ["NSE", "BSE"] : [exchange];
 
@@ -94,14 +103,12 @@ const fetchGroupData = async ({ queryKey: [, category, exchange] }) => {
       let url;
       
       if (isStandard) {
-        url = `/indicesNew/${formattedExchange}${formattedCategory}`;
+        const suffix = standardMapping[formattedCategory];
+        url = `/indicesNew/${formattedExchange}${suffix}`;
       } else {
+        // For new dynamic types (e.g., "test"), use the All prefix
         const categoryUpper = category.toUpperCase().replace(/\s+/g, "");
-        if (exch === "NSE") {
-          url = `/indicesNew/nseAll${categoryUpper}`;
-        } else {
-          url = `/indicesNew/bseAll${categoryUpper}`;
-        }
+        url = `/indicesNew/${formattedExchange}All${categoryUpper}`;
       }
 
       const response = await axiosInstance.get(url);
@@ -118,6 +125,7 @@ const fetchGroupData = async ({ queryKey: [, category, exchange] }) => {
 
     return rawData.map(item => ({
       ...item,
+      sort_order: item.sort_order, // explicitly preserve sort_order
       change: Number(item.ltp || 0) - Number(item.prev_close || 0),
       changePercent: item.prev_close > 0
         ? ((Number(item.ltp || 0) - Number(item.prev_close || 0)) / Number(item.prev_close)) * 100
@@ -157,26 +165,6 @@ export default function EquityScreen() {
   const [selectedSort, setSelectedSort] = useState("Default");
 
 
-  const logRefresh = async () => {
-    try {
-      const userId = await AsyncStorage.getItem("userId");
-      const deviceId =
-        Device.osBuildId || Device.modelId || Device.deviceName || "Unknown";
-
-      await axiosInstance.post("/eventlog", {
-        user_id: userId || "",
-        success: true,
-        device_id: deviceId,
-        event_group_id: 3,
-        event_type: "Equity",
-        content: "Refreshed",
-        app_version: "1.0.0"
-      });
-    } catch (err) {
-      console.log("Logging failed", err);
-    }
-  };
-
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -189,7 +177,6 @@ export default function EquityScreen() {
       console.error("Refresh failed:", error);
     } finally {
       setRefreshing(false);
-      logRefresh();
     }
   };
   // Only apply route.params if they represent an EXTERNAL navigation intent
@@ -211,13 +198,8 @@ export default function EquityScreen() {
 
   const sortOptions = ["A-Z", "Z-A", "High-Low", "Low-High"];
 
-  // Get filter options based on selected category
-  const getFilterOptions = () => {
-    if (selectedCategory === "Market Cap" || selectedCategory === "Index" || selectedCategory === "Sector") {
-      return ["All", "Gainers", "Losers"];
-    }
-    return ["All"];
-  };
+  // Get filter options - Unified for all dynamic categories
+  const getFilterOptions = () => ["All", "Gainers", "Losers"];
 
   const filterOptions = getFilterOptions();
 
@@ -400,6 +382,7 @@ export default function EquityScreen() {
 
       return combinedData.map(item => ({
         ...item,
+        sort_order: item.sort_order, // explicitly preserve sort_order
         change: Number(item.ltp || 0) - Number(item.prev_close || 0),
         changePercent: item.prev_close > 0
           ? ((Number(item.ltp || 0) - Number(item.prev_close || 0)) / Number(item.prev_close)) * 100
@@ -456,7 +439,27 @@ export default function EquityScreen() {
       return changePercent;
     };
 
-    if (sortType === "A-Z") {
+   if (sortType === "Default") {
+      // 1) Primary: sort_order asc (1, 2, 3...)
+      // 2) Secondary: price percentage change high to low
+      // Items with sort_order 0, null, or missing go to the end (999999)
+      sorted.sort((a, b) => {
+        const valA = (a.sort_order !== null && a.sort_order !== undefined) ? Number(a.sort_order) : 0;
+        const valB = (b.sort_order !== null && b.sort_order !== undefined) ? Number(b.sort_order) : 0;
+
+        const orderA = (valA <= 0 || isNaN(valA)) ? 999999 : valA;
+        const orderB = (valB <= 0 || isNaN(valB)) ? 999999 : valB;
+
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        
+        // Secondary sort: Percentage Change High to Low
+        return getChangePercent(b) - getChangePercent(a);
+      });
+    }
+
+    else if (sortType === "A-Z") {
       sorted.sort((a, b) => {
         const nameA = (a.symbol || a.group_name || a.name || "").toUpperCase();
         const nameB = (b.symbol || b.group_name || b.name || "").toUpperCase();
@@ -476,18 +479,7 @@ export default function EquityScreen() {
     else if (sortType === "Low-High") {
       sorted.sort((a, b) => getChangePercent(a) - getChangePercent(b));
     }
-    else if (sortType === "Default") {
-      // 1) first by sort order asc if no change then; 
-      // 2) price percentage change high to low.
-      sorted.sort((a, b) => {
-        const orderA = a.sort_order ?? 999999;
-        const orderB = b.sort_order ?? 999999;
-        if (orderA !== orderB) {
-          return orderA - orderB;
-        }
-        return getChangePercent(b) - getChangePercent(a);
-      });
-    }
+    
 
     return sorted;
   };
@@ -496,7 +488,7 @@ export default function EquityScreen() {
     setSelectedSort(sortType);
     setSortOpen(false);
 
-    if (selectedCategory === "Index") {
+    if (selectedCategory === "Index" || selectedCategory === "Indices") {
       setAllIndicesData(applySortToData(sortType, originalAllIndicesData));
     } else {
       setDisplayData(applySortToData(sortType, originalData));
@@ -527,7 +519,7 @@ export default function EquityScreen() {
       return filtered;
     };
 
-    if (selectedCategory === "Index") {
+    if (selectedCategory === "Index" || selectedCategory === "Indices") {
       setAllIndicesData(
         filterType === "All" ? originalAllIndicesData : processData(originalAllIndicesData)
       );
@@ -568,22 +560,11 @@ export default function EquityScreen() {
       );
     }
 
-    if (selectedCategory === "Index") {
-      return (
-        <Indices
-          exchange={selectedExchange}
-          viewMode={showPreview ? "horizontal" : "vertical"}
-          onViewAllPress={handleViewAllIndices}
-          onIndexPress={handleIndexPress}
-          externalData={allIndicesData}
-          maxItems={showPreview ? 5 : undefined}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-        />
-      );
-    }
+    const isLoading = selectedCategory === "Index" ? indicesQuery.isLoading : groupQuery.isLoading;
+    const isError = selectedCategory === "Index" ? indicesQuery.isError : groupQuery.isError;
+    const refetch = selectedCategory === "Index" ? indicesQuery.refetch : groupQuery.refetch;
 
-    if (groupQuery.isLoading) {
+    if (isLoading) {
       return (
         <View style={styles.placeholderContainer}>
           <ActivityIndicator size="large" color={global.colors.overlay} />
@@ -592,18 +573,20 @@ export default function EquityScreen() {
       );
     }
 
-    if (groupQuery.isError) {
+    if (isError) {
       return (
         <View style={styles.placeholderContainer}>
           <Text style={styles.errorText}>⚠️ Failed to load {selectedCategory}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => groupQuery.refetch()}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
-    if (!displayData || displayData.length === 0) {
+    const rawData = selectedCategory === "Index" ? allIndicesData : displayData;
+
+    if (!rawData || rawData.length === 0) {
       return (
         <View style={styles.placeholderContainer}>
           <Text style={styles.placeholderText}>No {selectedCategory} data available</Text>
@@ -612,13 +595,14 @@ export default function EquityScreen() {
     }
 
     const dataWithRealtime = mergeWithRealtime(
-      displayData.map((item) => ({
+      rawData.map((item) => ({
         ...item,
         symbol: item.symbol || item.group_name || item.name,
         name: item.group_name || item.name,
         token: item.token,
         prevClose: Number(item.prev_close || 0),
         value: Number(item.ltp || 0),
+        sort_order: item.sort_order,
       })),
       realtimePrices
     );
@@ -652,11 +636,9 @@ export default function EquityScreen() {
           tabs={swipeCategories}
         />
 
-        {/* Sort & Filter Bar for Market Cap, Sectors, and Indices */}
-        {(selectedCategory === "Market Cap" || selectedCategory === "Sector" || selectedCategory === "Index") && !selectedGroup && (
+        {/* Sort & Filter Bar - Visible for all categories except when viewing a group details */}
+        {!selectedGroup && (
           <View style={styles.sortFilterBar}>
-
-            {/* Sort & Filter - RIGHT (Always visible) */}
             <View style={styles.sortFilterButtonsContainer}>
               <TouchableOpacity style={styles.sortButton} onPress={() => setSortOpen(true)}>
                 <Image

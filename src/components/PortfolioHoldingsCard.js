@@ -34,6 +34,13 @@ const PortfolioHoldingsCard = ({
     profitColor = global.colors.error;
   }
 
+  let totalProfitColor = global.colors.textSecondary;
+  if (totalProfit > 0) {
+    totalProfitColor = global.colors.success;
+  } else if (totalProfit < 0) {
+    totalProfitColor = global.colors.error;
+  }
+
   const profitDisplay = `₹${Math.abs(profit).toFixed(2)}`;
 
   const percentDisplay = `${Math.abs(profitPercent).toFixed(2)}%`;
@@ -59,13 +66,13 @@ const PortfolioHoldingsCard = ({
                 ({percentDisplay})
               </Text>
             </View>
-            <View style={styles.gainSection}>
+            <View style={styles.totalGainSection}>
               <Text style={styles.gainLabel}>Total Gain/Loss</Text>
               <View style={styles.gainRow}>
-                <Text style={[styles.gainAmount, { color: profitColor }]}>
+                <Text style={[styles.gainAmount, { color: totalProfitColor }]}>
                   {totalProfitDisplay}
                 </Text>
-                <Text style={[styles.gainPercent, { color: profitColor }]}>
+                <Text style={[styles.gainPercent, { color: totalProfitColor }]}>
                   {" "}
                   ({totalProfitPercentDisplay})
                 </Text>
@@ -129,6 +136,10 @@ const styles = StyleSheet.create({
   gainSection: {
     alignItems: "flex-end",
     marginTop: 10,
+  },
+  totalGainSection: {
+    alignItems: "flex-end",
+    marginTop: 8,
   },
   gainLabel: {
     fontSize: 12,

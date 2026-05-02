@@ -20,6 +20,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRealtimePrices } from "../hooks/useRealtimePrices";
 import PortfolioHoldingsCard from "../components/PortfolioHoldingsCard";
 import BottomTabBar from "../components/BottomTabBar";
+import ManualEntryModal from "../components/ManualEntryModal";
+import { useDrawer } from "../context/DrawerContext";
 
 const filterOptions = [
     "All",
@@ -43,6 +45,18 @@ const PortfolioScreen = () => {
     const [brokerFilters, setBrokerFilters] = useState([]);
     const [selectedBroker, setSelectedBroker] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
+    const { openStockInfoDrawer } = useDrawer();
+    const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
+    const [longPressOpen, setLongPressOpen] = useState(false);
+    const [selectedHolding, setSelectedHolding] = useState(null);
+    const [manualEntry, setManualEntry] = useState({
+        id: null,
+        script: '',
+        exchange: '',
+        purchaseDate: null,
+        quantity: '',
+        avgPrice: '',
+    });
     const portfolioSymbols = orders
         .map(o => o.tradingsymbol)
         .filter(Boolean);
@@ -321,6 +335,115 @@ const PortfolioScreen = () => {
         setOrders(filtered);
     };
 
+    const handleSaveHolding = async () => {
+        try {
+            setLoading(true);
+            const userId = await AsyncStorage.getItem("userId");
+            const deviceId = await getDeviceId();
+
+            const payload = {
+                id: manualEntry.id,
+                user_id: userId,
+                device_mac: deviceId,
+                tradingsymbol: manualEntry.script,
+                exchange: manualEntry.exchange,
+                purchaseDate: manualEntry.purchaseDate ? manualEntry.purchaseDate.toISOString() : new Date().toISOString(),
+                quantity: Number(manualEntry.quantity),
+                averageprice: Number(manualEntry.avgPrice),
+                update_holding: manualEntry.id ? 1 : 0,
+                broker_id: 0
+            };
+
+            const url = manualEntry.id 
+                ? `${apiUrl}/api/portfolio/update-holding` 
+                : `${apiUrl}/api/portfolio/create-holding`;
+
+            const method = manualEntry.id ? "PUT" : "POST";
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    "Authorization": `Bearer ${authToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const json = await response.json();
+            if (json.success) {
+                setIsManualEntryOpen(false);
+                fetchOrders();
+                setManualEntry({
+                    id: null,
+                    script: '',
+                    exchange: '',
+                    purchaseDate: null,
+                    quantity: '',
+                    avgPrice: '',
+                });
+            } else {
+                alert(json.message || "Failed to save holding");
+            }
+        } catch (error) {
+            console.error("Save Holding Error:", error);
+            alert("An error occurred while saving");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLongPress = (item) => {
+        if (item.broker_id === 0) {
+            setSelectedHolding(item);
+            setLongPressOpen(true);
+        }
+    };
+
+    const handleEdit = () => {
+        setLongPressOpen(false);
+        if (selectedHolding) {
+            setManualEntry({
+                id: selectedHolding.id,
+                script: selectedHolding.tradingsymbol,
+                exchange: selectedHolding.exchange,
+                purchaseDate: selectedHolding.created_at ? new Date(selectedHolding.created_at) : new Date(),
+                quantity: String(selectedHolding.quantity || 0),
+                avgPrice: String(selectedHolding.averageprice || 0),
+            });
+            setIsManualEntryOpen(true);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!selectedHolding) return;
+        
+        try {
+            setLoading(true);
+            setLongPressOpen(false);
+            
+            const response = await fetch(`${apiUrl}/api/portfolio/delete-holding`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${authToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ id: selectedHolding.id })
+            });
+
+            const json = await response.json();
+            if (json.success) {
+                fetchOrders();
+            } else {
+                alert(json.message || "Failed to delete holding");
+            }
+        } catch (error) {
+            console.error("Delete Error:", error);
+            alert("Failed to delete");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <>
             <SafeAreaView style={styles.container} edges={['top']}>
@@ -434,7 +557,7 @@ const PortfolioScreen = () => {
                 </Modal>
 
                 {/* ORDERS LIST */}
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, marginBottom: 50 }}>
 
                     {loading ? (
                         <View style={styles.loaderBox}>
@@ -453,7 +576,7 @@ const PortfolioScreen = () => {
                                     return (
                                         <PortfolioCard
                                             name={item.tradingsymbol}
-                                            shares={Number(item.realisedquantity || 0)}
+                                            shares={Number(item.quantity || 0)}
                                             invested={Number(
                                                 Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
                                             )}
@@ -481,6 +604,13 @@ const PortfolioScreen = () => {
                                             ) / Number(
                                                 Number((item.averageprice || 0) * (item.realisedquantity || 0)).toFixed(2)
                                             )) * 100).toFixed(2)}
+                                            onPress={() => openStockInfoDrawer(item.symboltoken, item.tradingsymbol, "chart", item.isin, {
+                                                name: item.tradingsymbol,
+                                                price: ltp,
+                                                exchange: item.exchange,
+                                            })}
+                                            onLongPress={() => handleLongPress(item)}
+                                            brokerId={item.broker_id}
                                         />
                                     );
                                 }}
@@ -504,6 +634,60 @@ const PortfolioScreen = () => {
 
                 </View>
             </SafeAreaView>
+
+            {/* FAB - Floating Action Button */}
+            <TouchableOpacity 
+                style={styles.fab} 
+                onPress={() => setIsManualEntryOpen(true)}
+                activeOpacity={0.8}
+            >
+                <Ionicons name="add" size={32} color={global.colors.secondary} />
+            </TouchableOpacity>
+
+            <ManualEntryModal 
+                visible={isManualEntryOpen}
+                onClose={() => {
+                    setIsManualEntryOpen(false);
+                    setManualEntry({
+                        id: null,
+                        script: '',
+                        exchange: '',
+                        purchaseDate: null,
+                        quantity: '',
+                        avgPrice: '',
+                    });
+                }}
+                data={manualEntry}
+                onChange={(field, value) => setManualEntry(prev => ({ ...prev, [field]: value }))}
+                onSave={handleSaveHolding}
+            />
+
+            {/* LONG PRESS ACTIONS MODAL */}
+            {
+                
+    
+            <Modal visible={longPressOpen} transparent animationType="fade">
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    onPress={() => setLongPressOpen(false)}
+                    activeOpacity={1}
+                >
+                    <View style={styles.longPressMenu}>
+                        <Text style={styles.menuHeader}>{selectedHolding?.tradingsymbol}</Text>
+                        
+                        <TouchableOpacity style={styles.menuActionItem} onPress={handleEdit}>
+                            <Ionicons name="create-outline" size={20} color={global.colors.textPrimary} />
+                            <Text style={styles.menuActionText}>Edit Holding</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={[styles.menuActionItem, { borderBottomWidth: 0 }]} onPress={handleDelete}>
+                            <Ionicons name="trash-outline" size={20} color={global.colors.error} />
+                            <Text style={[styles.menuActionText, { color: global.colors.error }]}>Delete Holding</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+                    }
             {/* <BottomTabBar /> */}
         </>
     );
@@ -572,7 +756,47 @@ const styles = StyleSheet.create({
         marginLeft: 6,
         fontSize: 13,
         color: "#000",
+    },
+    optionsContainer: {
+        backgroundColor: "#FFF",
+        borderRadius: 20,
+        padding: 20,
+        width: "80%",
+        alignItems: "center",
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
+    optionsTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: global.colors.textPrimary,
+        marginBottom: 20,
+    },
+    optionItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 15,
+        width: "100%",
+        borderBottomWidth: 1,
+        borderBottomColor: "#F0F0F0",
+    },
+    optionText: {
+        fontSize: 16,
+        marginLeft: 15,
+        color: global.colors.textPrimary,
+    },
+    closeOption: {
+        borderBottomWidth: 0,
+        marginTop: 5,
+        justifyContent: "center",
+    },
+    closeOptionText: {
+        fontSize: 16,
         fontWeight: "600",
+        color: global.colors.textSecondary,
     },
 
     overlay: {
@@ -607,5 +831,61 @@ const styles = StyleSheet.create({
         color: global.colors.textPrimary,
         borderBottomWidth: 0.5,
         borderBottomColor: global.colors.border,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    longPressMenu: {
+        backgroundColor: global.colors.background,
+        borderRadius: 16,
+        width: '70%',
+        padding: 10,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    menuHeader: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: global.colors.textPrimary,
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: global.colors.border,
+        textAlign: 'center',
+    },
+    menuActionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: global.colors.border,
+    },
+    menuActionText: {
+        fontSize: 15,
+        fontWeight: '500',
+        marginLeft: 12,
+        color: global.colors.textPrimary,
+    },
+    fab: {
+        position: 'absolute',
+        bottom: 100,
+        right: 25,
+        width: 50,
+        height: 50,
+        borderRadius: 32.5,
+        backgroundColor: '#FFFFFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4.65,
+        zIndex: 999,
     },
 });
